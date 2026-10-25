@@ -371,11 +371,31 @@
     <script>
         // Configuración oficial de conexión a Supabase (vymc-db)
         const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-'; // Reemplazar por clave publishable entera
+        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d0iqR...'; // Recuerda pegar aquí tu clave completa de Supabase
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Renombrado a 'db' para evitar choque de variables con la librería global Supabase
+        let db = null;
+        if (window.supabase && window.supabase.createClient) {
+            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
 
-        let listaHermanos = [];
+        let listaHermanos = [
+            { id: 1, sexo: 'M', orac: 'X', pres: 'X', disc: '', perlas: '', lec: '', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: 'X', nombre: 'AGUILAR, Cielo' },
+            { id: 2, sexo: 'V', orac: '', pres: '', disc: 'X', perlas: '', lec: 'X', smm: '', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: '', nombre: 'AGUILAR, Guillermo' },
+            { id: 3, sexo: 'M', orac: '', pres: '', disc: '', perlas: '', lec: '', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'AHUMADA, Adriana' },
+            { id: 4, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: 'X', smm: 'X', nvc: 'X', eb: 'X', lectorL: 'X', presPub: 'X', lectorW: 'X', nombre: 'LLENOLIO, Claudio' },
+            { id: 5, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'LEDESMA, Hernán' },
+            { id: 6, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: 'X', lectorW: '', nombre: 'LUPIANO, Gastón' },
+            { id: 7, sexo: 'V', orac: 'X', pres: '', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'DORDONI, Tomás' },
+            { id: 8, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'HERNÁNDEZ RIVERO, Gastón' },
+            { id: 9, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'DE MERLIER, Lucas' },
+            { id: 10, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'GARAFA, Carlos' },
+            { id: 11, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'SALVATIERRA, Tomás' },
+            { id: 12, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: '', smm: '', nvc: 'X', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'SEMPERTEGUI, Héctor' },
+            { id: 13, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: '', lec: '', smm: '', nvc: '', eb: '', lectorL: '', presPub: 'X', lectorW: '', nombre: 'RIOS, Francisco' },
+            { id: 14, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'CORSI, Tomás' }
+        ];
+
         let programaMes = [
             {
                 idSemana: 0,
@@ -408,38 +428,48 @@
 
         // INICIALIZACIÓN
         window.onload = async function() {
-            await cargarHermanosDesdeSupabase();
+            try {
+                if (db) {
+                    await cargarHermanosDesdeSupabase();
+                } else {
+                    renderizarMatrizHermanos();
+                }
+            } catch (err) {
+                console.error("Cargando lista por defecto debido a:", err);
+                renderizarMatrizHermanos();
+            }
             renderizarSelectorSemanas();
             cargarSemanaEnPlanilla(0);
         };
 
         // CARGAR HERMANOS DESDE SUPABASE
         async function cargarHermanosDesdeSupabase() {
-            try {
-                const { data, error } = await supabase.from('hermanos').select('*').order('id');
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    listaHermanos = data.map(h => ({
-                        id: h.id,
-                        sexo: h.sexo || 'V',
-                        orac: h.oracion ? 'X' : '',
-                        pres: h.pres_vymc ? 'X' : '',
-                        disc: h.disc_tesoros ? 'X' : '',
-                        perlas: h.perlas ? 'X' : '',
-                        lec: h.lec_biblia ? 'X' : '',
-                        smm: h.smm ? 'X' : '',
-                        nvc: h.nvc ? 'X' : '',
-                        eb: h.ebc ? 'X' : '',
-                        lectorL: h.lector_ebc ? 'X' : '',
-                        presPub: h.pres_pub ? 'X' : '',
-                        lectorW: h.lector_atalaya ? 'X' : '',
-                        nombre: h.nombre
-                    }));
-                }
+            if (!db) return;
+            const { data, error } = await db.from('hermanos').select('*').order('id');
+            if (error) {
+                console.error("Error Supabase:", error);
                 renderizarMatrizHermanos();
-            } catch (err) {
-                console.error("Error al cargar hermanos:", err);
+                return;
             }
+            if (data && data.length > 0) {
+                listaHermanos = data.map(h => ({
+                    id: h.id,
+                    sexo: h.sexo || 'V',
+                    orac: h.oracion ? 'X' : '',
+                    pres: h.pres_vymc ? 'X' : '',
+                    disc: h.disc_tesoros ? 'X' : '',
+                    perlas: h.perlas ? 'X' : '',
+                    lec: h.lec_biblia ? 'X' : '',
+                    smm: h.smm ? 'X' : '',
+                    nvc: h.nvc ? 'X' : '',
+                    eb: h.ebc ? 'X' : '',
+                    lectorL: h.lector_ebc ? 'X' : '',
+                    presPub: h.pres_pub ? 'X' : '',
+                    lectorW: h.lector_atalaya ? 'X' : '',
+                    nombre: h.nombre
+                }));
+            }
+            renderizarMatrizHermanos();
         }
 
         // NAVEGACIÓN
@@ -721,7 +751,8 @@
                 h[campo] = valor;
                 cargarSemanaEnPlanilla(semanaActivaIdx);
 
-                // Mapear a base de datos Supabase
+                if (!db) return;
+
                 const dbMap = {
                     sexo: 'sexo', nombre: 'nombre',
                     orac: 'oracion', pres: 'pres_vymc', disc: 'disc_tesoros',
@@ -733,21 +764,34 @@
                 const dbCampo = dbMap[campo];
                 if (dbCampo) {
                     const dbValor = (typeof valor === 'string' && valor === 'X') ? true : (valor === '' ? false : valor);
-                    await supabase.from('hermanos').update({ [dbCampo]: dbValor }).eq('id', id);
+                    await db.from('hermanos').update({ [dbCampo]: dbValor }).eq('id', id);
                 }
             }
         }
 
         async function agregarNuevoHermano() {
-            const { data, error } = await supabase.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
-            if (!error && data) {
-                await cargarHermanosDesdeSupabase();
+            if (db) {
+                const { data, error } = await db.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
+                if (!error && data) {
+                    await cargarHermanosDesdeSupabase();
+                    return;
+                }
             }
+            const nuevoId = listaHermanos.length ? Math.max(...listaHermanos.map(h => h.id)) + 1 : 1;
+            listaHermanos.push({
+                id: nuevoId, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'NUEVO HERMANO'
+            });
+            renderizarMatrizHermanos();
         }
 
         async function eliminarHermano(id) {
-            await supabase.from('hermanos').delete().eq('id', id);
-            await cargarHermanosDesdeSupabase();
+            if (db) {
+                await db.from('hermanos').delete().eq('id', id);
+                await cargarHermanosDesdeSupabase();
+            } else {
+                listaHermanos = listaHermanos.filter(h => h.id !== id);
+                renderizarMatrizHermanos();
+            }
             cargarSemanaEnPlanilla(semanaActivaIdx);
         }
 
