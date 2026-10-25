@@ -212,19 +212,13 @@
                 </div>
             </div>
 
-            <!-- TABLA DE LA PLANILLA -->
+            <!-- TABLA DE LA PLANILLA (Limpia, sin datos o encabezados fijos) -->
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
                 <table class="excel-table min-w-[700px]" id="tablaPlanillaCompleta">
-                    <thead>
-                        <tr>
-                            <th colspan="4" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
-                                <span class="text-lg sm:text-2xl font-black text-slate-900" id="tituloSemanaActiva">
-                                    Cargando datos...
-                                </span>
-                            </th>
-                        </tr>
+                    <thead id="cabeceraTablaPlanilla">
+                        <!-- Generado dinámicamente -->
                     </thead>
                     <tbody id="cuerpoTablaPlanilla">
                         <!-- Generado dinámicamente -->
@@ -370,11 +364,11 @@
 
     </div>
 
-    <!-- SCRIPT PRINCIPAL INTEGRADOR SUPABASE CON PERSISTENCIA DE PLANILLAS -->
+    <!-- SCRIPT PRINCIPAL INTEGRADOR SUPABASE CON DIBUJO 100% DINÁMICO -->
     <script>
         // Configuración oficial de conexión a Supabase (vymc-db)
         const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d0iqR...'; // Recuerda pegar aquí tu clave completa
+        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d0iqR...'; // Pega tu clave publishable aquí
 
         let db = null;
         if (window.supabase && window.supabase.createClient) {
@@ -382,35 +376,8 @@
         }
 
         let listaHermanos = [];
-        let mesActualClave = "2026-10"; // Identificador del mes
-        let programaMes = [
-            {
-                idSemana: 0,
-                semana: "5-11 DE OCTUBRE",
-                lectura: "JEREMÍAS 40, 41",
-                tipoSemana: "normal",
-                canciones: ["33", "17", "38"],
-                partes: {
-                    p1: { t: "10 min", tit: "1. Tengamos un punto de vista equilibrado de la protección de Jehová", desc: "Discurso", cat: "disc", asig: "LUPIANO, Gastón" },
-                    p2: { t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 40, 41", cat: "perlas", asig: "DORDONI, Tomás" },
-                    p3: { t: "4 min o menos", tit: "3. Lectura de la Biblia: Jer 40:1-10 (th lección 2).", desc: "", cat: "lec", asig: "HERNÁNDEZ RIVERO, Gastón" },
-                    p4: { t: "2 mins.", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. (lmd lección 2 punto 3).", cat: "smm", asig: "", ayudante: "" },
-                    p5: { t: "2 mins.", tit: "5. Empiece conversaciones", desc: "PREDICACIÓN INFORMAL. (lmd lección 2 punto 5).", cat: "smm", asig: "", ayudante: "" },
-                    p6: { t: "4 mins.", tit: "6. Empiece conversaciones", desc: "PREDICACIÓN PÚBLICA. Carrito (lmd lección 5 punto 3).", cat: "smm", asig: "", ayudante: "" },
-                    p7: { t: "3 mins.", tit: "7. Explique sus creencias", desc: "Escenificación. ¿Quién es Jehová? (th lección 17).", cat: "smm", asig: "", ayudante: "" },
-                    p8: { t: "15 mins.", tit: "8. Jehová protege a las viudas", desc: "Análisis con el auditorio. Video.", cat: "nvc", asig: "DE MERLIER, Lucas" },
-                    p8b: { t: "", tit: "", desc: "", cat: "nvc", asig: "" },
-                    p9: { t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 11.", desc: "", cat: "eb", asig: "GARAFA, Carlos", lector: "SALVATIERRA, Tomás" }
-                },
-                presidencia: "LLENOLIO, Claudio",
-                oracionIni: "LEDESMA, Hernán",
-                repaso: "LLENOLIO, Claudio",
-                oracionFin: "SEMPERTEGUI, Héctor",
-                domPresi: "RIOS, Francisco",
-                domLector: "CORSI, Tomás"
-            }
-        ];
-
+        let mesActualClave = "2026-10";
+        let programaMes = [];
         let semanaActivaIdx = 0;
 
         // INICIALIZACIÓN
@@ -423,18 +390,36 @@
                     renderizarMatrizHermanos();
                 }
             } catch (err) {
-                console.error("Cargando lista local debido a:", err);
+                console.error("Error al inicializar:", err);
                 renderizarMatrizHermanos();
             }
-            renderizarSelectorSemanas();
-            cargarSemanaEnPlanilla(0);
+
+            if (programaMes && programaMes.length > 0) {
+                renderizarSelectorSemanas();
+                cargarSemanaEnPlanilla(0);
+            } else {
+                mostrarEstadoTablaVacia();
+            }
         };
+
+        function mostrarEstadoTablaVacia() {
+            document.getElementById('cabeceraTablaPlanilla').innerHTML = '';
+            document.getElementById('cuerpoTablaPlanilla').innerHTML = `
+                <tr>
+                    <td colspan="4" class="py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-calendar-plus text-4xl mb-3 text-slate-300"></i>
+                        <p class="font-bold text-sm">No hay un programa cargado para este mes.</p>
+                        <p class="text-xs text-slate-400 mt-1">Ve a la pestaña <b>"Cargar Programa"</b> para pegar el texto de la Guía de Actividades.</p>
+                    </td>
+                </tr>
+            `;
+        }
 
         // CARGAR PLANILLA DESDE SUPABASE
         async function cargarPlanillaDesdeSupabase() {
             if (!db) return;
             const { data, error } = await db.from('planillas').select('datos').eq('mes_ano', mesActualClave).single();
-            if (data && data.datos) {
+            if (data && data.datos && data.datos.length > 0) {
                 programaMes = data.datos;
             }
         }
@@ -540,11 +525,22 @@
         }
 
         function cargarSemanaEnPlanilla(idx) {
+            if (!programaMes || programaMes.length === 0) return;
             semanaActivaIdx = idx;
             renderizarSelectorSemanas();
             const sem = programaMes[idx];
 
-            document.getElementById('tituloSemanaActiva').innerText = `Semana del ${sem.semana}, ${sem.lectura}`;
+            // Renderizar la cabecera dinámica de la semana
+            const cabecera = document.getElementById('cabeceraTablaPlanilla');
+            cabecera.innerHTML = `
+                <tr>
+                    <th colspan="4" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
+                        <span class="text-lg sm:text-2xl font-black text-slate-900">
+                            Semana del ${sem.semana}, ${sem.lectura}
+                        </span>
+                    </th>
+                </tr>
+            `;
 
             const radios = document.getElementsByName('tipoSemana');
             radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
@@ -565,13 +561,13 @@
                 tabla.classList.remove('opacity-30', 'pointer-events-none');
             }
 
-            const p = sem.partes;
+            const p = sem.partes || {};
             const cuerpo = document.getElementById('cuerpoTablaPlanilla');
             
             cuerpo.innerHTML = `
                 <tr class="h-6">
                     <td class="w-12 text-center font-bold">1 min</td>
-                    <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones[0] || ''}. Presidencia: Palabras de introducción.</td>
+                    <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
                     <td class="w-64 px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
                 </tr>
                 <tr class="h-6">
@@ -637,7 +633,7 @@
                     <th colspan="4" class="bg-vida text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones[1] || ''}</td>
+                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
                 </tr>
                 ${p.p8?.tit ? `
                 <tr>
@@ -671,7 +667,7 @@
                 </tr>
                 <tr class="h-6">
                     <td></td>
-                    <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones[2] || ''} y oración</td>
+                    <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
                     <td class="px-2">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
                 </tr>
 
@@ -767,7 +763,7 @@
             const h = listaHermanos.find(item => item.id === id);
             if (h) {
                 h[campo] = valor;
-                cargarSemanaEnPlanilla(semanaActivaIdx);
+                if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 
                 if (!db) return;
 
@@ -810,22 +806,23 @@
                 listaHermanos = listaHermanos.filter(h => h.id !== id);
                 renderizarMatrizHermanos();
             }
-            cargarSemanaEnPlanilla(semanaActivaIdx);
+            if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
         }
 
         function generarListaPartesEnvio() {
+            if (!programaMes || programaMes.length === 0) return;
             const sem = programaMes[semanaActivaIdx];
             const cont = document.getElementById('listaPartesEnvio');
             cont.innerHTML = '';
 
             const items = [];
-            if (sem.partes.p3?.asig) items.push({ tit: sem.partes.p3.tit, asig: sem.partes.p3.asig });
-            if (sem.partes.p4?.asig) items.push({ tit: sem.partes.p4.tit, asig: sem.partes.p4.asig });
-            if (sem.partes.p5?.asig) items.push({ tit: sem.partes.p5.tit, asig: sem.partes.p5.asig });
-            if (sem.partes.p6?.asig) items.push({ tit: sem.partes.p6.tit, asig: sem.partes.p6.asig });
-            if (sem.partes.p7?.asig) items.push({ tit: sem.partes.p7.tit, asig: sem.partes.p7.asig });
-            if (sem.partes.p1?.asig) items.push({ tit: sem.partes.p1.tit, asig: sem.partes.p1.asig });
-            if (sem.partes.p8?.asig) items.push({ tit: sem.partes.p8.tit, asig: sem.partes.p8.asig });
+            if (sem.partes?.p3?.asig) items.push({ tit: sem.partes.p3.tit, asig: sem.partes.p3.asig });
+            if (sem.partes?.p4?.asig) items.push({ tit: sem.partes.p4.tit, asig: sem.partes.p4.asig });
+            if (sem.partes?.p5?.asig) items.push({ tit: sem.partes.p5.tit, asig: sem.partes.p5.asig });
+            if (sem.partes?.p6?.asig) items.push({ tit: sem.partes.p6.tit, asig: sem.partes.p6.asig });
+            if (sem.partes?.p7?.asig) items.push({ tit: sem.partes.p7.tit, asig: sem.partes.p7.asig });
+            if (sem.partes?.p1?.asig) items.push({ tit: sem.partes.p1.tit, asig: sem.partes.p1.asig });
+            if (sem.partes?.p8?.asig) items.push({ tit: sem.partes.p8.tit, asig: sem.partes.p8.asig });
 
             if (items.length === 0) {
                 cont.innerHTML = `<div class="p-4 text-center text-slate-400">No hay hermanos asignados en esta semana para generar fichas S-89.</div>`;
@@ -850,6 +847,7 @@
         }
 
         function verFichaS89(nombre, ayudante, parteTit) {
+            if (!programaMes || programaMes.length === 0) return;
             const sem = programaMes[semanaActivaIdx];
             document.getElementById('s89_nombre').innerText = nombre || "-";
             document.getElementById('s89_ayudante').innerText = ayudante || "-";
