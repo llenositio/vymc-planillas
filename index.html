@@ -6,6 +6,8 @@
     <title>Gestor VyMC - Planilla Mensual y Asignaciones</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- FontAwesome Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Fuente Inter -->
@@ -22,7 +24,7 @@
         .bg-maestros { background-color: #d97706; } /* Naranja / Dorado */
         .bg-vida { background-color: #b91c1c; }    /* Rojo */
 
-        /* Estilo de la tabla de la planilla (Fiel a la foto) */
+        /* Estilo de la tabla de la planilla */
         .excel-table {
             border-collapse: collapse;
             width: 100%;
@@ -207,10 +209,8 @@
                 </div>
             </div>
 
-            <!-- TABLA DE LA PLANILLA (Semiautomática / Visual de la Imagen) -->
+            <!-- TABLA DE LA PLANILLA -->
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
-                
-                <!-- Banners Informativos de Eventos Especiales -->
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
                 <table class="excel-table min-w-[700px]" id="tablaPlanillaCompleta">
@@ -218,13 +218,13 @@
                         <tr>
                             <th colspan="4" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
                                 <span class="text-lg sm:text-2xl font-black text-slate-900" id="tituloSemanaActiva">
-                                    Semana del 5-11 DE OCTUBRE, JEREMÍAS 40, 41
+                                    Cargando datos...
                                 </span>
                             </th>
                         </tr>
                     </thead>
                     <tbody id="cuerpoTablaPlanilla">
-                        <!-- Generado dinámicamente con JavaScript -->
+                        <!-- Generado dinámicamente -->
                     </tbody>
                 </table>
             </div>
@@ -246,7 +246,7 @@
 
                 <div class="mt-4 flex justify-between items-center">
                     <button onclick="cargarEjemploDemoMes()" class="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-lg border border-amber-200 transition">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Cargar datos de prueba (4 semanas)
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Cargar datos de prueba
                     </button>
 
                     <button onclick="procesarTextoMes()" class="text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2.5 rounded-lg shadow transition flex items-center gap-1.5">
@@ -267,7 +267,7 @@
                             <i class="fa-solid fa-users-gear text-amber-600"></i> Matriz de Hermanos y Cualificaciones
                         </h2>
                         <p class="text-xs text-slate-500">
-                            Marca con una "X" las asignaciones que cada hermano está capacitado para presentar. Solo los hermanos cualificados aparecerán en sus desplegables.
+                            Marca con una "X" las asignaciones que cada hermano está capacitado para presentar. Se guarda automáticamente en la base de datos.
                         </p>
                     </div>
                     <button onclick="agregarNuevoHermano()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1">
@@ -309,20 +309,16 @@
         <!-- ========================================================= -->
         <section id="sec-envio" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                <!-- Lista de Asignados de la Semana Activa -->
                 <div class="lg:col-span-5 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <h2 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
                         <i class="fa-solid fa-list-check text-amber-600"></i> Asignaciones de la Semana
                     </h2>
                     <div class="space-y-2 text-xs" id="listaPartesEnvio">
-                        <!-- Lista interactiva de partes para seleccionar -->
+                        <!-- Lista interactiva -->
                     </div>
                 </div>
 
-                <!-- Previsualizador e Impresor de Ficha S-89 -->
                 <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center">
-                    
                     <div class="w-full flex justify-between items-center mb-4">
                         <h3 class="text-sm font-bold text-slate-800">Ficha de Asignación S-89 (Vista Previa)</h3>
                         <div class="flex gap-2">
@@ -332,14 +328,13 @@
                         </div>
                     </div>
 
-                    <!-- Tarjeta S-89 Exacta -->
                     <div id="fichaS89Contenedor" class="s89-card w-full shadow-md rounded">
                         <div class="s89-header">
                             ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS
                         </div>
                         <div class="s89-row">
                             <div class="s89-label">Nombre</div>
-                            <div class="s89-value font-bold text-slate-900" id="s89_nombre">CAMACHO, Ariel</div>
+                            <div class="s89-value font-bold text-slate-900" id="s89_nombre">-</div>
                         </div>
                         <div class="s89-row">
                             <div class="s89-label">Ayudante</div>
@@ -347,11 +342,11 @@
                         </div>
                         <div class="s89-row">
                             <div class="s89-label">Fecha</div>
-                            <div class="s89-value font-medium" id="s89_fecha">Semana del 5-11 DE OCTUBRE, JEREMÍAS 40, 41</div>
+                            <div class="s89-value font-medium" id="s89_fecha">-</div>
                         </div>
                         <div class="s89-row">
                             <div class="s89-label">Intervenc N°</div>
-                            <div class="s89-value font-bold" id="s89_intervencion">1. Tengamos un punto de vista equilibrado (Discurso)</div>
+                            <div class="s89-value font-bold" id="s89_intervencion">-</div>
                         </div>
                         <div class="s89-row">
                             <div class="s89-label">Se presenta en</div>
@@ -366,37 +361,21 @@
                             En la <i>Guía de actividades</i> encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las <i>Instrucciones para la reunión Vida y Ministerio Cristianos</i> (S-38).
                         </div>
                     </div>
-
                 </div>
-
             </div>
         </section>
 
     </div>
 
-    <!-- SCRIPT PRINCIPAL DE LÓGICA Y DATOS -->
+    <!-- SCRIPT PRINCIPAL INTEGRADOR SUPABASE -->
     <script>
-        // =========================================================
-        // BASE DE DATOS DE HERMANOS (Matriz inicial con cualificaciones)
-        // =========================================================
-        let listaHermanos = [
-            { id: 1, sexo: 'M', orac: 'X', pres: 'X', disc: '', perlas: '', lec: '', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: 'X', nombre: 'AGUILAR, Cielo' },
-            { id: 2, sexo: 'V', orac: '', pres: '', disc: 'X', perlas: '', lec: 'X', smm: '', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: '', nombre: 'AGUILAR, Guillermo' },
-            { id: 3, sexo: 'M', orac: '', pres: '', disc: '', perlas: '', lec: '', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'AHUMADA, Adriana' },
-            { id: 4, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: 'X', smm: 'X', nvc: 'X', eb: 'X', lectorL: 'X', presPub: 'X', lectorW: 'X', nombre: 'LLENOLIO, Claudio' },
-            { id: 5, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'LEDESMA, Hernán' },
-            { id: 6, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: 'X', lectorW: '', nombre: 'LUPIANO, Gastón' },
-            { id: 7, sexo: 'V', orac: 'X', pres: '', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'DORDONI, Tomás' },
-            { id: 8, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'HERNÁNDEZ RIVERO, Gastón' },
-            { id: 9, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'DE MERLIER, Lucas' },
-            { id: 10, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: 'X', lec: '', smm: '', nvc: 'X', eb: 'X', lectorL: '', presPub: '', lectorW: '', nombre: 'GARAFA, Carlos' },
-            { id: 11, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'SALVATIERRA, Tomás' },
-            { id: 12, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: '', smm: '', nvc: 'X', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'SEMPERTEGUI, Héctor' },
-            { id: 13, sexo: 'V', orac: 'X', pres: 'X', disc: 'X', perlas: '', lec: '', smm: '', nvc: '', eb: '', lectorL: '', presPub: 'X', lectorW: '', nombre: 'RIOS, Francisco' },
-            { id: 14, sexo: 'V', orac: '', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: 'X', presPub: '', lectorW: 'X', nombre: 'CORSI, Tomás' }
-        ];
+        // Configuración oficial de conexión a Supabase (vymc-db)
+        const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d0iqR...'; // Reemplazar por clave publishable entera
 
-        // DATOS DE LAS SEMANAS DEL MES
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let listaHermanos = [];
         let programaMes = [
             {
                 idSemana: 0,
@@ -422,73 +401,48 @@
                 oracionFin: "SEMPERTEGUI, Héctor",
                 domPresi: "RIOS, Francisco",
                 domLector: "CORSI, Tomás"
-            },
-            {
-                idSemana: 1,
-                semana: "12-18 DE OCTUBRE",
-                lectura: "JEREMÍAS 42, 43",
-                tipoSemana: "viajante",
-                canciones: ["84", "100", "118"],
-                partes: {
-                    p1: { t: "10 min", tit: "1. Jehová nunca nos abandona", desc: "Discurso", cat: "disc", asig: "LUPIANO, Gastón" },
-                    p2: { t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas", cat: "perlas", asig: "DORDONI, Tomás" },
-                    p3: { t: "4 min o menos", tit: "3. Lectura de la Biblia: Jer 42:1-12", desc: "", cat: "lec", asig: "AGUILAR, Guillermo" },
-                    p4: { t: "15 mins. total", tit: "4. Seamos Mejores Maestros (Sección Especial)", desc: "Intervenciones estudiantiles agrupadas para el Viajante", cat: "smm", asig: "HERNÁNDEZ RIVERO, Gastón", ayudante: "" },
-                    p5: { t: "", tit: "", desc: "", cat: "smm", asig: "" },
-                    p6: { t: "", tit: "", desc: "", cat: "smm", asig: "" },
-                    p7: { t: "", tit: "", desc: "", cat: "smm", asig: "" },
-                    p8: { t: "10 mins.", tit: "8. Necesidades de la congregación", desc: "Discurso local", cat: "nvc", asig: "GARAFA, Carlos" },
-                    p8b: { t: "", tit: "", desc: "", cat: "nvc", asig: "" },
-                    p9: { t: "30 min", tit: "Discurso de servicio del Superintendente de Circuito", desc: "", cat: "eb", asig: "SUPERINTENDENTE DE CIRCUITO", lector: "" }
-                },
-                presidencia: "LLENOLIO, Claudio",
-                oracionIni: "LEDESMA, Hernán",
-                repaso: "LLENOLIO, Claudio",
-                oracionFin: "SEMPERTEGUI, Héctor",
-                domPresi: "RIOS, Francisco",
-                domLector: "CORSI, Tomás"
-            },
-            {
-                idSemana: 2,
-                semana: "19-25 DE OCTUBRE",
-                lectura: "ASAMBLEA DE CIRCUITO",
-                tipoSemana: "asamblea",
-                canciones: ["-", "-", "-"],
-                partes: {},
-                presidencia: "", oracionIni: "", repaso: "", oracionFin: "", domPresi: "", domLector: ""
-            },
-            {
-                idSemana: 3,
-                semana: "26 OCTUBRE - 1 NOVIEMBRE",
-                lectura: "JEREMÍAS 44, 45",
-                tipoSemana: "normal",
-                canciones: ["45", "89", "120"],
-                partes: {
-                    p1: { t: "10 min", tit: "1. No busquemos 'cosas grandes' para nosotros", desc: "Discurso Jer 45:5", cat: "disc", asig: "" },
-                    p2: { t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas", cat: "perlas", asig: "" },
-                    p3: { t: "4 min o menos", tit: "3. Lectura de la Biblia", desc: "", cat: "lec", asig: "" },
-                    p4: { t: "3 mins.", tit: "4. Empiece conversaciones", desc: "Predicación pública", cat: "smm", asig: "", ayudante: "" },
-                    p5: { t: "4 mins.", tit: "5. Haga discípulos", desc: "Curso bíblico", cat: "smm", asig: "", ayudante: "" },
-                    p6: { t: "", tit: "", desc: "", cat: "smm", asig: "" },
-                    p7: { t: "", tit: "", desc: "", cat: "smm", asig: "" },
-                    p8: { t: "15 mins.", tit: "8. Logros de la organización", desc: "Video y análisis", cat: "nvc", asig: "" },
-                    p8b: { t: "", tit: "", desc: "", cat: "nvc", asig: "" },
-                    p9: { t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 12", desc: "", cat: "eb", asig: "", lector: "" }
-                },
-                presidencia: "", oracionIni: "", repaso: "", oracionFin: "", domPresi: "", domLector: ""
             }
         ];
 
         let semanaActivaIdx = 0;
 
-        // INICIALIZACIÓN DE LA PÁGINA
-        window.onload = function() {
+        // INICIALIZACIÓN
+        window.onload = async function() {
+            await cargarHermanosDesdeSupabase();
             renderizarSelectorSemanas();
-            renderizarMatrizHermanos();
             cargarSemanaEnPlanilla(0);
         };
 
-        // NAVEGACIÓN ENTRE PESTAÑAS
+        // CARGAR HERMANOS DESDE SUPABASE
+        async function cargarHermanosDesdeSupabase() {
+            try {
+                const { data, error } = await supabase.from('hermanos').select('*').order('id');
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    listaHermanos = data.map(h => ({
+                        id: h.id,
+                        sexo: h.sexo || 'V',
+                        orac: h.oracion ? 'X' : '',
+                        pres: h.pres_vymc ? 'X' : '',
+                        disc: h.disc_tesoros ? 'X' : '',
+                        perlas: h.perlas ? 'X' : '',
+                        lec: h.lec_biblia ? 'X' : '',
+                        smm: h.smm ? 'X' : '',
+                        nvc: h.nvc ? 'X' : '',
+                        eb: h.ebc ? 'X' : '',
+                        lectorL: h.lector_ebc ? 'X' : '',
+                        presPub: h.pres_pub ? 'X' : '',
+                        lectorW: h.lector_atalaya ? 'X' : '',
+                        nombre: h.nombre
+                    }));
+                }
+                renderizarMatrizHermanos();
+            } catch (err) {
+                console.error("Error al cargar hermanos:", err);
+            }
+        }
+
+        // NAVEGACIÓN
         function cambiarPestaña(tab) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`sec-${tab}`).classList.remove('hidden');
@@ -498,12 +452,9 @@
             });
             document.getElementById(`tab-${tab}`).className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
 
-            if (tab === 'envio') {
-                generarListaPartesEnvio();
-            }
+            if (tab === 'envio') generarListaPartesEnvio();
         }
 
-        // DIBUJAR NAVEGADOR DE SEMANAS (1 a 4/5)
         function renderizarSelectorSemanas() {
             const cont = document.getElementById('selectorSemanas');
             cont.innerHTML = '';
@@ -516,7 +467,6 @@
             });
         }
 
-        // OBTENER Opciones filtradas de hermanos por categoría
         function obtenerOpcionesHermanos(cat) {
             return listaHermanos.filter(h => {
                 if (!cat) return true;
@@ -545,7 +495,6 @@
             return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
         }
 
-        // CARGAR DIBUJO DE LA PLANILLA EN PANTALLA
         function cargarSemanaEnPlanilla(idx) {
             semanaActivaIdx = idx;
             renderizarSelectorSemanas();
@@ -553,7 +502,6 @@
 
             document.getElementById('tituloSemanaActiva').innerText = `Semana del ${sem.semana}, ${sem.lectura}`;
 
-            // Sincronizar Radio buttons de tipo de semana
             const radios = document.getElementsByName('tipoSemana');
             radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
 
@@ -577,12 +525,9 @@
             const cuerpo = document.getElementById('cuerpoTablaPlanilla');
             
             cuerpo.innerHTML = `
-                <!-- Presidencia y Oración -->
                 <tr class="h-6">
                     <td class="w-12 text-center font-bold">1 min</td>
-                    <td class="px-2 font-medium" colspan="2">
-                        Canción N° ${sem.canciones[0] || ''}. Presidencia: Palabras de introducción.
-                    </td>
+                    <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones[0] || ''}. Presidencia: Palabras de introducción.</td>
                     <td class="w-64 px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
                 </tr>
                 <tr class="h-6">
@@ -591,7 +536,6 @@
                     <td class="px-2">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
                 </tr>
 
-                <!-- TESOROS DE LA BIBLIA -->
                 <tr>
                     <th colspan="4" class="bg-tesoros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
                 </tr>
@@ -613,7 +557,6 @@
                     <td class="px-2">${crearSelectHTML('asig_p3', 'lec', p.p3?.asig)}</td>
                 </tr>
 
-                <!-- SEAMOS MEJORES MAESTROS -->
                 <tr>
                     <th colspan="4" class="bg-maestros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
                 </tr>
@@ -646,7 +589,6 @@
                     <td class="px-2">${crearSelectHTML('asig_p7', 'smm', p.p7.asig)}</td>
                 </tr>` : ''}
 
-                <!-- NUESTRA VIDA CRISTIANA -->
                 <tr>
                     <th colspan="4" class="bg-vida text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
@@ -689,7 +631,6 @@
                     <td class="px-2">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
                 </tr>
 
-                <!-- FIN DE SEMANA -->
                 <tr class="border-t-2 border-slate-900 bg-slate-50/50">
                     <td class="px-2 font-bold py-1.5" colspan="2">
                         Domingo, presidencia: 
@@ -703,7 +644,6 @@
             `;
         }
 
-        // GUARDAR CAMBIO DE ASIGNADO
         function guardarAsignacionSemana(elemId) {
             const val = document.getElementById(elemId).value;
             const sem = programaMes[semanaActivaIdx];
@@ -727,13 +667,11 @@
             else if (elemId === 'asig_dom_lector') sem.domLector = val;
         }
 
-        // CAMBIAR TIPO DE SEMANA (Normal, Viajante, Asamblea)
         function actualizarTipoSemana(tipo) {
             programaMes[semanaActivaIdx].tipoSemana = tipo;
             cargarSemanaEnPlanilla(semanaActivaIdx);
         }
 
-        // ALTERNAR VISIBILIDAD MANUAL DE PARTES
         function toggleParteManual(parteKey) {
             const p = programaMes[semanaActivaIdx].partes[parteKey];
             if (!p) return;
@@ -746,7 +684,6 @@
             cargarSemanaEnPlanilla(semanaActivaIdx);
         }
 
-        // MATRIZ DE HERMANOS - RENDERIZADO
         function renderizarMatrizHermanos() {
             const cuerpo = document.getElementById('cuerpoTablaHermanos');
             cuerpo.innerHTML = '';
@@ -755,7 +692,7 @@
                 const tr = document.createElement('tr');
                 tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
                 tr.innerHTML = `
-                    <td class="font-bold text-slate-400">${h.id}</td>
+                    <td class="font-bold text-slate-400">${index + 1}</td>
                     <td>
                         <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
                             <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
@@ -778,29 +715,42 @@
             });
         }
 
-        function actualizarHermano(id, campo, valor) {
+        async function actualizarHermano(id, campo, valor) {
             const h = listaHermanos.find(item => item.id === id);
             if (h) {
                 h[campo] = valor;
                 cargarSemanaEnPlanilla(semanaActivaIdx);
+
+                // Mapear a base de datos Supabase
+                const dbMap = {
+                    sexo: 'sexo', nombre: 'nombre',
+                    orac: 'oracion', pres: 'pres_vymc', disc: 'disc_tesoros',
+                    perlas: 'perlas', lec: 'lec_biblia', smm: 'smm',
+                    nvc: 'nvc', eb: 'ebc', lectorL: 'lector_ebc',
+                    presPub: 'pres_pub', lectorW: 'lector_atalaya'
+                };
+
+                const dbCampo = dbMap[campo];
+                if (dbCampo) {
+                    const dbValor = (typeof valor === 'string' && valor === 'X') ? true : (valor === '' ? false : valor);
+                    await supabase.from('hermanos').update({ [dbCampo]: dbValor }).eq('id', id);
+                }
             }
         }
 
-        function agregarNuevoHermano() {
-            const nuevoId = listaHermanos.length ? Math.max(...listaHermanos.map(h => h.id)) + 1 : 1;
-            listaHermanos.push({
-                id: nuevoId, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'NUEVO HERMANO'
-            });
-            renderizarMatrizHermanos();
+        async function agregarNuevoHermano() {
+            const { data, error } = await supabase.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
+            if (!error && data) {
+                await cargarHermanosDesdeSupabase();
+            }
         }
 
-        function eliminarHermano(id) {
-            listaHermanos = listaHermanos.filter(h => h.id !== id);
-            renderizarMatrizHermanos();
+        async function eliminarHermano(id) {
+            await supabase.from('hermanos').delete().eq('id', id);
+            await cargarHermanosDesdeSupabase();
             cargarSemanaEnPlanilla(semanaActivaIdx);
         }
 
-        // GENERADOR DE LISTA EN MÓDULO S-89
         function generarListaPartesEnvio() {
             const sem = programaMes[semanaActivaIdx];
             const cont = document.getElementById('listaPartesEnvio');
@@ -820,7 +770,7 @@
                 return;
             }
 
-            items.forEach((it, idx) => {
+            items.forEach((it) => {
                 const card = document.createElement('div');
                 card.className = "p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition flex justify-between items-center";
                 card.onclick = () => verFichaS89(it.asig, "", it.tit);
@@ -834,7 +784,6 @@
                 cont.appendChild(card);
             });
 
-            // Cargar primero por defecto
             verFichaS89(items[0].asig, "", items[0].tit);
         }
 
@@ -863,11 +812,11 @@
 
         function cargarEjemploDemoMes() {
             document.getElementById('textoMesCompleto').value = `5-11 DE OCTUBRE\nJEREMÍAS 40, 41\n...\n12-18 DE OCTUBRE\nJEREMÍAS 42, 43\n...`;
-            alert("Se cargó el texto de demostración para el mes continuo.");
+            alert("Se cargó el texto de demostración.");
         }
 
         function procesarTextoMes() {
-            alert("El procesador analizó las semanas del mes de forma exitosa.");
+            alert("El procesador analizó las semanas con éxito.");
             cambiarPestaña('planilla');
         }
     </script>
