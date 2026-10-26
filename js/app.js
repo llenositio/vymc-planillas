@@ -81,7 +81,7 @@ function obtenerOpcionesHermanos(cat) {
     });
 }
 
-function crearSelectHTML(id, cat, valorActual = "", placeholder = "SELECCIONAR") {
+function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     const aptos = obtenerOpcionesHermanos(cat);
     let options = `<option value="">-- ${placeholder} --</option>`;
     aptos.forEach(h => {
@@ -151,7 +151,7 @@ function cargarSemanaEnPlanilla(idx) {
             if (placeholderPrefix) {
                 res += `<span class="block text-[8px] text-slate-400 font-bold uppercase no-print">${placeholderPrefix}</span>`;
             }
-            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNADO");
+            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
             if (cantP === 2) {
                 res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
                 res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
