@@ -382,7 +382,6 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-/* FUNCIONES DEL MODAL DE EXTRACCIÓN (GLOBALES) */
 window.abrirModalImportador = function() {
     const m = document.getElementById('modalImportador');
     if (m) m.classList.remove('hidden');
@@ -404,6 +403,18 @@ window.volverAPasoTextoCrudo = function() {
     if (paso2) paso2.classList.add('hidden');
     if (btn1) btn1.classList.remove('hidden');
     if (btn2) btn2.classList.add('hidden');
+};
+
+/* BOTÓN DE AYUDA / ASISTENTE EN MODAL */
+window.insertarPlantilla = function(tipo) {
+    const txt = document.getElementById('outputTextoDelimitado');
+    if (!txt) return;
+
+    if (tipo === 'cancionVida') {
+        txt.value += "\nCancion 121";
+    } else if (tipo === 'parteStandard') {
+        txt.value += "\n10 mins // Título de la parte // Descripción breve";
+    }
 };
 
 window.convertirTextoCrudoADelimitado = function() {
@@ -449,6 +460,11 @@ window.convertirTextoCrudoADelimitado = function() {
             let matchMin = l.match(/\((\d+\s*min[s]?\.)\)/i);
             let t = matchMin ? matchMin[1] : "1 min";
             resultadoLineas.push(`${t} // ${l}`);
+            continue;
+        }
+
+        if (l.startsWith("Canción") && !l.includes("y oración") && !l.includes("introducción")) {
+            resultadoLineas.push(l);
             continue;
         }
 
@@ -506,6 +522,12 @@ window.cargarDelimitadoAPlanilla = async function() {
         if (linea.startsWith("TESOROS DE LA BIBLIA")) { seccionActual = "tesoros"; return; }
         if (linea.startsWith("SEAMOS MEJORES MAESTROS")) { seccionActual = "maestros"; return; }
         if (linea.startsWith("NUESTRA VIDA CRISTIANA")) { seccionActual = "vida"; return; }
+
+        if (linea.startsWith("Cancion") || linea.startsWith("Canción")) {
+            let num = linea.replace(/\D/g, '');
+            if (num) nuevaSemana.canciones[1] = num;
+            return;
+        }
 
         if (linea.startsWith("Semana del")) {
             const partesHead = linea.replace('Semana del', '').split(';');
