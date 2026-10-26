@@ -36,29 +36,26 @@
             vertical-align: middle;
         }
 
-        /* ANCHOS EXACTOS DEL MODELO EXCEL */
+        /* ANCHOS RIGIDOS DE COLUMNA */
+        #tablaPlanillaCompleta col.col-tiempo { width: 48px !important; }
+        #tablaPlanillaCompleta col.col-titulo { width: 25% !important; }
+        #tablaPlanillaCompleta col.col-desc   { width: 25% !important; }
+        #tablaPlanillaCompleta col.col-asig   { width: 45% !important; }
+
         .col-tiempo {
-            width: 42px !important;
-            max-width: 42px !important;
-            min-width: 42px !important;
+            width: 48px !important;
+            max-width: 48px !important;
+            min-width: 48px !important;
             text-align: center !important;
             white-space: nowrap !important;
             font-weight: bold;
+            font-size: 11px !important;
         }
 
-        .col-titulo {
-            width: 23% !important;
-        }
+        .col-titulo { width: 25% !important; }
+        .col-desc { width: 25% !important; }
+        .col-asig { width: 45% !important; }
 
-        .col-desc {
-            width: 23% !important;
-        }
-
-        .col-asig {
-            width: 50% !important;
-        }
-
-        /* FORMATO NOMBRES TIPO EXCEL (Marrón, Negrita) */
         .select-asig { 
             width: 100%; 
             background: transparent; 
@@ -86,7 +83,6 @@
 </head>
 <body class="pb-12">
 
-    <!-- BARRA NAVEGACIÓN PRINCIPAL -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 no-print">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
@@ -99,7 +95,6 @@
                 </div>
             </div>
 
-            <!-- Pestañas -->
             <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-xl text-xs font-semibold">
                 <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
                     <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
@@ -120,7 +115,6 @@
         <section id="sec-planilla" class="tab-content">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4 no-print">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-xs font-bold uppercase text-slate-500">Semana del Mes:</span>
                         <div id="selectorSemanas" class="flex gap-1"></div>
@@ -163,7 +157,6 @@
                         </div>
                     </div>
 
-                    <!-- Selector Dinámico de Cantidad de Salas -->
                     <div class="flex items-center gap-2 bg-white px-2.5 py-1 rounded border border-slate-300">
                         <span class="font-bold text-slate-700">Salas Activas:</span>
                         <select id="selectNumSalas" onchange="cambiarNumSalasSemana(this.value)" class="font-bold text-amber-800 bg-transparent outline-none cursor-pointer">
@@ -175,7 +168,6 @@
                 </div>
             </div>
 
-            <!-- TABLA DE PLANILLA -->
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
@@ -193,14 +185,14 @@
                     <i class="fa-solid fa-paste text-amber-600"></i> Pegar Programa Completo del Mes
                 </h2>
                 <p class="text-xs text-slate-500 mb-4">
-                    Copia y pega el texto de las semanas de la Guía de Actividades. Se extraerán automáticamente títulos, lecciones y minutos.
+                    Copia y pega el texto continuo de la Guía de Actividades.
                 </p>
 
-                <textarea id="textoMesCompleto" rows="12" class="w-full p-3 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-amber-500 bg-slate-50" placeholder="Pega aquí el programa continuo del mes..."></textarea>
+                <textarea id="textoMesCompleto" rows="12" class="w-full p-3 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-amber-500 bg-slate-50" placeholder="Pega aquí el programa del mes..."></textarea>
 
                 <div class="mt-4 flex justify-between items-center">
                     <button onclick="cargarEjemploDemoMes()" class="text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-2 rounded-lg border border-amber-200 transition">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Cargar datos de prueba
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Limpiar
                     </button>
 
                     <button onclick="procesarTextoMes()" class="text-xs font-extrabold text-white bg-slate-900 hover:bg-slate-800 px-5 py-2.5 rounded-lg shadow transition flex items-center gap-1.5">
@@ -253,7 +245,6 @@
 
     </div>
 
-    <!-- CARGA DE SCRIPTS MODULARES -->
     <script src="js/supabase.js"></script>
     <script src="js/parser.js"></script>
     <script src="js/app.js"></script>
