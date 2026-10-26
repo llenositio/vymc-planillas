@@ -105,10 +105,10 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <colgroup>
-            <col style="width: 42px;">
-            <col style="width: 22%;">
-            <col style="width: 22%;">
-            <col style="width: 50%;">
+            <col style="width: 42px; max-width: 42px;">
+            <col style="width: 24%;">
+            <col style="width: 24%;">
+            <col style="width: 52%;">
         </colgroup>
         <tr>
             <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
@@ -141,7 +141,7 @@ function cargarSemanaEnPlanilla(idx) {
     const p = sem.partes || {};
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // Generador de celdas para salas aprovechando el 50% del ancho
+    // Generador de celdas para salas aprovechando el 52% del ancho
     const renderSalasCelda = (parteKey, cat) => {
         const item = p[parteKey] || {};
         if (numSalas === 1) {
@@ -170,7 +170,7 @@ function cargarSemanaEnPlanilla(idx) {
 
     cuerpo.innerHTML = `
         <tr class="h-6">
-            <td class="text-center font-bold">1 min</td>
+            <td class="text-center font-bold text-xs">1 min</td>
             <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
             <td class="px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
@@ -184,19 +184,19 @@ function cargarSemanaEnPlanilla(idx) {
             <th colspan="4" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
         </tr>
         <tr>
-            <td class="text-center font-bold">${p.p1?.t || '10 min'}</td>
+            <td class="text-center font-bold text-xs">${p.p1?.t || '10 min'}</td>
             <td class="px-2 font-medium">${p.p1?.tit || '1. Discurso'}</td>
             <td class="px-2 font-semibold text-slate-700">${p.p1?.desc || 'Discurso'}</td>
             <td class="px-2">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
         </tr>
         <tr>
-            <td class="text-center font-bold">${p.p2?.t || '10 min'}</td>
+            <td class="text-center font-bold text-xs">${p.p2?.t || '10 min'}</td>
             <td class="px-2 font-medium">${p.p2?.tit || '2. Busquemos perlas escondidas'}</td>
             <td class="px-2 font-semibold text-slate-700">${p.p2?.desc || 'Preguntas y respuestas'}</td>
             <td class="px-2">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
         </tr>
         <tr>
-            <td class="text-center font-bold">${p.p3?.t || '4 min'}</td>
+            <td class="text-center font-bold text-xs">${p.p3?.t || '4 min'}</td>
             <td class="px-2 font-medium">3. Lectura de la Biblia</td>
             <td class="px-2 font-medium text-slate-700">${p.p3?.desc || ''}</td>
             ${renderSalasCelda('p3', 'lec')}
@@ -207,7 +207,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         ${['p4', 'p5', 'p6', 'p7'].map(pk => p[pk]?.tit ? `
         <tr>
-            <td class="text-center font-bold">${p[pk].t}</td>
+            <td class="text-center font-bold text-xs">${p[pk].t}</td>
             <td class="px-2 font-medium">${p[pk].tit}</td>
             <td class="px-2 text-slate-700">${p[pk].desc}</td>
             ${renderSalasCelda(pk, 'smm')}
@@ -221,13 +221,13 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         ${p.p8?.tit ? `
         <tr>
-            <td class="text-center font-bold">${p.p8.t}</td>
+            <td class="text-center font-bold text-xs">${p.p8.t}</td>
             <td class="px-2 font-medium">${p.p8.tit}</td>
             <td class="px-2 text-slate-700">${p.p8.desc}</td>
             <td class="px-2">${crearSelectHTML('asig_p8', 'nvc', p.p8.asig)}</td>
         </tr>` : ''}
         <tr>
-            <td class="text-center font-bold">${p.p9?.t || '30 min'}</td>
+            <td class="text-center font-bold text-xs">${p.p9?.t || '30 min'}</td>
             <td class="px-2 font-medium" colspan="2">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
             <td class="px-2">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
         </tr>
@@ -238,7 +238,7 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
         </tr>` : ''}
         <tr class="h-6">
-            <td class="text-center font-bold">3 min</td>
+            <td class="text-center font-bold text-xs">3 min</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
             <td class="px-2">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
