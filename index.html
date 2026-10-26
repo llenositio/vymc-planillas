@@ -52,6 +52,7 @@
             vertical-align: middle;
         }
 
+        /* FORMATO DE DESPLEGABLES AJUSTADO PARA 3 SALAS */
         .select-asig { 
             width: 100%; 
             background: transparent; 
@@ -61,8 +62,11 @@
             outline: none; 
             cursor: pointer; 
             padding: 1px 0; 
-            font-size: 11px; 
+            font-size: 10px; 
             text-transform: uppercase;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
         }
         .select-asig:focus { background-color: #fef08a; }
 
@@ -81,8 +85,8 @@
             body { background: white !important; padding: 0 !important; }
             .print-area { box-shadow: none !important; border: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
             #tablaPlanillaCompleta { width: 100% !important; border: 1.5px solid #000 !important; }
-            #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { border: 1px solid #000 !important; padding: 2px 3px !important; font-size: 10px !important; }
-            .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 10px !important; font-weight: 800 !important; }
+            #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { border: 1px solid #000 !important; padding: 2px 3px !important; font-size: 9.5px !important; }
+            .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 9px !important; font-weight: 800 !important; }
             @page { size: A4 portrait; margin: 0.5cm; }
         }
     </style>
@@ -183,11 +187,11 @@
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
-                        <col style="width: 25%;">
-                        <col style="width: 25%;">
-                        <col style="width: 16.6%;">
-                        <col style="width: 16.6%;">
-                        <col style="width: 16.6%;">
+                        <col style="width: 18% !important;">
+                        <col style="width: 18% !important;">
+                        <col style="width: 21.3% !important;">
+                        <col style="width: 21.3% !important;">
+                        <col style="width: 21.3% !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
