@@ -420,7 +420,7 @@ window.convertirTextoCrudoADelimitado = function() {
     let semanaTexto = "";
     let lecturaTexto = "";
 
-    // 1. Obtener encabezados principales
+    // 1. Extraer encabezados (Semana y Lectura)
     for (let i = 0; i < lineas.length; i++) {
         let l = lineas[i];
         if (l.match(/\d+-\d+\s+DE\s+[A-Z]+/i)) {
@@ -436,25 +436,23 @@ window.convertirTextoCrudoADelimitado = function() {
         resultadoLineas.push(`Semana del ${semanaTexto} // ${lecturaTexto}`);
     }
 
-    // 2. Procesar el cuerpo del programa
+    // 2. Recorrer y agrupar partes completas
     for (let i = 0; i < lineas.length; i++) {
         let l = lineas[i];
 
-        // Secciones
         if (l.includes("TESOROS DE LA BIBLIA")) {
-            resultadoLineas.push("\nTESOROS DE LA BIBLIA");
+            resultadoLineas.push("TESOROS DE LA BIBLIA");
             continue;
         }
         if (l.includes("SEAMOS MEJORES MAESTROS")) {
-            resultadoLineas.push("\nSEAMOS MEJORES MAESTROS");
+            resultadoLineas.push("SEAMOS MEJORES MAESTROS");
             continue;
         }
         if (l.includes("NUESTRA VIDA CRISTIANA")) {
-            resultadoLineas.push("\nNUESTRA VIDA CRISTIANA");
+            resultadoLineas.push("NUESTRA VIDA CRISTIANA");
             continue;
         }
 
-        // Introducción
         if (l.startsWith("Canción") && l.includes("introducción")) {
             let partesIntro = l.split('|');
             resultadoLineas.push(`${partesIntro[0].trim()} // ${partesIntro[1] ? partesIntro[1].trim() : ''}`);
@@ -462,13 +460,11 @@ window.convertirTextoCrudoADelimitado = function() {
             continue;
         }
 
-        // Canción intermedia (Vida Cristiana)
         if (l.startsWith("Canción") && !l.includes("oración") && !l.includes("introducción")) {
             resultadoLineas.push(l);
             continue;
         }
 
-        // Conclusión
         if (l.includes("Palabras de conclusión")) {
             let partesFin = l.split('|');
             resultadoLineas.push(`${partesFin[0].trim()} |`);
@@ -476,43 +472,43 @@ window.convertirTextoCrudoADelimitado = function() {
             continue;
         }
 
-        // Partes numeradas (1. 2. 3. etc)
+        // Detectar inicio de parte numerada (ej: "1. ", "4. ", "10. ")
         let matchNum = l.match(/^(\d+)\.\s*(.+)/);
         if (matchNum) {
             let numParte = matchNum[1];
             let restTexto = matchNum[2];
-            let tiempo = "";
+            let tiempo = "5 min";
+            let descripcion = "";
 
-            // Buscar tiempo en las líneas siguientes cercanas
+            // Buscar tiempo en las líneas siguientes
             for (let j = i; j <= Math.min(i + 4, lineas.length - 1); j++) {
                 let matchTiempo = lineas[j].match(/\((\d+\s*min[s]?\.)\)/i);
                 if (matchTiempo) {
-                    tiempo = matchTiempo[0];
+                    tiempo = matchTiempo[1]; // toma solo "10 min" o "2 mins"
                     break;
                 }
             }
 
-            // Reglas específicas según el tipo de parte
+            // Reglas por sección y número de parte
             if (numParte === "1") {
-                resultadoLineas.push(`${l}//\nDiscurso\n${tiempo}\n`);
+                resultadoLineas.push(`${tiempo} // ${l} // Discurso`);
             } 
             else if (numParte === "2") {
-                resultadoLineas.push(`${l}//Preguntas y respuestas, ${lecturaTexto}\n${tiempo}\n\n`);
+                resultadoLineas.push(`${tiempo} // ${l} // Preguntas y respuestas, ${lecturaTexto}`);
             } 
             else if (numParte === "3") {
                 let detLectura = restTexto.replace(/\(\d+\s*min[s]?\.\)/i, '').trim();
-                resultadoLineas.push(`3. Lectura de la Biblia//${detLectura}${tiempo}\n`);
+                resultadoLineas.push(`${tiempo} // 3. Lectura de la Biblia // ${detLectura}`);
             } 
             else {
-                // Partes de Maestros y Vida Cristiana
                 let partesLinea = restTexto.split('.');
                 let titulo = `${numParte}. ${partesLinea[0].trim()}`;
-                let descripcion = partesLinea.slice(1).join('.').replace(/\(\d+\s*min[s]?\.\)/i, '').trim();
+                descripcion = partesLinea.slice(1).join('.').replace(/\(\d+\s*min[s]?\.\)/i, '').trim();
 
                 if (descripcion) {
-                    resultadoLineas.push(`${titulo}// ${descripcion}\n${tiempo}\n`);
+                    resultadoLineas.push(`${tiempo} // ${titulo} // ${descripcion}`);
                 } else {
-                    resultadoLineas.push(`${titulo}//\n${tiempo}\n`);
+                    resultadoLineas.push(`${tiempo} // ${titulo} // `);
                 }
             }
         }
@@ -526,7 +522,6 @@ window.convertirTextoCrudoADelimitado = function() {
     document.getElementById('btnConvertirCrudo').classList.add('hidden');
     document.getElementById('btnCargarAPlanilla').classList.remove('hidden');
 };
-
 window.cargarDelimitadoAPlanilla = async function() {
     const outEl = document.getElementById('outputTextoDelimitado');
     if (!outEl || !outEl.value.trim()) return;
