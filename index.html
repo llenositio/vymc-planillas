@@ -13,81 +13,14 @@
     <!-- Fuente Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-
-        /* Colores oficiales de las secciones de VyMC */
-        .bg-tesoros { background-color: #164e63; } /* Verde azulado oscuro */
-        .bg-maestros { background-color: #d97706; } /* Naranja / Dorado */
-        .bg-vida { background-color: #b91c1c; }    /* Rojo */
-
-        /* Estilo de la tabla de la planilla */
-        .excel-table {
-            border-collapse: collapse;
-            width: 100%;
-            background-color: white;
-        }
-        .excel-table td, .excel-table th {
-            border: 1px solid #334155;
-            padding: 5px 8px;
-            font-size: 13px;
-        }
-
-        /* Controles de selección dentro de la planilla */
-        .select-asig {
-            width: 100%;
-            background: transparent;
-            font-weight: 700;
-            color: #854d0e;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            padding: 2px 0;
-            font-size: 12px;
-        }
-        .select-asig:focus {
-            background-color: #fef08a;
-            border-radius: 2px;
-        }
-
-        /* Ficha S-89 Estilo Exacto */
-        .s89-card {
-            border: 2px solid #000;
-            background-color: #fff;
-            max-width: 480px;
-            margin: 0 auto;
-            font-family: Arial, sans-serif;
-        }
-        .s89-header {
-            font-weight: 900;
-            text-align: center;
-            font-size: 15px;
-            letter-spacing: -0.2px;
-            border-bottom: 2px solid #000;
-            padding: 8px 4px;
-            text-transform: uppercase;
-        }
-        .s89-row {
-            display: flex;
-            border-bottom: 1px solid #000;
-            font-size: 13px;
-        }
-        .s89-label {
-            width: 110px;
-            font-weight: bold;
-            padding: 4px 6px;
-            border-right: 1px solid #000;
-            background-color: #f8fafc;
-        }
-        .s89-value {
-            flex: 1;
-            padding: 4px 6px;
-        }
-
-        /* Impresión */
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .bg-tesoros { background-color: #164e63; }
+        .bg-maestros { background-color: #d97706; }
+        .bg-vida { background-color: #b91c1c; }
+        .excel-table { border-collapse: collapse; width: 100%; background-color: white; }
+        .excel-table td, .excel-table th { border: 1px solid #334155; padding: 5px 8px; font-size: 13px; }
+        .select-asig { width: 100%; background: transparent; font-weight: 700; color: #854d0e; border: none; outline: none; cursor: pointer; padding: 2px 0; font-size: 12px; }
+        .select-asig:focus { background-color: #fef08a; border-radius: 2px; }
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
@@ -100,7 +33,7 @@
 </head>
 <body class="pb-12">
 
-    <!-- BARRA NAVEGACIÓN PRINCIPAL (No imprimible) -->
+    <!-- BARRA NAVEGACIÓN PRINCIPAL -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 no-print">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
@@ -113,7 +46,7 @@
                 </div>
             </div>
 
-            <!-- Pestañas de Navegación -->
+            <!-- Pestañas -->
             <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-xl text-xs font-semibold">
                 <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
                     <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
@@ -124,33 +57,22 @@
                 <button onclick="cambiarPestaña('hermanos')" id="tab-hermanos" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
                     <i class="fa-solid fa-users mr-1"></i> Lista de Hermanos (Matriz)
                 </button>
-                <button onclick="cambiarPestaña('envio')" id="tab-envio" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
-                    <i class="fa-solid fa-paper-plane mr-1"></i> Enviar Asignaciones (S-89)
-                </button>
             </nav>
         </div>
     </header>
 
     <div class="max-w-7xl mx-auto px-2 sm:px-4 mt-4">
 
-        <!-- ========================================================= -->
-        <!-- PESTAÑA 1: PLANILLA MENSUAL DE REUNIÓN                    -->
-        <!-- ========================================================= -->
+        <!-- PESTAÑA 1: PLANILLA MENSUAL -->
         <section id="sec-planilla" class="tab-content">
-            
-            <!-- Barra Superior de Control de Semanas y Eventos Especiales -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4 no-print">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                     
-                    <!-- Navegador de Semanas -->
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="text-xs font-bold uppercase text-slate-500">Semana del Mes:</span>
-                        <div id="selectorSemanas" class="flex gap-1">
-                            <!-- Botones generados dinámicamente -->
-                        </div>
+                        <div id="selectorSemanas" class="flex gap-1"></div>
                     </div>
 
-                    <!-- Botones de Acción -->
                     <div class="flex items-center gap-2">
                         <span id="estadoGuardado" class="text-xs font-semibold text-emerald-600 mr-2 flex items-center gap-1 opacity-0 transition-opacity">
                             <i class="fa-solid fa-cloud-check"></i> Guardado en la nube
@@ -163,24 +85,23 @@
 
                 <hr class="my-3 border-slate-100">
 
-                <!-- CONFIGURACIÓN DE EVENTO ESPECIAL Y EXCEPCIONES -->
-                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
                         <span class="font-bold text-slate-700 flex items-center gap-1.5">
-                            <i class="fa-solid fa-sliders text-amber-600"></i> Evento Especial o Formato de esta Semana:
+                            <i class="fa-solid fa-sliders text-amber-600"></i> Formato de esta Semana:
                         </span>
                         <div class="flex gap-3 flex-wrap font-medium">
                             <label class="inline-flex items-center gap-1 cursor-pointer">
                                 <input type="radio" name="tipoSemana" value="normal" checked onchange="actualizarTipoSemana('normal')" class="text-amber-600 focus:ring-amber-500">
-                                <span>Semana Normal</span>
+                                <span>Normal</span>
                             </label>
                             <label class="inline-flex items-center gap-1 cursor-pointer text-blue-700">
                                 <input type="radio" name="tipoSemana" value="viajante" onchange="actualizarTipoSemana('viajante')" class="text-blue-600 focus:ring-blue-500">
-                                <span class="font-bold"><i class="fa-solid fa-user-tie"></i> Visita del Viajante</span>
+                                <span class="font-bold"><i class="fa-solid fa-user-tie"></i> Visita Viajante</span>
                             </label>
                             <label class="inline-flex items-center gap-1 cursor-pointer text-red-700">
                                 <input type="radio" name="tipoSemana" value="asamblea" onchange="actualizarTipoSemana('asamblea')" class="text-red-600 focus:ring-red-500">
-                                <span class="font-bold"><i class="fa-solid fa-building-columns"></i> Asamblea (Cancelada)</span>
+                                <span class="font-bold"><i class="fa-solid fa-building-columns"></i> Asamblea</span>
                             </label>
                             <label class="inline-flex items-center gap-1 cursor-pointer text-purple-700">
                                 <input type="radio" name="tipoSemana" value="conmemoracion" onchange="actualizarTipoSemana('conmemoracion')" class="text-purple-600 focus:ring-purple-500">
@@ -189,54 +110,37 @@
                         </div>
                     </div>
 
-                    <!-- Opciones de ajuste manual -->
-                    <div class="flex flex-wrap gap-4 text-slate-600 pt-1 border-t border-slate-200/80">
-                        <span class="font-semibold text-slate-500">Partes activas:</span>
-                        <label class="inline-flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" id="chk_smm2" checked onchange="toggleParteManual('p5')" class="rounded text-amber-600">
-                            <span>SMM Intervención 2</span>
-                        </label>
-                        <label class="inline-flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" id="chk_smm3" checked onchange="toggleParteManual('p6')" class="rounded text-amber-600">
-                            <span>SMM Intervención 3</span>
-                        </label>
-                        <label class="inline-flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" id="chk_smm4" checked onchange="toggleParteManual('p7')" class="rounded text-amber-600">
-                            <span>SMM Intervención 4</span>
-                        </label>
-                        <label class="inline-flex items-center gap-1 cursor-pointer">
-                            <input type="checkbox" id="chk_nvc2" checked onchange="toggleParteManual('p8b')" class="rounded text-amber-600">
-                            <span>Segunda Parte de NVC</span>
-                        </label>
+                    <!-- Selector Dinámico de Cantidad de Salas -->
+                    <div class="flex items-center gap-2 bg-white px-2.5 py-1 rounded border border-slate-300">
+                        <span class="font-bold text-slate-700">Salas Activas:</span>
+                        <select id="selectNumSalas" onchange="cambiarNumSalasSemana(this.value)" class="font-bold text-amber-800 bg-transparent outline-none cursor-pointer">
+                            <option value="1">1 Sala (Principal)</option>
+                            <option value="2">2 Salas (A y B)</option>
+                            <option value="3">3 Salas (A, B y C)</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <!-- TABLA DE LA PLANILLA (Limpia, sin datos o encabezados fijos) -->
+            <!-- TABLA DE PLANILLA -->
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
                 <table class="excel-table min-w-[700px]" id="tablaPlanillaCompleta">
-                    <thead id="cabeceraTablaPlanilla">
-                        <!-- Generado dinámicamente -->
-                    </thead>
-                    <tbody id="cuerpoTablaPlanilla">
-                        <!-- Generado dinámicamente -->
-                    </tbody>
+                    <thead id="cabeceraTablaPlanilla"></thead>
+                    <tbody id="cuerpoTablaPlanilla"></tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ========================================================= -->
-        <!-- PESTAÑA 2: CARGA DE PROGRAMA MENSUAL EN TEXTO              -->
-        <!-- ========================================================= -->
+        <!-- PESTAÑA 2: CARGAR PROGRAMA -->
         <section id="sec-carga" class="tab-content hidden">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 max-w-4xl mx-auto">
                 <h2 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
                     <i class="fa-solid fa-paste text-amber-600"></i> Pegar Programa Completo del Mes
                 </h2>
                 <p class="text-xs text-slate-500 mb-4">
-                    Puedes copiar y pegar de una sola vez el texto de las 4 o 5 semanas de la *Guía de Actividades*. El analizador separará automáticamente cada semana y extraerá los títulos, tiempos y lecturas.
+                    Copia y pega el texto de las semanas de la Guía de Actividades. Se extraerán automáticamente títulos, lecciones y minutos.
                 </p>
 
                 <textarea id="textoMesCompleto" rows="12" class="w-full p-3 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-amber-500 bg-slate-50" placeholder="Pega aquí el programa continuo del mes..."></textarea>
@@ -253,9 +157,7 @@
             </div>
         </section>
 
-        <!-- ========================================================= -->
-        <!-- PESTAÑA 3: MATRIZ DE CUALIFICACIONES DE HERMANOS           -->
-        <!-- ========================================================= -->
+        <!-- PESTAÑA 3: MATRIZ DE HERMANOS -->
         <section id="sec-hermanos" class="tab-content hidden">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -263,9 +165,6 @@
                         <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
                             <i class="fa-solid fa-users-gear text-amber-600"></i> Matriz de Hermanos y Cualificaciones
                         </h2>
-                        <p class="text-xs text-slate-500">
-                            Marca con una "X" las asignaciones que cada hermano está capacitado para presentar. Se guarda automáticamente en la base de datos.
-                        </p>
                     </div>
                     <button onclick="agregarNuevoHermano()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1">
                         <i class="fa-solid fa-user-plus"></i> Agregar Hermano
@@ -293,687 +192,17 @@
                                 <th class="w-12 no-print">Acción</th>
                             </tr>
                         </thead>
-                        <tbody id="cuerpoTablaHermanos">
-                            <!-- Filas de hermanos cargadas dinámicamente -->
-                        </tbody>
+                        <tbody id="cuerpoTablaHermanos"></tbody>
                     </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================================= -->
-        <!-- PESTAÑA 4: MÓDULO DE ENVÍO DE ASIGNACIONES (S-89)         -->
-        <!-- ========================================================= -->
-        <section id="sec-envio" class="tab-content hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-5 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <h2 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-list-check text-amber-600"></i> Asignaciones de la Semana
-                    </h2>
-                    <div class="space-y-2 text-xs" id="listaPartesEnvio">
-                        <!-- Lista interactiva -->
-                    </div>
-                </div>
-
-                <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center">
-                    <div class="w-full flex justify-between items-center mb-4">
-                        <h3 class="text-sm font-bold text-slate-800">Ficha de Asignación S-89 (Vista Previa)</h3>
-                        <div class="flex gap-2">
-                            <button onclick="copiarTextoWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
-                                <i class="fa-brands fa-whatsapp text-sm"></i> Enviar por WhatsApp
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="fichaS89Contenedor" class="s89-card w-full shadow-md rounded">
-                        <div class="s89-header">
-                            ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS
-                        </div>
-                        <div class="s89-row">
-                            <div class="s89-label">Nombre</div>
-                            <div class="s89-value font-bold text-slate-900" id="s89_nombre">-</div>
-                        </div>
-                        <div class="s89-row">
-                            <div class="s89-label">Ayudante</div>
-                            <div class="s89-value" id="s89_ayudante">-</div>
-                        </div>
-                        <div class="s89-row">
-                            <div class="s89-label">Fecha</div>
-                            <div class="s89-value font-medium" id="s89_fecha">-</div>
-                        </div>
-                        <div class="s89-row">
-                            <div class="s89-label">Intervenc N°</div>
-                            <div class="s89-value font-bold" id="s89_intervencion">-</div>
-                        </div>
-                        <div class="s89-row">
-                            <div class="s89-label">Se presenta en</div>
-                            <div class="s89-value flex gap-6 font-semibold">
-                                <label class="inline-flex items-center gap-1"><input type="radio" name="salaS89" checked class="text-black"> Sala Principal / A</label>
-                                <label class="inline-flex items-center gap-1"><input type="radio" name="salaS89" class="text-black"> Sala B</label>
-                                <label class="inline-flex items-center gap-1"><input type="radio" name="salaS89" class="text-black"> Sala C</label>
-                            </div>
-                        </div>
-                        <div class="p-3 text-[11px] leading-relaxed text-slate-700 bg-slate-50 border-t border-black">
-                            <span class="font-bold">Nota al estudiante:</span><br>
-                            En la <i>Guía de actividades</i> encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las <i>Instrucciones para la reunión Vida y Ministerio Cristianos</i> (S-38).
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
 
     </div>
 
-    <!-- SCRIPT PRINCIPAL INTEGRADOR SUPABASE CON DIBUJO 100% DINÁMICO -->
-    <script>
-        // Configuración oficial de conexión a Supabase (vymc-db)
-        const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-'; // Pega tu clave publishable aquí
-
-        let db = null;
-        if (window.supabase && window.supabase.createClient) {
-            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-
-        let listaHermanos = [];
-        let mesActualClave = "2026-10";
-        let programaMes = [];
-        let semanaActivaIdx = 0;
-
-        // INICIALIZACIÓN
-        window.onload = async function() {
-            try {
-                if (db) {
-                    await cargarHermanosDesdeSupabase();
-                    await cargarPlanillaDesdeSupabase();
-                } else {
-                    renderizarMatrizHermanos();
-                }
-            } catch (err) {
-                console.error("Error al inicializar:", err);
-                renderizarMatrizHermanos();
-            }
-
-            if (programaMes && programaMes.length > 0) {
-                renderizarSelectorSemanas();
-                cargarSemanaEnPlanilla(0);
-            } else {
-                mostrarEstadoTablaVacia();
-            }
-        };
-
-        function mostrarEstadoTablaVacia() {
-            document.getElementById('cabeceraTablaPlanilla').innerHTML = '';
-            document.getElementById('cuerpoTablaPlanilla').innerHTML = `
-                <tr>
-                    <td colspan="4" class="py-12 text-center text-slate-400">
-                        <i class="fa-solid fa-calendar-plus text-4xl mb-3 text-slate-300"></i>
-                        <p class="font-bold text-sm">No hay un programa cargado para este mes.</p>
-                        <p class="text-xs text-slate-400 mt-1">Ve a la pestaña <b>"Cargar Programa"</b> para pegar el texto de la Guía de Actividades.</p>
-                    </td>
-                </tr>
-            `;
-        }
-
-        // CARGAR PLANILLA DESDE SUPABASE
-        async function cargarPlanillaDesdeSupabase() {
-            if (!db) return;
-            const { data, error } = await db.from('planillas').select('datos').eq('mes_ano', mesActualClave).single();
-            if (data && data.datos && data.datos.length > 0) {
-                programaMes = data.datos;
-            }
-        }
-
-        // GUARDAR PLANILLA EN SUPABASE
-        async function guardarPlanillaEnSupabase() {
-            if (!db) return;
-            const el = document.getElementById('estadoGuardado');
-            if (el) el.classList.remove('opacity-0');
-
-            await db.from('planillas').upsert({
-                mes_ano: mesActualClave,
-                datos: programaMes,
-                updated_at: new Date()
-            }, { onConflict: 'mes_ano' });
-
-            setTimeout(() => {
-                if (el) el.classList.add('opacity-0');
-            }, 1800);
-        }
-
-        // CARGAR HERMANOS DESDE SUPABASE
-        async function cargarHermanosDesdeSupabase() {
-            if (!db) return;
-            const { data, error } = await db.from('hermanos').select('*').order('id');
-            if (error) {
-                console.error("Error Supabase:", error);
-                renderizarMatrizHermanos();
-                return;
-            }
-            if (data && data.length > 0) {
-                listaHermanos = data.map(h => ({
-                    id: h.id,
-                    sexo: h.sexo || 'V',
-                    orac: h.oracion ? 'X' : '',
-                    pres: h.pres_vymc ? 'X' : '',
-                    disc: h.disc_tesoros ? 'X' : '',
-                    perlas: h.perlas ? 'X' : '',
-                    lec: h.lec_biblia ? 'X' : '',
-                    smm: h.smm ? 'X' : '',
-                    nvc: h.nvc ? 'X' : '',
-                    eb: h.ebc ? 'X' : '',
-                    lectorL: h.lector_ebc ? 'X' : '',
-                    presPub: h.pres_pub ? 'X' : '',
-                    lectorW: h.lector_atalaya ? 'X' : '',
-                    nombre: h.nombre
-                }));
-            }
-            renderizarMatrizHermanos();
-        }
-
-        // NAVEGACIÓN
-        function cambiarPestaña(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`sec-${tab}`).classList.remove('hidden');
-
-            document.querySelectorAll('nav button').forEach(btn => {
-                btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
-            });
-            document.getElementById(`tab-${tab}`).className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-
-            if (tab === 'envio') generarListaPartesEnvio();
-        }
-
-        function renderizarSelectorSemanas() {
-            const cont = document.getElementById('selectorSemanas');
-            cont.innerHTML = '';
-            programaMes.forEach((s, idx) => {
-                const btn = document.createElement('button');
-                btn.onclick = () => cargarSemanaEnPlanilla(idx);
-                btn.className = `px-2.5 py-1 text-xs font-bold rounded-md border transition ${idx === semanaActivaIdx ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`;
-                btn.innerText = `Sem ${idx + 1}: ${s.semana.split(' DE ')[0]}`;
-                cont.appendChild(btn);
-            });
-        }
-
-        function obtenerOpcionesHermanos(cat) {
-            return listaHermanos.filter(h => {
-                if (!cat) return true;
-                if (cat === 'orac') return h.orac === 'X';
-                if (cat === 'pres') return h.pres === 'X';
-                if (cat === 'disc') return h.disc === 'X';
-                if (cat === 'perlas') return h.perlas === 'X';
-                if (cat === 'lec') return h.lec === 'X';
-                if (cat === 'smm') return h.smm === 'X';
-                if (cat === 'nvc') return h.nvc === 'X';
-                if (cat === 'eb') return h.eb === 'X';
-                if (cat === 'lectorL') return h.lectorL === 'X';
-                if (cat === 'presPub') return h.presPub === 'X';
-                if (cat === 'lectorW') return h.lectorW === 'X';
-                return true;
-            });
-        }
-
-        function crearSelectHTML(id, cat, valorActual = "") {
-            const aptos = obtenerOpcionesHermanos(cat);
-            let options = `<option value="">-- Seleccionar --</option>`;
-            aptos.forEach(h => {
-                const sel = h.nombre === valorActual ? 'selected' : '';
-                options += `<option value="${h.nombre}" ${sel}>${h.nombre}</option>`;
-            });
-            return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
-        }
-
-        function cargarSemanaEnPlanilla(idx) {
-            if (!programaMes || programaMes.length === 0) return;
-            semanaActivaIdx = idx;
-            renderizarSelectorSemanas();
-            const sem = programaMes[idx];
-
-            // Renderizar la cabecera dinámica de la semana
-            const cabecera = document.getElementById('cabeceraTablaPlanilla');
-            cabecera.innerHTML = `
-                <tr>
-                    <th colspan="4" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
-                        <span class="text-lg sm:text-2xl font-black text-slate-900">
-                            Semana del ${sem.semana}, ${sem.lectura}
-                        </span>
-                    </th>
-                </tr>
-            `;
-
-            const radios = document.getElementsByName('tipoSemana');
-            radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
-
-            const banner = document.getElementById('bannerEventoEspecial');
-            const tabla = document.getElementById('tablaPlanillaCompleta');
-
-            if (sem.tipoSemana === 'asamblea') {
-                banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-                banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
-                tabla.classList.add('opacity-30', 'pointer-events-none');
-            } else if (sem.tipoSemana === 'conmemoracion') {
-                banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
-                banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO`;
-                tabla.classList.remove('opacity-30', 'pointer-events-none');
-            } else {
-                banner.classList.add('hidden');
-                tabla.classList.remove('opacity-30', 'pointer-events-none');
-            }
-
-            const p = sem.partes || {};
-            const cuerpo = document.getElementById('cuerpoTablaPlanilla');
-            
-            cuerpo.innerHTML = `
-                <tr class="h-6">
-                    <td class="w-12 text-center font-bold">1 min</td>
-                    <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
-                    <td class="w-64 px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
-                </tr>
-                <tr class="h-6">
-                    <td></td>
-                    <td class="px-2 font-medium" colspan="2">Oración</td>
-                    <td class="px-2">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
-                </tr>
-
-                <tr>
-                    <th colspan="4" class="bg-tesoros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
-                </tr>
-                <tr>
-                    <td class="text-center font-bold w-12">${p.p1?.t || '10 min'}</td>
-                    <td class="px-2 font-medium w-64">${p.p1?.tit || '1. Discurso'}</td>
-                    <td class="px-2 font-semibold w-56">${p.p1?.desc || 'Discurso'}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
-                </tr>
-                <tr>
-                    <td class="text-center font-bold">${p.p2?.t || '10 min'}</td>
-                    <td class="px-2 font-medium">${p.p2?.tit || '2. Busquemos perlas escondidas'}</td>
-                    <td class="px-2 font-semibold">${p.p2?.desc || 'Preguntas y respuestas'}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
-                </tr>
-                <tr>
-                    <td class="text-center font-bold">${p.p3?.t || '4 min'}</td>
-                    <td class="px-2 font-medium" colspan="2">${p.p3?.tit || '3. Lectura de la Biblia'}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p3', 'lec', p.p3?.asig)}</td>
-                </tr>
-
-                <tr>
-                    <th colspan="4" class="bg-maestros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
-                </tr>
-                ${p.p4?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p4.t}</td>
-                    <td class="px-2 font-medium">${p.p4.tit}</td>
-                    <td class="px-2">${p.p4.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p4', 'smm', p.p4.asig)}</td>
-                </tr>` : ''}
-                ${p.p5?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p5.t}</td>
-                    <td class="px-2 font-medium">${p.p5.tit}</td>
-                    <td class="px-2">${p.p5.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p5', 'smm', p.p5.asig)}</td>
-                </tr>` : ''}
-                ${p.p6?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p6.t}</td>
-                    <td class="px-2 font-medium">${p.p6.tit}</td>
-                    <td class="px-2">${p.p6.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p6', 'smm', p.p6.asig)}</td>
-                </tr>` : ''}
-                ${p.p7?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p7.t}</td>
-                    <td class="px-2 font-medium">${p.p7.tit}</td>
-                    <td class="px-2">${p.p7.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p7', 'smm', p.p7.asig)}</td>
-                </tr>` : ''}
-
-                <tr>
-                    <th colspan="4" class="bg-vida text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
-                </tr>
-                <tr>
-                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
-                </tr>
-                ${p.p8?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p8.t}</td>
-                    <td class="px-2 font-medium">${p.p8.tit}</td>
-                    <td class="px-2">${p.p8.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p8', 'nvc', p.p8.asig)}</td>
-                </tr>` : ''}
-                ${p.p8b?.tit ? `
-                <tr>
-                    <td class="text-center font-bold">${p.p8b.t}</td>
-                    <td class="px-2 font-medium">${p.p8b.tit}</td>
-                    <td class="px-2">${p.p8b.desc}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p8b', 'nvc', p.p8b.asig)}</td>
-                </tr>` : ''}
-                <tr>
-                    <td class="text-center font-bold">${p.p9?.t || '30 min'}</td>
-                    <td class="px-2 font-medium" colspan="2">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
-                    <td class="px-2">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
-                </tr>
-                ${sem.tipoSemana !== 'viajante' ? `
-                <tr>
-                    <td></td>
-                    <td class="px-2 font-medium" colspan="2">Lector del Estudio Bíblico:</td>
-                    <td class="px-2">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
-                </tr>` : ''}
-                <tr class="h-6">
-                    <td class="text-center font-bold">3 min</td>
-                    <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
-                    <td class="px-2">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
-                </tr>
-                <tr class="h-6">
-                    <td></td>
-                    <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
-                    <td class="px-2">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
-                </tr>
-
-                <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-                    <td class="px-2 font-bold py-1.5" colspan="2">
-                        Domingo, presidencia: 
-                        <div class="w-48 inline-block ml-2">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
-                    </td>
-                    <td class="px-2 font-bold py-1.5 text-right" colspan="2">
-                        Lector La Atalaya: 
-                        <div class="w-48 inline-block ml-2 text-left">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
-                    </td>
-                </tr>
-            `;
-        }
-
-        async function guardarAsignacionSemana(elemId) {
-            const val = document.getElementById(elemId).value;
-            const sem = programaMes[semanaActivaIdx];
-
-            if (elemId === 'asig_presi') sem.presidencia = val;
-            else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
-            else if (elemId === 'asig_p1') sem.partes.p1.asig = val;
-            else if (elemId === 'asig_p2') sem.partes.p2.asig = val;
-            else if (elemId === 'asig_p3') sem.partes.p3.asig = val;
-            else if (elemId === 'asig_p4' && sem.partes.p4) sem.partes.p4.asig = val;
-            else if (elemId === 'asig_p5' && sem.partes.p5) sem.partes.p5.asig = val;
-            else if (elemId === 'asig_p6' && sem.partes.p6) sem.partes.p6.asig = val;
-            else if (elemId === 'asig_p7' && sem.partes.p7) sem.partes.p7.asig = val;
-            else if (elemId === 'asig_p8' && sem.partes.p8) sem.partes.p8.asig = val;
-            else if (elemId === 'asig_p8b' && sem.partes.p8b) sem.partes.p8b.asig = val;
-            else if (elemId === 'asig_p9') sem.partes.p9.asig = val;
-            else if (elemId === 'asig_lector_eb') sem.partes.p9.lector = val;
-            else if (elemId === 'asig_repaso') sem.repaso = val;
-            else if (elemId === 'asig_orac_fin') sem.oracionFin = val;
-            else if (elemId === 'asig_dom_presi') sem.domPresi = val;
-            else if (elemId === 'asig_dom_lector') sem.domLector = val;
-
-            await guardarPlanillaEnSupabase();
-        }
-
-        async function actualizarTipoSemana(tipo) {
-            programaMes[semanaActivaIdx].tipoSemana = tipo;
-            cargarSemanaEnPlanilla(semanaActivaIdx);
-            await guardarPlanillaEnSupabase();
-        }
-
-        async function toggleParteManual(parteKey) {
-            const p = programaMes[semanaActivaIdx].partes[parteKey];
-            if (!p) return;
-            if (p.tit) {
-                p._backupTit = p.tit;
-                p.tit = "";
-            } else {
-                p.tit = p._backupTit || "Intervención opcional";
-            }
-            cargarSemanaEnPlanilla(semanaActivaIdx);
-            await guardarPlanillaEnSupabase();
-        }
-
-        function renderizarMatrizHermanos() {
-            const cuerpo = document.getElementById('cuerpoTablaHermanos');
-            cuerpo.innerHTML = '';
-
-            listaHermanos.forEach((h, index) => {
-                const tr = document.createElement('tr');
-                tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-                tr.innerHTML = `
-                    <td class="font-bold text-slate-400">${index + 1}</td>
-                    <td>
-                        <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
-                            <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
-                            <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
-                        </select>
-                    </td>
-                    ${['orac', 'pres', 'disc', 'perlas', 'lec', 'smm', 'nvc', 'eb', 'lectorL', 'presPub', 'lectorW'].map(col => `
-                        <td>
-                            <input type="checkbox" ${h[col] === 'X' ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked ? 'X' : '')" class="rounded text-amber-600">
-                        </td>
-                    `).join('')}
-                    <td class="text-left font-bold px-3">
-                        <input type="text" value="${h.nombre}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
-                    </td>
-                    <td class="no-print">
-                        <button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                `;
-                cuerpo.appendChild(tr);
-            });
-        }
-
-        async function actualizarHermano(id, campo, valor) {
-            const h = listaHermanos.find(item => item.id === id);
-            if (h) {
-                h[campo] = valor;
-                if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-
-                if (!db) return;
-
-                const dbMap = {
-                    sexo: 'sexo', nombre: 'nombre',
-                    orac: 'oracion', pres: 'pres_vymc', disc: 'disc_tesoros',
-                    perlas: 'perlas', lec: 'lec_biblia', smm: 'smm',
-                    nvc: 'nvc', eb: 'ebc', lectorL: 'lector_ebc',
-                    presPub: 'pres_pub', lectorW: 'lector_atalaya'
-                };
-
-                const dbCampo = dbMap[campo];
-                if (dbCampo) {
-                    const dbValor = (typeof valor === 'string' && valor === 'X') ? true : (valor === '' ? false : valor);
-                    await db.from('hermanos').update({ [dbCampo]: dbValor }).eq('id', id);
-                }
-            }
-        }
-
-        async function agregarNuevoHermano() {
-            if (db) {
-                const { data, error } = await db.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
-                if (!error && data) {
-                    await cargarHermanosDesdeSupabase();
-                    return;
-                }
-            }
-            const nuevoId = listaHermanos.length ? Math.max(...listaHermanos.map(h => h.id)) + 1 : 1;
-            listaHermanos.push({
-                id: nuevoId, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'NUEVO HERMANO'
-            });
-            renderizarMatrizHermanos();
-        }
-
-        async function eliminarHermano(id) {
-            if (db) {
-                await db.from('hermanos').delete().eq('id', id);
-                await cargarHermanosDesdeSupabase();
-            } else {
-                listaHermanos = listaHermanos.filter(h => h.id !== id);
-                renderizarMatrizHermanos();
-            }
-            if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-        }
-
-        function generarListaPartesEnvio() {
-            if (!programaMes || programaMes.length === 0) return;
-            const sem = programaMes[semanaActivaIdx];
-            const cont = document.getElementById('listaPartesEnvio');
-            cont.innerHTML = '';
-
-            const items = [];
-            if (sem.partes?.p3?.asig) items.push({ tit: sem.partes.p3.tit, asig: sem.partes.p3.asig });
-            if (sem.partes?.p4?.asig) items.push({ tit: sem.partes.p4.tit, asig: sem.partes.p4.asig });
-            if (sem.partes?.p5?.asig) items.push({ tit: sem.partes.p5.tit, asig: sem.partes.p5.asig });
-            if (sem.partes?.p6?.asig) items.push({ tit: sem.partes.p6.tit, asig: sem.partes.p6.asig });
-            if (sem.partes?.p7?.asig) items.push({ tit: sem.partes.p7.tit, asig: sem.partes.p7.asig });
-            if (sem.partes?.p1?.asig) items.push({ tit: sem.partes.p1.tit, asig: sem.partes.p1.asig });
-            if (sem.partes?.p8?.asig) items.push({ tit: sem.partes.p8.tit, asig: sem.partes.p8.asig });
-
-            if (items.length === 0) {
-                cont.innerHTML = `<div class="p-4 text-center text-slate-400">No hay hermanos asignados en esta semana para generar fichas S-89.</div>`;
-                return;
-            }
-
-            items.forEach((it) => {
-                const card = document.createElement('div');
-                card.className = "p-3 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-amber-50 hover:border-amber-300 transition flex justify-between items-center";
-                card.onclick = () => verFichaS89(it.asig, "", it.tit);
-                card.innerHTML = `
-                    <div>
-                        <div class="font-bold text-slate-900">${it.asig}</div>
-                        <div class="text-[11px] text-slate-500">${it.tit}</div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
-                `;
-                cont.appendChild(card);
-            });
-
-            verFichaS89(items[0].asig, "", items[0].tit);
-        }
-
-        function verFichaS89(nombre, ayudante, parteTit) {
-            if (!programaMes || programaMes.length === 0) return;
-            const sem = programaMes[semanaActivaIdx];
-            document.getElementById('s89_nombre').innerText = nombre || "-";
-            document.getElementById('s89_ayudante').innerText = ayudante || "-";
-            document.getElementById('s89_fecha').innerText = `Semana del ${sem.semana}, ${sem.lectura}`;
-            document.getElementById('s89_intervencion').innerText = parteTit || "-";
-        }
-
-        function copiarTextoWhatsApp() {
-            const nombre = document.getElementById('s89_nombre').innerText;
-            const fecha = document.getElementById('s89_fecha').innerText;
-            const parte = document.getElementById('s89_intervencion').innerText;
-
-            const msj = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n` +
-                        `👤 *Estimado/a:* ${nombre}\n` +
-                        `📅 *${fecha}*\n` +
-                        `🎤 *Intervención:* ${parte}\n\n` +
-                        `En la *Guía de actividades* encontrará la información necesaria para su parte. ¡Muchas gracias por su valiosa colaboración!`;
-
-            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msj)}`;
-            window.open(url, '_blank');
-        }
-
-       function cargarEjemploDemoMes() {
-    document.getElementById('textoMesCompleto').value = 
-`5-11 DE OCTUBRE
-JEREMÍAS 40, 41
-Canciones: 33, 17, 38
-1. Tengamos un punto de vista equilibrado de la protección de Jehová (10 min) - Discurso
-2. Busquemos perlas escondidas (10 min) - Preguntas y respuestas
-3. Lectura de la Biblia: Jer 40:1-10 (4 min)
-4. Empiece conversaciones (2 min) - DE CASA EN CASA
-5. Empiece conversaciones (2 min) - PREDICACIÓN INFORMAL
-6. Empiece conversaciones (4 min) - PREDICACIÓN PÚBLICA
-7. Explique sus creencias (3 min) - Escenificación
-8. Jehová protege a las viudas (15 min) - Análisis con el auditorio
-9. Estudio bíblico de la congregación: wcg cap. 11 (30 min)
-
-12-18 DE OCTUBRE
-JEREMÍAS 42, 43
-Canciones: 84, 100, 118
-1. Jehová nunca nos abandona (10 min) - Discurso
-2. Busquemos perlas escondidas (10 min) - Preguntas y respuestas
-3. Lectura de la Biblia: Jer 42:1-12 (4 min)
-4. Seamos Mejores Maestros (15 min) - Intervenciones estudiantiles agrupadas
-8. Necesidades de la congregación (10 min) - Discurso local
-9. Discurso de servicio del Superintendente de Circuito (30 min)`;
-
-    alert("Texto de demostración cargado en el cuadro.");
-}
-
-async function procesarTextoMes() {
-    const rawText = document.getElementById('textoMesCompleto').value.trim();
-    if (!rawText) {
-        alert("Por favor pega el texto de la Guía de Actividades antes de procesar.");
-        return;
-    }
-
-    // Dividir por bloques de semanas (busca fechas como X-X DE MES)
-    const bloques = rawText.split(/\n(?=\d{1,2}-\d{1,2}\s+DE\s+)/i);
-    let nuevasSemanas = [];
-
-    bloques.forEach((bloque, idx) => {
-        const lineas = bloque.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (lineas.length < 2) return;
-
-        const semanaNom = lineas[0];
-        const lecturaNom = lineas[1];
-
-        // Buscar canciones
-        let canciones = ["", "", ""];
-        const lineaCanciones = lineas.find(l => l.toLowerCase().includes("cancion") || l.toLowerCase().includes("canciones"));
-        if (lineaCanciones) {
-            const numCanciones = lineaCanciones.match(/\d+/g);
-            if (numCanciones) canciones = numCanciones.slice(0, 3);
-        }
-
-        // Construir partes dinámicamente
-        let partes = {};
-
-        lineas.forEach(linea => {
-            const matchParte = linea.match(/^(\d+)\.\s+(.*)/);
-            if (matchParte) {
-                const num = matchParte[1];
-                const resto = matchParte[2];
-                const matchTiempo = resto.match(/\((\d+\s*min[^\)]*)\)/i);
-                const t = matchTiempo ? matchTiempo[1] : "";
-                const tit = resto.replace(/\([^\)]*\)/g, '').trim();
-
-                partes[`p${num}`] = {
-                    t: t,
-                    tit: `${num}. ${tit}`,
-                    desc: "",
-                    cat: num === "1" ? "disc" : num === "2" ? "perlas" : num === "3" ? "lec" : parseInt(num) <= 7 ? "smm" : parseInt(num) <= 8 ? "nvc" : "eb",
-                    asig: ""
-                };
-            }
-        });
-
-        nuevasSemanas.push({
-            idSemana: idx,
-            semana: semanaNom,
-            lectura: lecturaNom,
-            tipoSemana: "normal",
-            canciones: canciones,
-            partes: partes,
-            presidencia: "",
-            oracionIni: "",
-            repaso: "",
-            oracionFin: "",
-            domPresi: "",
-            domLector: ""
-        });
-    });
-
-    if (nuevasSemanas.length > 0) {
-        programaMes = nuevasSemanas;
-        semanaActivaIdx = 0;
-        await guardarPlanillaEnSupabase();
-        renderizarSelectorSemanas();
-        cargarSemanaEnPlanilla(0);
-        cambiarPestaña('planilla');
-        alert(`¡Éxito! Se procesaron y generaron ${nuevasSemanas.length} semanas de reunión.`);
-    } else {
-        alert("No se pudo detectar el formato de las semanas. Asegúrate de incluir encabezados como '5-11 DE OCTUBRE'.");
-    }
-}
-    </script>
+    <!-- CARGA DE SCRIPTS MODULARES -->
+    <script src="js/supabase.js"></script>
+    <script src="js/parser.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
