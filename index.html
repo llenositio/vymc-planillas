@@ -19,7 +19,7 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* ESTRUCTURA BASE DE 7 COLUMNAS */
+        /* ESTRUCTURA BASE DE 9 COLUMNAS (SIMETRÍA PERFECTA) */
         #tablaPlanillaCompleta { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -59,6 +59,7 @@
             transition: color 0.2s, background-color 0.2s;
             border-radius: 2px;
             padding: 1px 2px;
+            cursor: text;
         }
         .editable-field:focus {
             color: #0f172a !important; /* Texto negro al editar */
@@ -115,7 +116,7 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-tight">Gestor VyMC - Planilla y Asignaciones</h1>
-                    <p class="text-xs text-slate-400">Matriz de 7 Micro-Columnas • Simetría Total de Salas</p>
+                    <p class="text-xs text-slate-400">Matriz de 9 Micro-Columnas • Simetría Total 100% Editable</p>
                 </div>
             </div>
 
@@ -198,16 +199,18 @@
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
-                <!-- ESTRUCTURA BASE DE 7 COLUMNAS -->
+                <!-- ESTRUCTURA BASE DE 9 COLUMNAS PERFECTAMENTE PROPORCIONADAS -->
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
                         <col style="width: 15% !important;">
                         <col style="width: 25% !important;">
-                        <col style="width: 15% !important;">
-                        <col style="width: 15% !important;">
-                        <col style="width: 15% !important;">
-                        <col style="width: 15% !important;">
+                        <col style="width: 10% !important;">
+                        <col style="width: 10% !important;">
+                        <col style="width: 10% !important;">
+                        <col style="width: 10% !important;">
+                        <col style="width: 10% !important;">
+                        <col style="width: 10% !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
