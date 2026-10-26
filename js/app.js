@@ -116,7 +116,7 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <tr>
-            <th colspan="9" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
+            <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                 <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                     <span>Semana del</span>
                     <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
@@ -149,7 +149,7 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // RENDER DE SALAS BASADO EN 6 MICRO-COLUMNAS DE ASIGNACIÓN (SALA A, B Y C)
+    // COMBINACIÓN SIMÉTRICA DE LAS 7 MICRO-COLUMNAS DE ASIGNACIONES (35% TOTAL)
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
@@ -171,16 +171,16 @@ function cargarSemanaEnPlanilla(idx) {
         let html = '';
 
         if (numSalas === 1) {
-            // 1 SALA: Toma las 6 micro-columnas completas (colspan="6")
-            html += `<td class="p-1 col-asig relative group" colspan="6">
+            // 1 SALA: Toma las 7 micro-columnas de asignación (35% total)
+            html += `<td class="p-1 col-asig relative group" colspan="7">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
             </td>`;
         } else if (numSalas === 2) {
-            // 2 SALAS: Sala Prin (3 micro-cols) y Sala B (3 micro-cols) -> ¡ANCHO EXACTO 50/50 SIMÉTRICO!
-            html += `<td class="p-1 col-asig relative group" colspan="3">
+            // 2 SALAS: Sala Principal (4 micro-cols) y Sala B (3 micro-cols) o repartidas de manera idéntica 17.5% - 17.5%
+            html += `<td class="p-1 col-asig relative group" colspan="4">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
@@ -190,8 +190,8 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
             </td>`;
         } else if (numSalas === 3) {
-            // 3 SALAS: Sala Prin (2 micro-cols), Sala B (2 micro-cols), Sala C (2 micro-cols) -> ¡ANCHO EXACTO 33/33/33 SIMÉTRICO!
-            html += `<td class="p-1 col-asig relative group" colspan="2">
+            // 3 SALAS: Sala Principal (3 micro-cols), Sala B (2 micro-cols), Sala C (2 micro-cols)
+            html += `<td class="p-1 col-asig relative group" colspan="3">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
@@ -210,30 +210,30 @@ function cargarSemanaEnPlanilla(idx) {
     const renderSalasLectura = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         if (numSalas === 1) {
-            return `<td class="px-2 col-asig" colspan="6">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
+            return `<td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
         } else if (numSalas === 2) {
-            return `<td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
+            return `<td class="px-1 py-1 col-asig" colspan="4">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
                     <td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>`;
         } else {
-            return `<td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
+            return `<td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
                     <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>
                     <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}</td>`;
         }
     };
 
-    // APERTURA CON "1 MIN" Y FRASES TOTALMENTE EDITABLES EN GRIS
+    // APERTURA
     let filasHTML = `
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true">1 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
                 Canción N° ${sem.canciones?.[0] || '161'}. Presidencia: Palabras de introducción.
             </td>
-            <td class="px-2 col-asig" colspan="6">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
+            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true"></td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Oración</td>
-            <td class="px-2 col-asig" colspan="6">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
+            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
     `;
 
@@ -247,7 +247,7 @@ function cargarSemanaEnPlanilla(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="8" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
                 </tr>
             `;
             renderizoTesorosHeader = true;
@@ -255,7 +255,7 @@ function cargarSemanaEnPlanilla(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="8" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                    <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
                 </tr>
             `;
             renderizoMaestrosHeader = true;
@@ -263,10 +263,10 @@ function cargarSemanaEnPlanilla(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
-                    <th colspan="8" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold editable-field" colspan="9" contenteditable="true">
+                    <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true">
                         Canción Nº: ${sem.canciones?.[1] || '121'}
                     </td>
                 </tr>
@@ -298,7 +298,7 @@ function cargarSemanaEnPlanilla(idx) {
                         <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="6">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
                     </tr>
                 `;
             }
@@ -319,11 +319,11 @@ function cargarSemanaEnPlanilla(idx) {
                     <tr>
                         <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-asig" colspan="6">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
                     </tr>
                     <tr>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Lector:</td>
-                        <td class="px-2 col-asig" colspan="6">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
+                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
                     </tr>
                 `;
             } else {
@@ -335,7 +335,7 @@ function cargarSemanaEnPlanilla(idx) {
                         </td>
                         <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="6">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
                     </tr>
                 `;
             }
@@ -344,7 +344,7 @@ function cargarSemanaEnPlanilla(idx) {
 
     filasHTML += `
         <tr class="no-print bg-slate-50">
-            <td colspan="9" class="p-1 text-center">
+            <td colspan="10" class="p-1 text-center">
                 <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
                     <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
                 </button>
@@ -357,13 +357,13 @@ function cargarSemanaEnPlanilla(idx) {
         <tr>
             <td class="c-tiempo editable-field" rowspan="2" contenteditable="true">3 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig" colspan="6">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
+            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
         <tr>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
                 Canción ${sem.canciones?.[2] || '28'} y oración
             </td>
-            <td class="px-2 col-asig" colspan="6">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
+            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
         <!-- REUNIÓN PÚBLICA EDITABLE -->
@@ -372,7 +372,7 @@ function cargarSemanaEnPlanilla(idx) {
                 Domingo, presidencia: 
                 <div class="inline-block ml-2 w-48">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
             </td>
-            <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="6" contenteditable="true">
+            <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true">
                 Lector: 
                 <div class="inline-block ml-2 text-left w-48">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
             </td>
