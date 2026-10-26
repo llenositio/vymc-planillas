@@ -143,32 +143,81 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    const renderSalasCelda = (pIndex, cat) => {
+    // Render de celdas de asignación para Seamos Mejores Maestros (1 o 2 participantes y multisalas)
+    const renderSalasMaestros = (pIndex, cat) => {
+        const item = partes[pIndex] || {};
+        const cantP = item.participantes || 1;
+
+        const renderSelectsSala = (prefix, valTit, valAyu) => {
+            let res = `<div class="flex flex-col justify-center h-full">`;
+            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "Asignado");
+            if (cantP === 2) {
+                res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
+                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "Ayudante");
+            }
+            res += `</div>`;
+            return res;
+        };
+
+        let html = `<td class="p-1 col-asig relative group">`;
+        
+        // Botón toggle 1 vs 2 participantes
+        html += `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10" title="Cambiar a 1 o 2 asignados">
+            ${cantP === 1 ? '1 Asig' : '2 Asig'}
+        </button>`;
+
+        if (numSalas === 1) {
+            html += renderSelectsSala(`asig_p${pIndex}_A`, item.asig, item.asigAyudante);
+        } else {
+            html += `<div class="grid grid-cols-${numSalas} gap-1 text-[10px] h-full">
+                <div class="border-r border-slate-300 pr-1">
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Prin.</span>
+                    ${renderSelectsSala(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
+                </div>
+                <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala B</span>
+                    ${renderSelectsSala(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante)}
+                </div>`;
+            if (numSalas === 3) {
+                html += `<div>
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala C</span>
+                    ${renderSelectsSala(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante)}
+                </div>`;
+            }
+            html += `</div>`;
+        }
+        html += `</td>`;
+        return html;
+    };
+
+    // Render de celdas para Lectura de la Biblia (Salas A, B, C con 1 solo participante)
+    const renderSalasLectura = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         if (numSalas === 1) {
-            return `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`;
+            return `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
         }
         
         let html = `<td class="px-1 py-1 col-asig">
             <div class="grid grid-cols-${numSalas} gap-1 text-[10px]">
                 <div class="border-r border-slate-300 pr-1">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase">Prin.</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig, "Principal")}
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Prin.</span>
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
                 </div>
                 <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase">Sala B</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_B`, cat, item.asigB, "Sala B")}
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala B</span>
+                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
                 </div>`;
         if (numSalas === 3) {
             html += `<div>
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase">Sala C</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_C`, cat, item.asigC, "Sala C")}
+                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala C</span>
+                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
                 </div>`;
         }
         html += `</div></td>`;
         return html;
     };
 
+    // APERTURA DE LA REUNIÓN
     let filasHTML = `
         <tr class="h-6">
             <td class="col-tiempo">1 min</td>
@@ -182,79 +231,141 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    let seccionActual = '';
+    let renderizoTesorosHeader = false;
+    let renderizoMaestrosHeader = false;
+    let renderizoVidaHeader = false;
 
     partes.forEach((item, pIndex) => {
-        if (pIndex === 0 && seccionActual !== 'tesoros') {
+
+        // ENCABEZADOS DE SECCIÓN
+        if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
             filasHTML += `
                 <tr>
                     <th class="bg-tesoros text-white text-center"><i class="fa-solid fa-gem text-xs"></i></th>
                     <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
                 </tr>
             `;
-            seccionActual = 'tesoros';
-        } else if (pIndex === 3 && seccionActual !== 'maestros') {
+            renderizoTesorosHeader = true;
+        } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
             filasHTML += `
                 <tr>
                     <th class="bg-maestros text-white text-center"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
                     <th colspan="3" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
                 </tr>
             `;
-            seccionActual = 'maestros';
-        } else if (pIndex === 7 && seccionActual !== 'vida') {
+            renderizoMaestrosHeader = true;
+        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
             filasHTML += `
                 <tr>
                     <th class="bg-vida text-white text-center"><i class="fa-solid fa-sheep text-xs"></i></th>
                     <th colspan="3" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
+                    <td class="px-2 font-bold" colspan="4">Canción Nº: ${sem.canciones?.[1] || ''}</td>
                 </tr>
             `;
-            seccionActual = 'vida';
+            renderizoVidaHeader = true;
         }
 
         let cat = 'smm';
-        if (pIndex === 0) cat = 'disc';
-        else if (pIndex === 1) cat = 'perlas';
-        else if (pIndex === 2) cat = 'lec';
-        else if (pIndex >= 7) cat = 'nvc';
+        if (item.seccion === 'tesoros') {
+            if (pIndex === 0) cat = 'disc';
+            else if (item.tit.includes('perlas')) cat = 'perlas';
+            else if (item.tit.includes('Lectura')) cat = 'lec';
+        } else if (item.seccion === 'vida') {
+            cat = 'nvc';
+        }
 
-        const esMultiSala = (pIndex >= 2 && pIndex <= 6);
-
-        // Si hay descripción renderiza las 2 columnas del medio separadas. Si no, ocupa ambas.
-        if (item.desc) {
+        // RENDERIZADO DE FILAS SEGÚN LA SECCIÓN
+        if (item.seccion === 'tesoros') {
+            if (item.tit.includes('Lectura')) {
+                filasHTML += `
+                    <tr>
+                        <td class="col-tiempo">${item.t}</td>
+                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
+                        ${renderSalasLectura(pIndex, cat)}
+                    </tr>
+                `;
+            } else {
+                filasHTML += `
+                    <tr>
+                        <td class="col-tiempo">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                        <td class="px-2 col-desc text-slate-700">${item.desc}</td>
+                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
+                    </tr>
+                `;
+            }
+        } 
+        else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr>
                     <td class="col-tiempo">${item.t}</td>
                     <td class="px-2 col-titulo font-medium">${item.tit}</td>
                     <td class="px-2 col-desc text-slate-700">${item.desc}</td>
-                    ${esMultiSala ? renderSalasCelda(pIndex, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`}
+                    ${renderSalasMaestros(pIndex, cat)}
                 </tr>
             `;
-        } else {
-            filasHTML += `
-                <tr>
-                    <td class="col-tiempo">${item.t}</td>
-                    <td class="px-2 font-medium" colspan="2">${item.tit}</td>
-                    ${esMultiSala ? renderSalasCelda(pIndex, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`}
-                </tr>
-            `;
+        } 
+        else if (item.seccion === 'vida') {
+            if (item.tit.includes('Estudio bíblico')) {
+                // Estudio Bíblico de la Congregación (Filas 17/18 con rowspan)
+                filasHTML += `
+                    <tr>
+                        <td class="col-tiempo" rowspan="2">${item.t}</td>
+                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
+                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
+                    </tr>
+                    <tr>
+                        <td class="px-2 font-medium" colspan="2">Lector:</td>
+                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
+                    </tr>
+                `;
+            } else {
+                // Partes normales editables de Nuestra Vida Cristiana
+                filasHTML += `
+                    <tr class="group">
+                        <td class="col-tiempo relative">
+                            ${item.t}
+                            <button onclick="eliminarFilaVida(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                        </td>
+                        <td class="px-2 col-titulo font-medium">
+                            <input type="text" value="${item.tit}" onchange="actualizarTextoParte(${pIndex}, 'tit', this.value)" class="w-full bg-transparent font-medium focus:bg-amber-50">
+                        </td>
+                        <td class="px-2 col-desc text-slate-700">
+                            <input type="text" value="${item.desc}" onchange="actualizarTextoParte(${pIndex}, 'desc', this.value)" class="w-full bg-transparent text-slate-700 focus:bg-amber-50">
+                        </td>
+                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
+                    </tr>
+                `;
+            }
         }
     });
 
+    // Botón no-print para agregar fila en Nuestra Vida Cristiana
     filasHTML += `
-        <tr class="h-6">
-            <td class="col-tiempo">3 min</td>
+        <tr class="no-print bg-slate-50">
+            <td colspan="4" class="p-1 text-center">
+                <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
+                    <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
+                </button>
+            </td>
+        </tr>
+    `;
+
+    // CONCLUSIÓN Y CIERRE (Filas 19/20)
+    filasHTML += `
+        <tr>
+            <td class="col-tiempo" rowspan="2">3 mins.</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
-        <tr class="h-6">
-            <td class="col-tiempo"></td>
+        <tr>
             <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
+        <!-- REUNIÓN PÚBLICA / PREDETERMINADA -->
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
             <td class="px-2 font-bold py-1.5" colspan="2">
                 Domingo, presidencia: 
@@ -268,6 +379,61 @@ function cargarSemanaEnPlanilla(idx) {
     `;
 
     cuerpo.innerHTML = filasHTML;
+}
+
+// Alternar entre 1 o 2 participantes en asignaciones estudiantiles
+async function toggleParticipantesParte(pIndex) {
+    const sem = programaMes[semanaActivaIdx];
+    if (sem && sem.partes && sem.partes[pIndex]) {
+        sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
+        cargarSemanaEnPlanilla(semanaActivaIdx);
+        await guardarPlanillaEnSupabase();
+    }
+}
+
+// Modificar textos manualmente en filas de Vida Cristiana
+async function actualizarTextoParte(pIndex, campo, valor) {
+    const sem = programaMes[semanaActivaIdx];
+    if (sem && sem.partes && sem.partes[pIndex]) {
+        sem.partes[pIndex][campo] = valor;
+        await guardarPlanillaEnSupabase();
+    }
+}
+
+// Agregar fila dinámica a Nuestra Vida Cristiana
+async function agregarFilaVida() {
+    const sem = programaMes[semanaActivaIdx];
+    if (!sem) return;
+    
+    // Insertar antes del Estudio Bíblico
+    const idxEBC = sem.partes.findIndex(p => p.tit.includes('Estudio bíblico'));
+    const nuevaParte = {
+        seccion: 'vida',
+        t: '15 mins.',
+        tit: 'Parte adicional',
+        desc: 'Análisis con el auditorio.',
+        participantes: 1,
+        asig: ''
+    };
+
+    if (idxEBC !== -1) {
+        sem.partes.splice(idxEBC, 0, nuevaParte);
+    } else {
+        sem.partes.push(nuevaParte);
+    }
+
+    cargarSemanaEnPlanilla(semanaActivaIdx);
+    await guardarPlanillaEnSupabase();
+}
+
+// Eliminar fila de Nuestra Vida Cristiana
+async function eliminarFilaVida(pIndex) {
+    const sem = programaMes[semanaActivaIdx];
+    if (sem && sem.partes && sem.partes[pIndex]) {
+        sem.partes.splice(pIndex, 1);
+        cargarSemanaEnPlanilla(semanaActivaIdx);
+        await guardarPlanillaEnSupabase();
+    }
 }
 
 async function cambiarNumSalasSemana(cantidad) {
@@ -287,14 +453,22 @@ async function guardarAsignacionSemana(elemId) {
     if (elemId === 'asig_presi') sem.presidencia = val;
     else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
     else if (elemId.startsWith('asig_p')) {
-        const partes = elemId.split('_');
-        const pIndex = parseInt(partes[1].replace('p', ''));
-        const sala = partes[2];
+        const partesId = elemId.split('_');
+        const pIndex = parseInt(partesId[1].replace('p', ''));
+        const sala = partesId[2];
+        const rol = partesId[3];
 
         if (sem.partes && sem.partes[pIndex]) {
-            if (sala === 'A') sem.partes[pIndex].asig = val;
-            else if (sala === 'B') sem.partes[pIndex].asigB = val;
-            else if (sala === 'C') sem.partes[pIndex].asigC = val;
+            if (sala === 'A') {
+                if (rol === 'ayudante') sem.partes[pIndex].asigAyudante = val;
+                else sem.partes[pIndex].asig = val;
+            } else if (sala === 'B') {
+                if (rol === 'ayudante') sem.partes[pIndex].asigBAyudante = val;
+                else sem.partes[pIndex].asigB = val;
+            } else if (sala === 'C') {
+                if (rol === 'ayudante') sem.partes[pIndex].asigCAyudante = val;
+                else sem.partes[pIndex].asigC = val;
+            }
         }
     }
     else if (elemId === 'asig_repaso') sem.repaso = val;
