@@ -21,62 +21,35 @@ function procesarTextoGuiaActividades(texto) {
             }
         });
 
-        // Estructura base limpia
-        const partes = {
-            p1: { t: '10 min', tit: '1. Discurso', desc: '', asig: '' },
-            p2: { t: '10 min', tit: '2. Busquemos perlas escondidas', desc: 'Preguntas y respuestas', asig: '' },
-            p3: { t: '4 min', tit: '3. Lectura de la Biblia', desc: '', asig: '', asigB: '', asigC: '' },
-            p4: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
-            p5: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
-            p6: { t: '4 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
-            p7: { t: '3 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
-            p8: { t: '15 min', tit: '', desc: '', asig: '' },
-            p9: { t: '30 min', tit: 'Estudio bíblico de la congregación', desc: '', asig: '', lector: '' }
-        };
-
-        let smmCounter = 4;
+        const partes = {};
+        let parteCounter = 1;
 
         for (let i = 2; i < lineas.length; i++) {
             const linea = lineas[i];
 
-            // Detectar el primer discurso de Tesoros
-            if (linea.match(/^\b1\.\s+/i) || (linea.includes('(10 min)') && !linea.includes('perlas'))) {
-                const matchMin = linea.match(/\((\d+)\s*min/i);
-                partes.p1.t = matchMin ? `${matchMin[1]} min` : '10 min';
-                partes.p1.tit = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-                partes.p1.desc = 'Discurso';
-            }
-            // Detectar SMM (Seamos Mejores Maestros)
-            else if (linea.match(/^\d+\.\s*(Empiece|Haga|Explique|Discurso|Video)/i) && smmCounter <= 7) {
-                const matchMin = linea.match(/\((\d+)\s*min/i);
-                const mins = matchMin ? `${matchMin[1]} min` : '3 min';
-                const titLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
+            // Busca cualquier tiempo especificado entre paréntesis: (X min) o (X mins.)
+            const matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
+            
+            if (matchMin) {
+                const minutosExtraidos = `${matchMin[1]} min`;
+                let tituloLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
+                let descripcion = '';
 
-                let descText = '';
                 if (i + 1 < lineas.length && lineas[i + 1].startsWith('(')) {
-                    descText = lineas[i + 1];
+                    descripcion = lineas[i + 1];
                     i++;
                 }
 
-                partes[`p${smmCounter}`] = {
-                    t: mins,
-                    tit: titLimpio,
-                    desc: descText,
-                    asig: '', asigB: '', asigC: ''
+                partes[`p${parteCounter}`] = {
+                    t: minutosExtraidos, // Tiempo dinámico leído del texto
+                    tit: tituloLimpio,
+                    desc: descripcion,
+                    asig: '',
+                    asigB: '',
+                    asigC: ''
                 };
-                smmCounter++;
-            }
-            // Detectar NVC (Nuestra Vida Cristiana)
-            else if (linea.includes('(15 min)') || linea.includes('(10 min)') && i > 8) {
-                if (!linea.includes('Estudio bíblico')) {
-                    const matchMin = linea.match(/\((\d+)\s*min/i);
-                    partes.p8 = {
-                        t: matchMin ? `${matchMin[1]} min` : '15 min',
-                        tit: linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim(),
-                        desc: '',
-                        asig: ''
-                    };
-                }
+
+                parteCounter++;
             }
         }
 
