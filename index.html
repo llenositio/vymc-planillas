@@ -18,8 +18,31 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        .excel-table { border-collapse: collapse; width: 100%; table-layout: fixed; background-color: white; }
-        .excel-table td, .excel-table th { border: 1px solid #334155; padding: 5px 6px; font-size: 12px; word-wrap: break-word; }
+        /* Forzar tabla a respetar anchos fijos de columnas */
+        .excel-table { 
+            border-collapse: collapse; 
+            width: 100% !important; 
+            table-layout: fixed !important; 
+            background-color: white; 
+        }
+
+        /* Control estricto del ancho de celdas */
+        .excel-table td, .excel-table th { 
+            border: 1px solid #334155; 
+            padding: 4px 6px; 
+            font-size: 12px; 
+            word-wrap: break-word; 
+            overflow: hidden; 
+        }
+
+        /* Primera columna (Tiempo) compacta al mínimo */
+        .excel-table td:first-child, .excel-table th:first-child {
+            width: 42px !important;
+            max-width: 42px !important;
+            min-width: 42px !important;
+            white-space: nowrap;
+            text-align: center;
+        }
         
         /* Selectores de asignación */
         .select-asig { width: 100%; background: transparent; font-weight: 700; color: #854d0e; border: none; outline: none; cursor: pointer; padding: 2px 0; font-size: 11px; }
@@ -31,7 +54,6 @@
             .print-area { box-shadow: none !important; border: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
             .excel-table { border: 1.5px solid #000 !important; }
             .excel-table td, .excel-table th { border: 1px solid #000 !important; padding: 3px 4px !important; font-size: 10px !important; }
-            /* Quitar las flechas de desplegable para la impresión / PDF */
             .select-asig { color: #800000 !important; appearance: none; -webkit-appearance: none; font-size: 10px !important; }
             @page { size: A4 portrait; margin: 0.6cm; }
         }
