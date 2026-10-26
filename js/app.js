@@ -13,37 +13,37 @@ window.onload = async function() {
     renderizarMatrizHermanos();
 
     if (!programaMes || programaMes.length === 0) {
-        programaMes = [crearEstructuraSemanaVacia("14-20 DE SEPTIEMBRE", "JEREMÍAS 34, 35")];
+        programaMes = [crearEstructuraSemanaEjemplo()];
     }
     
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(0);
 };
 
-function crearEstructuraSemanaVacia(nombreSemana, lectura) {
+function crearEstructuraSemanaEjemplo() {
     return {
-        semana: nombreSemana,
-        lectura: lectura,
-        canciones: ["161", "121", "28"],
+        semana: "31 DE AGOSTO A 6 DE SEPTIEMBRE",
+        lectura: "JEREMÍAS 31",
+        canciones: ["27", "67", "132"],
         tipoSemana: "normal",
         numSalas: 1,
-        presidencia: "",
-        oracionIni: "",
-        repaso: "",
-        oracionFin: "",
-        domPresi: "",
-        domLector: "",
+        presidencia: "GARAFA, Carlos",
+        oracionIni: "DORDONI, Tomás",
+        repaso: "GARAFA, Carlos",
+        oracionFin: "DE MERLIER, Lucas",
+        domPresi: "SEMPERTEGUI, Alberto",
+        domLector: "SALVATIERRA, Tomás",
         partes: [
-            { seccion: "tesoros", t: "10 mins.", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "10 mins.", tit: "2. Busquemos perlas escondidas.", desc: `Preguntas y respuestas ${lectura}`, participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "4 mins.", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5)", desc: "", participantes: 1, asig: "" },
-            { seccion: "maestros", t: "2 mins.", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "2 mins.", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza.", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "3 mins.", tit: "6. Haga revisitas", desc: "INFORMAL. Ofrézcale un curso de la Biblia.", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "4 mins.", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia.", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "vida", t: "6 mins.", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "9 mins.", tit: "9. Logros de la organización", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "30 mins.", tit: "Estudio bíblico de la congregación: wcg cap. 8", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+            { seccion: "tesoros", t: "10 min", tit: '1. “Haré un nuevo pacto”', desc: "Discurso", participantes: 1, asig: "CAMACHO, Ariel" },
+            { seccion: "tesoros", t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 31", participantes: 1, asig: "LEDESMA, Hernán" },
+            { seccion: "tesoros", t: "4 min o menos", tit: "3. Lectura de la Biblia: Jer 31:1-11 (th lección 12).", desc: "", participantes: 1, asig: "CHACÓN, Dylan" },
+            
+            { seccion: "maestros", t: "3 mins.", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso bíblico de forma directa (lmd lección 4 punto 3).", participantes: 2, asig: "LUPIANO, Gastón", asigAyudante: "GARAFA, Agustín" },
+            { seccion: "maestros", t: "4 mins.", tit: "5. Empiece conversaciones", desc: "PREDICACIÓN INFORMAL. Use ijwyp artículo 106 para ayudar a un compañero de clase que está estresado porque siente que un maestro lo trata mal (lmd lección 3 punto 3).", participantes: 2, asig: "SALVATIERRA, Tomás", asigAyudante: "CELIX, Julián" },
+            { seccion: "maestros", t: "5 mins.", tit: "6. Explique sus creencias", desc: "Discurso. ijwfq artículo 37. Título: ¿Por qué no se involucran los testigos de Jehová en asuntos políticos? (th lección 14).", participantes: 1, asig: "MANTELLO, Sergio", asigAyudante: "" },
+            
+            { seccion: "vida", t: "15 mins,", tit: "7. Notificación del proyecto de construcción", desc: "Discurso", participantes: 1, asig: "TRAIANO, Miguel" },
+            { seccion: "vida", t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 6.", desc: "", participantes: 2, asig: "ROMBOLÁ, Exequiel", asigAyudante: "CORSI, Tomás" }
         ]
     };
 }
@@ -79,7 +79,7 @@ function obtenerOpcionesHermanos(cat) {
     });
 }
 
-function crearSelectHTML(id, cat, valorActual = "", placeholder = "Seleccionar") {
+function crearSelectHTML(id, cat, valorActual = "", placeholder = "SELECCIONAR") {
     const aptos = obtenerOpcionesHermanos(cat);
     let options = `<option value="">-- ${placeholder} --</option>`;
     aptos.forEach(h => {
@@ -112,13 +112,10 @@ function cargarSemanaEnPlanilla(idx) {
             <col class="col-asig">
         </colgroup>
         <tr>
-            <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
-                <div class="flex justify-center items-center gap-2">
-                    <span class="font-extrabold text-slate-800 text-sm">Semana del</span>
-                    <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-live font-black text-slate-900 text-base text-center w-64 border-b border-slate-300">
-                    <span class="font-extrabold text-slate-800 text-sm">,</span>
-                    <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-live font-black text-slate-900 text-base text-center w-64 border-b border-slate-300">
-                </div>
+            <th colspan="4" class="py-1.5 px-3 bg-white text-center border-b-2 border-slate-900">
+                <span class="text-lg font-black text-slate-900 tracking-tight">
+                    Semana del ${sem.semana}, ${sem.lectura}
+                </span>
             </th>
         </tr>
     `;
@@ -151,10 +148,10 @@ function cargarSemanaEnPlanilla(idx) {
 
         const renderSelectsSala = (prefix, valTit, valAyu) => {
             let res = `<div class="flex flex-col justify-center h-full">`;
-            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "Asignado");
+            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "SELECCIONAR");
             if (cantP === 2) {
                 res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
-                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "Ayudante");
+                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
             }
             res += `</div>`;
             return res;
@@ -219,7 +216,7 @@ function cargarSemanaEnPlanilla(idx) {
         <tr class="h-6">
             <td class="col-tiempo">1 min</td>
             <td class="px-2 font-medium" colspan="2">
-                Canción N° <input type="text" value="${sem.canciones?.[0] || ''}" onchange="actualizarCancionSemana(0, this.value)" class="input-live w-12 text-center font-bold">. Presidencia: Palabras de introducción.
+                Canción Nº ${sem.canciones?.[0] || '27'}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
@@ -260,7 +257,7 @@ function cargarSemanaEnPlanilla(idx) {
                 </tr>
                 <tr>
                     <td class="px-2 font-bold" colspan="4">
-                        Canción Nº: <input type="text" value="${sem.canciones?.[1] || ''}" onchange="actualizarCancionSemana(1, this.value)" class="input-live w-12 font-bold">
+                        Canción Nº: ${sem.canciones?.[1] || '67'}
                     </td>
                 </tr>
             `;
@@ -280,27 +277,17 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo">
-                            <input type="text" value="${item.t}" onchange="actualizarCampoParte(${pIndex}, 't', this.value)" class="input-live text-center font-bold">
-                        </td>
-                        <td class="px-2 font-medium" colspan="2">
-                            <input type="text" value="${item.tit}" onchange="actualizarCampoParte(${pIndex}, 'tit', this.value)" class="input-live font-medium">
-                        </td>
+                        <td class="col-tiempo">${item.t}</td>
+                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
                     </tr>
                 `;
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo">
-                            <input type="text" value="${item.t}" onchange="actualizarCampoParte(${pIndex}, 't', this.value)" class="input-live text-center font-bold">
-                        </td>
-                        <td class="px-2 col-titulo font-medium">
-                            <input type="text" value="${item.tit}" onchange="actualizarCampoParte(${pIndex}, 'tit', this.value)" class="input-live font-medium">
-                        </td>
-                        <td class="px-2 col-desc text-slate-700">
-                            <input type="text" value="${item.desc}" onchange="actualizarCampoParte(${pIndex}, 'desc', this.value)" class="input-live text-slate-700">
-                        </td>
+                        <td class="col-tiempo">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                        <td class="px-2 col-desc text-slate-700">${item.desc}</td>
                         <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
                     </tr>
                 `;
@@ -309,15 +296,9 @@ function cargarSemanaEnPlanilla(idx) {
         else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr>
-                    <td class="col-tiempo">
-                        <input type="text" value="${item.t}" onchange="actualizarCampoParte(${pIndex}, 't', this.value)" class="input-live text-center font-bold">
-                    </td>
-                    <td class="px-2 col-titulo font-medium">
-                        <input type="text" value="${item.tit}" onchange="actualizarCampoParte(${pIndex}, 'tit', this.value)" class="input-live font-medium">
-                    </td>
-                    <td class="px-2 col-desc text-slate-700">
-                        <input type="text" value="${item.desc}" onchange="actualizarCampoParte(${pIndex}, 'desc', this.value)" class="input-live text-slate-700">
-                    </td>
+                    <td class="col-tiempo">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                    <td class="px-2 col-desc text-slate-700">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
                 </tr>
             `;
@@ -326,12 +307,8 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo" rowspan="2">
-                            <input type="text" value="${item.t}" onchange="actualizarCampoParte(${pIndex}, 't', this.value)" class="input-live text-center font-bold">
-                        </td>
-                        <td class="px-2 font-medium" colspan="2">
-                            <input type="text" value="${item.tit}" onchange="actualizarCampoParte(${pIndex}, 'tit', this.value)" class="input-live font-medium">
-                        </td>
+                        <td class="col-tiempo" rowspan="2">${item.t}</td>
+                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
                         <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
                     </tr>
                     <tr>
@@ -343,15 +320,11 @@ function cargarSemanaEnPlanilla(idx) {
                 filasHTML += `
                     <tr class="group">
                         <td class="col-tiempo relative">
-                            <input type="text" value="${item.t}" onchange="actualizarCampoParte(${pIndex}, 't', this.value)" class="input-live text-center font-bold">
+                            ${item.t}
                             <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
                         </td>
-                        <td class="px-2 col-titulo font-medium">
-                            <input type="text" value="${item.tit}" onchange="actualizarCampoParte(${pIndex}, 'tit', this.value)" class="input-live font-medium">
-                        </td>
-                        <td class="px-2 col-desc text-slate-700">
-                            <input type="text" value="${item.desc}" onchange="actualizarCampoParte(${pIndex}, 'desc', this.value)" class="input-live text-slate-700">
-                        </td>
+                        <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                        <td class="px-2 col-desc text-slate-700">${item.desc}</td>
                         <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
                     </tr>
                 `;
@@ -372,13 +345,13 @@ function cargarSemanaEnPlanilla(idx) {
     // CONCLUSIÓN
     filasHTML += `
         <tr>
-            <td class="col-tiempo" rowspan="2">3 mins.</td>
+            <td class="col-tiempo" rowspan="2">3 min</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
         <tr>
             <td class="px-2 font-medium" colspan="2">
-                Canción <input type="text" value="${sem.canciones?.[2] || ''}" onchange="actualizarCancionSemana(2, this.value)" class="input-live w-12 font-bold text-center"> y oración
+                Canción ${sem.canciones?.[2] || '132'} y oración
             </td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
@@ -399,30 +372,7 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-// ASIGNACIONES EXPLÍCITAS AL OBJETO WINDOW
-window.actualizarEncabezadoSemana = async function(campo, valor) {
-    if (programaMes[semanaActivaIdx]) {
-        programaMes[semanaActivaIdx][campo] = valor;
-        await guardarPlanillaEnSupabase();
-    }
-};
-
-window.actualizarCancionSemana = async function(index, valor) {
-    if (programaMes[semanaActivaIdx]) {
-        if (!programaMes[semanaActivaIdx].canciones) programaMes[semanaActivaIdx].canciones = ["161", "121", "28"];
-        programaMes[semanaActivaIdx].canciones[index] = valor;
-        await guardarPlanillaEnSupabase();
-    }
-};
-
-window.actualizarCampoParte = async function(pIndex, campo, valor) {
-    const sem = programaMes[semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes[pIndex][campo] = valor;
-        await guardarPlanillaEnSupabase();
-    }
-};
-
+// ASIGNACIONES EXPLÍCITAS EN WINDOW
 window.toggleParticipantesParte = async function(pIndex) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
@@ -434,7 +384,8 @@ window.toggleParticipantesParte = async function(pIndex) {
 
 window.agregarNuevaSemana = async function() {
     const numSem = programaMes.length + 1;
-    const nuevaSem = crearEstructuraSemanaVacia(`NUEVA SEMANA ${numSem}`, "LECTURA BÍBLICA");
+    const nuevaSem = crearEstructuraSemanaEjemplo();
+    nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
     programaMes.push(nuevaSem);
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
