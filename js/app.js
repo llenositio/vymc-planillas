@@ -13,25 +13,12 @@ window.onload = async function() {
     renderizarMatrizHermanos();
 
     if (!programaMes || programaMes.length === 0) {
-        // Crear una semana por defecto si la base de datos está vacía
         programaMes = [crearEstructuraSemanaVacia("14-20 DE SEPTIEMBRE", "JEREMÍAS 34, 35")];
     }
     
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(0);
 };
-
-function cambiarPestaña(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById(`sec-${tab}`);
-    if (target) target.classList.remove('hidden');
-
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
-    });
-    const activeTab = document.getElementById(`tab-${tab}`);
-    if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-}
 
 function crearEstructuraSemanaVacia(nombreSemana, lectura) {
     return {
@@ -47,16 +34,13 @@ function crearEstructuraSemanaVacia(nombreSemana, lectura) {
         domPresi: "",
         domLector: "",
         partes: [
-            // TESOROS
             { seccion: "tesoros", t: "10 mins.", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
             { seccion: "tesoros", t: "10 mins.", tit: "2. Busquemos perlas escondidas.", desc: `Preguntas y respuestas ${lectura}`, participantes: 1, asig: "" },
             { seccion: "tesoros", t: "4 mins.", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5)", desc: "", participantes: 1, asig: "" },
-            // MAESTROS
             { seccion: "maestros", t: "2 mins.", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
             { seccion: "maestros", t: "2 mins.", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza.", participantes: 2, asig: "", asigAyudante: "" },
             { seccion: "maestros", t: "3 mins.", tit: "6. Haga revisitas", desc: "INFORMAL. Ofrézcale un curso de la Biblia.", participantes: 2, asig: "", asigAyudante: "" },
             { seccion: "maestros", t: "4 mins.", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia.", participantes: 2, asig: "", asigAyudante: "" },
-            // VIDA
             { seccion: "vida", t: "6 mins.", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
             { seccion: "vida", t: "9 mins.", tit: "9. Logros de la organización", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
             { seccion: "vida", t: "30 mins.", tit: "Estudio bíblico de la congregación: wcg cap. 8", desc: "", participantes: 2, asig: "", asigAyudante: "" }
@@ -415,50 +399,50 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-// FUNCIONES DE EDICIÓN EN VIVO
-async function actualizarEncabezadoSemana(campo, valor) {
+// ASIGNACIONES EXPLÍCITAS AL OBJETO WINDOW
+window.actualizarEncabezadoSemana = async function(campo, valor) {
     if (programaMes[semanaActivaIdx]) {
         programaMes[semanaActivaIdx][campo] = valor;
         await guardarPlanillaEnSupabase();
     }
-}
+};
 
-async function actualizarCancionSemana(index, valor) {
+window.actualizarCancionSemana = async function(index, valor) {
     if (programaMes[semanaActivaIdx]) {
         if (!programaMes[semanaActivaIdx].canciones) programaMes[semanaActivaIdx].canciones = ["161", "121", "28"];
         programaMes[semanaActivaIdx].canciones[index] = valor;
         await guardarPlanillaEnSupabase();
     }
-}
+};
 
-async function actualizarCampoParte(pIndex, campo, valor) {
+window.actualizarCampoParte = async function(pIndex, campo, valor) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex][campo] = valor;
         await guardarPlanillaEnSupabase();
     }
-}
+};
 
-async function toggleParticipantesParte(pIndex) {
+window.toggleParticipantesParte = async function(pIndex) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
         cargarSemanaEnPlanilla(semanaActivaIdx);
         await guardarPlanillaEnSupabase();
     }
-}
+};
 
-async function agregarNuevaSemana() {
+window.agregarNuevaSemana = async function() {
     const numSem = programaMes.length + 1;
-    const nuevaSem = crearEstructuraSemanaVacia(`NUEVA SEMANA ${numSem}`, "LIBRO");
+    const nuevaSem = crearEstructuraSemanaVacia(`NUEVA SEMANA ${numSem}`, "LECTURA BÍBLICA");
     programaMes.push(nuevaSem);
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(semanaActivaIdx);
     await guardarPlanillaEnSupabase();
-}
+};
 
-async function agregarFilaVida() {
+window.agregarFilaVida = async function() {
     const sem = programaMes[semanaActivaIdx];
     if (!sem) return;
     
@@ -480,25 +464,25 @@ async function agregarFilaVida() {
 
     cargarSemanaEnPlanilla(semanaActivaIdx);
     await guardarPlanillaEnSupabase();
-}
+};
 
-async function eliminarFilaParte(pIndex) {
+window.eliminarFilaParte = async function(pIndex) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes.splice(pIndex, 1);
         cargarSemanaEnPlanilla(semanaActivaIdx);
         await guardarPlanillaEnSupabase();
     }
-}
+};
 
-async function cambiarNumSalasSemana(cantidad) {
+window.cambiarNumSalasSemana = async function(cantidad) {
     if (!programaMes[semanaActivaIdx]) return;
     programaMes[semanaActivaIdx].numSalas = parseInt(cantidad);
     cargarSemanaEnPlanilla(semanaActivaIdx);
     await guardarPlanillaEnSupabase();
-}
+};
 
-async function guardarAsignacionSemana(elemId) {
+window.guardarAsignacionSemana = async function(elemId) {
     const el = document.getElementById(elemId);
     if (!el) return;
     const val = el.value;
@@ -532,15 +516,27 @@ async function guardarAsignacionSemana(elemId) {
     else if (elemId === 'asig_dom_lector') sem.domLector = val;
 
     await guardarPlanillaEnSupabase();
-}
+};
 
-async function actualizarTipoSemana(tipo) {
+window.actualizarTipoSemana = async function(tipo) {
     if (!programaMes[semanaActivaIdx]) return;
     programaMes[semanaActivaIdx].tipoSemana = tipo;
     if (tipo === 'viajante') programaMes[semanaActivaIdx].numSalas = 1;
     cargarSemanaEnPlanilla(semanaActivaIdx);
     await guardarPlanillaEnSupabase();
-}
+};
+
+window.cambiarPestaña = function(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    const target = document.getElementById(`sec-${tab}`);
+    if (target) target.classList.remove('hidden');
+
+    document.querySelectorAll('nav button').forEach(btn => {
+        btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
+    });
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
+};
 
 function renderizarMatrizHermanos() {
     const cuerpo = document.getElementById('cuerpoTablaHermanos');
@@ -574,18 +570,18 @@ function renderizarMatrizHermanos() {
     });
 }
 
-async function actualizarHermano(id, campo, valor) {
+window.actualizarHermano = async function(id, campo, valor) {
     await actualizarHermanoBD(id, campo, valor);
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-}
+};
 
-async function agregarNuevoHermano() {
+window.agregarNuevoHermano = async function() {
     await agregarNuevoHermanoBD();
     renderizarMatrizHermanos();
-}
+};
 
-async function eliminarHermano(id) {
+window.eliminarHermano = async function(id) {
     await eliminarHermanoBD(id);
     renderizarMatrizHermanos();
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-}
+};
