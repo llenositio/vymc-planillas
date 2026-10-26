@@ -19,7 +19,7 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* ESTRUCTURA BASE DE 6 COLUMNAS */
+        /* ESTRUCTURA BASE DE 7 COLUMNAS */
         #tablaPlanillaCompleta { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -52,20 +52,20 @@
             vertical-align: middle;
         }
 
-        /* FORMATO EDITABLE CON SUGERENCIA EN GRIS */
+        /* FORMATO EDITABLE TOTALMENTE GRISADO COMO SUGERENCIA */
         .editable-field {
             outline: none;
-            color: #64748b !important; /* Gris sutil de sugerencia */
+            color: #64748b !important; /* Gris elegante de sugerencia/plantilla */
             transition: color 0.2s, background-color 0.2s;
             border-radius: 2px;
             padding: 1px 2px;
         }
         .editable-field:focus {
-            color: #0f172a !important; /* Negro al editar */
-            background-color: #fef08a !important; /* Resaltado amarillo de edición */
+            color: #0f172a !important; /* Texto negro al editar */
+            background-color: #fef08a !important; /* Resaltado de edición */
         }
 
-        /* FORMATO DE DESPLEGABLES AJUSTADO */
+        /* FORMATO DE DESPLEGABLES DE ASIGNACIONES */
         .select-asig { 
             width: 100%; 
             background: transparent; 
@@ -100,7 +100,7 @@
             #tablaPlanillaCompleta { width: 100% !important; border: 1.5px solid #000 !important; }
             #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { border: 1px solid #000 !important; padding: 2px 3px !important; font-size: 9.5px !important; }
             .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 9px !important; font-weight: 800 !important; }
-            .editable-field { color: #0f172a !important; } /* Imprimir siempre en negro */
+            .editable-field { color: #0f172a !important; }
             @page { size: A4 portrait; margin: 0.5cm; }
         }
     </style>
@@ -115,7 +115,7 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-tight">Gestor VyMC - Planilla y Asignaciones</h1>
-                    <p class="text-xs text-slate-400">Modelo Cuadrícula de 6 Columnas • Col 1 a 40px</p>
+                    <p class="text-xs text-slate-400">Matriz de 7 Micro-Columnas • Simetría Total de Salas</p>
                 </div>
             </div>
 
@@ -198,14 +198,16 @@
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
+                <!-- ESTRUCTURA BASE DE 7 COLUMNAS -->
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
-                        <col style="width: 18% !important;">
-                        <col style="width: 28% !important;">
-                        <col style="width: 18% !important;">
-                        <col style="width: 18% !important;">
-                        <col style="width: 18% !important;">
+                        <col style="width: 15% !important;">
+                        <col style="width: 25% !important;">
+                        <col style="width: 15% !important;">
+                        <col style="width: 15% !important;">
+                        <col style="width: 15% !important;">
+                        <col style="width: 15% !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
