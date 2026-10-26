@@ -870,16 +870,110 @@
             window.open(url, '_blank');
         }
 
-        function cargarEjemploDemoMes() {
-            document.getElementById('textoMesCompleto').value = `5-11 DE OCTUBRE\nJEREMÍAS 40, 41\n...\n12-18 DE OCTUBRE\nJEREMÍAS 42, 43\n...`;
-            alert("Se cargó el texto de demostración.");
+       function cargarEjemploDemoMes() {
+    document.getElementById('textoMesCompleto').value = 
+`5-11 DE OCTUBRE
+JEREMÍAS 40, 41
+Canciones: 33, 17, 38
+1. Tengamos un punto de vista equilibrado de la protección de Jehová (10 min) - Discurso
+2. Busquemos perlas escondidas (10 min) - Preguntas y respuestas
+3. Lectura de la Biblia: Jer 40:1-10 (4 min)
+4. Empiece conversaciones (2 min) - DE CASA EN CASA
+5. Empiece conversaciones (2 min) - PREDICACIÓN INFORMAL
+6. Empiece conversaciones (4 min) - PREDICACIÓN PÚBLICA
+7. Explique sus creencias (3 min) - Escenificación
+8. Jehová protege a las viudas (15 min) - Análisis con el auditorio
+9. Estudio bíblico de la congregación: wcg cap. 11 (30 min)
+
+12-18 DE OCTUBRE
+JEREMÍAS 42, 43
+Canciones: 84, 100, 118
+1. Jehová nunca nos abandona (10 min) - Discurso
+2. Busquemos perlas escondidas (10 min) - Preguntas y respuestas
+3. Lectura de la Biblia: Jer 42:1-12 (4 min)
+4. Seamos Mejores Maestros (15 min) - Intervenciones estudiantiles agrupadas
+8. Necesidades de la congregación (10 min) - Discurso local
+9. Discurso de servicio del Superintendente de Circuito (30 min)`;
+
+    alert("Texto de demostración cargado en el cuadro.");
+}
+
+async function procesarTextoMes() {
+    const rawText = document.getElementById('textoMesCompleto').value.trim();
+    if (!rawText) {
+        alert("Por favor pega el texto de la Guía de Actividades antes de procesar.");
+        return;
+    }
+
+    // Dividir por bloques de semanas (busca fechas como X-X DE MES)
+    const bloques = rawText.split(/\n(?=\d{1,2}-\d{1,2}\s+DE\s+)/i);
+    let nuevasSemanas = [];
+
+    bloques.forEach((bloque, idx) => {
+        const lineas = bloque.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        if (lineas.length < 2) return;
+
+        const semanaNom = lineas[0];
+        const lecturaNom = lineas[1];
+
+        // Buscar canciones
+        let canciones = ["", "", ""];
+        const lineaCanciones = lineas.find(l => l.toLowerCase().includes("cancion") || l.toLowerCase().includes("canciones"));
+        if (lineaCanciones) {
+            const numCanciones = lineaCanciones.match(/\d+/g);
+            if (numCanciones) canciones = numCanciones.slice(0, 3);
         }
 
-        async function procesarTextoMes() {
-            alert("El procesador analizó las semanas con éxito.");
-            await guardarPlanillaEnSupabase();
-            cambiarPestaña('planilla');
-        }
+        // Construir partes dinámicamente
+        let partes = {};
+
+        lineas.forEach(linea => {
+            const matchParte = linea.match(/^(\d+)\.\s+(.*)/);
+            if (matchParte) {
+                const num = matchParte[1];
+                const resto = matchParte[2];
+                const matchTiempo = resto.match(/\((\d+\s*min[^\)]*)\)/i);
+                const t = matchTiempo ? matchTiempo[1] : "";
+                const tit = resto.replace(/\([^\)]*\)/g, '').trim();
+
+                partes[`p${num}`] = {
+                    t: t,
+                    tit: `${num}. ${tit}`,
+                    desc: "",
+                    cat: num === "1" ? "disc" : num === "2" ? "perlas" : num === "3" ? "lec" : parseInt(num) <= 7 ? "smm" : parseInt(num) <= 8 ? "nvc" : "eb",
+                    asig: ""
+                };
+            }
+        });
+
+        nuevasSemanas.push({
+            idSemana: idx,
+            semana: semanaNom,
+            lectura: lecturaNom,
+            tipoSemana: "normal",
+            canciones: canciones,
+            partes: partes,
+            presidencia: "",
+            oracionIni: "",
+            repaso: "",
+            oracionFin: "",
+            domPresi: "",
+            domLector: ""
+        });
+    });
+
+    if (nuevasSemanas.length > 0) {
+        programaMes = nuevasSemanas;
+        semanaActivaIdx = 0;
+        await guardarPlanillaEnSupabase();
+        renderizarSelectorSemanas();
+        cargarSemanaEnPlanilla(0);
+        cambiarPestaña('planilla');
+        alert(`¡Éxito! Se procesaron y generaron ${nuevasSemanas.length} semanas de reunión.`);
+    } else {
+        alert("No se pudo detectar el formato de las semanas. Asegúrate de incluir encabezados como '5-11 DE OCTUBRE'.");
+    }
+}
     </script>
 </body>
 </html>
