@@ -169,6 +169,7 @@ function cargarSemanaEnPlanilla(idx) {
         return html;
     };
 
+    // Construcción estricta de 4 columnas
     let filasHTML = `
         <tr class="h-6">
             <td class="col-tiempo">1 min</td>
@@ -181,6 +182,7 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
 
+        <!-- SECCIÓN TESOROS DE LA BIBLIA -->
         <tr>
             <th class="bg-tesoros text-white text-center"><i class="fa-solid fa-gem text-xs"></i></th>
             <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
@@ -220,24 +222,15 @@ function cargarSemanaEnPlanilla(idx) {
 
         const esParteMultiSala = (index >= 2 && index <= 6);
 
-        if (item.desc) {
-            filasHTML += `
-                <tr>
-                    <td class="col-tiempo">${item.t || ''}</td>
-                    <td class="px-2 col-titulo font-medium">${item.tit}</td>
-                    <td class="px-2 col-desc text-slate-700">${item.desc}</td>
-                    ${esParteMultiSala ? renderSalasCelda(pk, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_${pk}`, cat, item.asig)}</td>`}
-                </tr>
-            `;
-        } else {
-            filasHTML += `
-                <tr>
-                    <td class="col-tiempo">${item.t || ''}</td>
-                    <td class="px-2 font-medium" colspan="2">${item.tit}</td>
-                    ${esParteMultiSala ? renderSalasCelda(pk, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_${pk}`, cat, item.asig)}</td>`}
-                </tr>
-            `;
-        }
+        // Forzar la creación explícita de las 4 columnas
+        filasHTML += `
+            <tr>
+                <td class="col-tiempo">${item.t || ''}</td>
+                <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                <td class="px-2 col-desc text-slate-700">${item.desc || ''}</td>
+                ${esParteMultiSala ? renderSalasCelda(pk, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_${pk}`, cat, item.asig)}</td>`}
+            </tr>
+        `;
     });
 
     filasHTML += `
