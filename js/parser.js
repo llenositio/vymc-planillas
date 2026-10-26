@@ -1,6 +1,6 @@
 /**
  * Analiza el texto bruto pegado desde JW.org o la Guía de Actividades
- * y construye las semanas con sus partes detalladas.
+ * y construye las semanas con sus partes detalladas, canciones y libro de estudio.
  */
 function procesarTextoGuiaActividades(rawText) {
     if (!rawText || !rawText.trim()) return [];
@@ -16,12 +16,18 @@ function procesarTextoGuiaActividades(rawText) {
         const semanaNom = lineas[0];
         const lecturaNom = lineas[1];
 
-        // Extracción de números de canciones
-        let canciones = ["", "", ""];
-        const lineaCanciones = lineas.find(l => l.toLowerCase().includes("cancion") || l.toLowerCase().includes("canciones"));
-        if (lineaCanciones) {
-            const numCanciones = lineaCanciones.match(/\d+/g);
-            if (numCanciones) canciones = numCanciones.slice(0, 3);
+        // 1. EXTRAER CANCIONES (Busca todas las apariciones de "Canción X" en la semana)
+        let canciones = [];
+        lineas.forEach(linea => {
+            const matchCancion = linea.match(/Canci[óo]n\s+(\d+)/i);
+            if (matchCancion && canciones.length < 3) {
+                canciones.push(matchCancion[1]);
+            }
+        });
+
+        // Si se encontraron menos de 3 canciones, rellenar vacíos
+        while (canciones.length < 3) {
+            canciones.push("");
         }
 
         let partes = {};
@@ -39,13 +45,12 @@ function procesarTextoGuiaActividades(rawText) {
                 let desc = "";
                 let titFinal = titBruto;
 
-                // Extraer tiempo entre paréntesis de la misma línea o del renglón siguiente
+                // Extraer tiempo entre paréntesis
                 let matchTiempo = titBruto.match(/\((\d+\s*min[^\)]*)\)/i);
-                
-                // Si es la Lectura de la Biblia (Parte 3)
+
+                // --- CASO ESPECIAL: LECTURA DE LA BIBLIA (PARTE 3) ---
                 if (num === 3) {
                     titFinal = "3. Lectura de la Biblia";
-                    // Revisar renglón posterior para obtener versículos y lección (Ej: "(4 mins.) Jer 40:1-10 (th lección 2).")
                     if (i + 1 < lineas.length) {
                         const sigLinea = lineas[i + 1];
                         const matchSigTiempo = sigLinea.match(/\((\d+\s*min[^\)]*)\)/i);
@@ -56,17 +61,33 @@ function procesarTextoGuiaActividades(rawText) {
                             desc = sigLinea;
                         }
                     }
-                    if (!t) t = "4 min o menos"; // Valor por defecto oficial
+                    if (!t) t = "4 min o menos";
                     titFinal = `3. Lectura de la Biblia: ${desc}`;
-                    desc = ""; // Se consolida en el título como en el Excel
+                    desc = "";
                 } 
-                // Para las demás partes numeradas (1, 2, 4, 5, 6, 7, 8, 9...)
+                // --- CASO ESPECIAL: ESTUDIO BÍBLICO DE LA CONGREGACIÓN (PARTE 9) ---
+                else if (num === 9) {
+                    titFinal = "9. Estudio bíblico de la congregación";
+                    t = "30 min";
+                    
+                    // Extraer la porción del libro (Ejemplo: "wcg cap. 11" o "(30 mins.) wcg cap. 11")
+                    let textoLibro = titBruto.replace(/\([^\)]*\)/g, '').replace(/Estudio b[íi]blico de la congregaci[óo]n:?/i, '').trim();
+                    
+                    // Si no venía en la misma línea, buscar en el renglón de abajo
+                    if (!textoLibro && i + 1 < lineas.length) {
+                        textoLibro = lineas[i + 1].replace(/\([^\)]*\)/g, '').trim();
+                    }
+
+                    if (textoLibro) {
+                        titFinal = `9. Estudio bíblico de la congregación: ${textoLibro}`;
+                    }
+                }
+                // --- RESTO DE PARTES ---
                 else {
                     if (matchTiempo) {
                         t = matchTiempo[1];
                         titFinal = `${num}. ` + titBruto.replace(/\([^\)]*\)/g, '').trim();
                     } else if (i + 1 < lineas.length) {
-                        // Buscar tiempo en la siguiente línea si no estaba en la primera
                         const sigLinea = lineas[i + 1];
                         const matchSigTiempo = sigLinea.match(/\((\d+\s*min[^\)]*)\)/i);
                         if (matchSigTiempo) {
@@ -75,12 +96,11 @@ function procesarTextoGuiaActividades(rawText) {
                         }
                     }
 
-                    // Categorizar la parte
                     if (num === 1) desc = "Discurso";
                     else if (num === 2) desc = `Preguntas y respuestas ${lecturaNom}`;
                 }
 
-                // Definir categoría
+                // Categorización
                 let cat = "smm";
                 if (num === 1) cat = "disc";
                 else if (num === 2) cat = "perlas";
@@ -93,9 +113,9 @@ function procesarTextoGuiaActividades(rawText) {
                     tit: titFinal,
                     desc: desc,
                     cat: cat,
-                    asig: "",      // Sala Principal / A
-                    asigB: "",     // Sala B
-                    asigC: ""      // Sala C
+                    asig: "",
+                    asigB: "",
+                    asigC: ""
                 };
             }
         }
@@ -105,7 +125,7 @@ function procesarTextoGuiaActividades(rawText) {
             semana: semanaNom,
             lectura: lecturaNom,
             tipoSemana: "normal",
-            numSalas: 1, // Por defecto 1 sala (se puede cambiar a 2 o 3 por semana)
+            numSalas: 1,
             canciones: canciones,
             partes: partes,
             presidencia: "",
