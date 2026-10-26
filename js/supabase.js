@@ -1,4 +1,3 @@
-// Configuración de Supabase
 const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-';
 
@@ -8,12 +7,9 @@ if (window.supabase && window.supabase.createClient) {
 }
 
 let listaHermanos = [];
-let mesActualClave = "2026-09"; // Se actualiza dinámicamente según el texto subido
+let mesActualClave = "2026-09";
 let programaMes = [];
 
-/**
- * Carga la lista de hermanos y sus cualificaciones desde Supabase
- */
 async function cargarHermanosDesdeSupabase() {
     if (!db) return [];
     const { data, error } = await db.from('hermanos').select('*').order('id');
@@ -42,9 +38,6 @@ async function cargarHermanosDesdeSupabase() {
     return listaHermanos;
 }
 
-/**
- * Carga la planilla de semanas guardada para el mes activo desde Supabase
- */
 async function cargarPlanillaDesdeSupabase() {
     if (!db) return [];
     const { data, error } = await db.from('planillas').select('datos').eq('mes_ano', mesActualClave).single();
@@ -54,15 +47,11 @@ async function cargarPlanillaDesdeSupabase() {
     return programaMes;
 }
 
-/**
- * Guarda o actualiza la planilla completa del mes en Supabase (soporta multisalas y sub-asignados)
- */
 async function guardarPlanillaEnSupabase() {
     if (!db) return;
     const el = document.getElementById('estadoGuardado');
     if (el) el.classList.remove('opacity-0');
 
-    // Autodetectar mes_ano desde el primer registro del programa si está disponible
     if (programaMes && programaMes.length > 0 && programaMes[0].semana) {
         const textoSemana = programaMes[0].semana;
         if (textoSemana.includes('SEPTIEMBRE')) mesActualClave = '2026-09';
@@ -90,9 +79,6 @@ async function guardarPlanillaEnSupabase() {
     }, 1800);
 }
 
-/**
- * Actualiza cualificaciones o datos de un hermano en la base de datos
- */
 async function actualizarHermanoBD(id, campo, valor) {
     const h = listaHermanos.find(item => item.id === id);
     if (!h) return;
@@ -102,19 +88,11 @@ async function actualizarHermanoBD(id, campo, valor) {
     if (!db) return;
 
     const dbMap = {
-        sexo: 'sexo', 
-        nombre: 'nombre',
-        orac: 'oracion', 
-        pres: 'pres_vymc', 
-        disc: 'disc_tesoros',
-        perlas: 'perlas', 
-        lec: 'lec_biblia', 
-        smm: 'smm',
-        nvc: 'nvc', 
-        eb: 'ebc', 
-        lectorL: 'lector_ebc',
-        presPub: 'pres_pub', 
-        lectorW: 'lector_atalaya'
+        sexo: 'sexo', nombre: 'nombre',
+        orac: 'oracion', pres: 'pres_vymc', disc: 'disc_tesoros',
+        perlas: 'perlas', lec: 'lec_biblia', smm: 'smm',
+        nvc: 'nvc', eb: 'ebc', lectorL: 'lector_ebc',
+        presPub: 'pres_pub', lectorW: 'lector_atalaya'
     };
 
     const dbCampo = dbMap[campo];
@@ -124,9 +102,6 @@ async function actualizarHermanoBD(id, campo, valor) {
     }
 }
 
-/**
- * Agrega un nuevo registro de hermano en Supabase
- */
 async function agregarNuevoHermanoBD() {
     if (db) {
         const { data, error } = await db.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
@@ -141,9 +116,6 @@ async function agregarNuevoHermanoBD() {
     });
 }
 
-/**
- * Elimina un hermano de Supabase
- */
 async function eliminarHermanoBD(id) {
     if (db) {
         await db.from('hermanos').delete().eq('id', id);
