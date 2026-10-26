@@ -1,29 +1,12 @@
-let semanaActivaIdx = 0;
+window.procesarTextoPrograma = function(textoPegado) {
+    if (!textoPegado || !textoPegado.trim()) return;
 
-window.onload = async function() {
-    try {
-        if (typeof db !== 'undefined' && db) {
-            await cargarHermanosDesdeSupabase();
-            await cargarPlanillaDesdeSupabase();
-        }
-    } catch (err) {
-        console.error("Error inicializando:", err);
-    }
-
-    renderizarMatrizHermanos();
-
-    if (!programaMes || programaMes.length === 0) {
-        programaMes = [crearEstructuraSemanaEjemplo()];
-    }
+    // Normalizar texto
+    const lineas = textoPegado.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
-    renderizarSelectorSemanas();
-    cargarSemanaEnPlanilla(0);
-};
-
-function crearEstructuraSemanaEjemplo() {
-    return {
-        semana: "14-20 DE SEPTIEMBRE",
-        lectura: "JEREMÍAS 34, 35",
+    let nuevaSemana = {
+        semana: "SEMANA DEL MES",
+        lectura: "",
         canciones: ["161", "121", "28"],
         tipoSemana: "normal",
         numSalas: 1,
@@ -31,542 +14,83 @@ function crearEstructuraSemanaEjemplo() {
         oracionIni: "",
         repaso: "",
         oracionFin: "",
-        domPresi: "",
-        domLector: "",
-        partes: [
-            { seccion: "tesoros", t: "10 min", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 34, 35", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5).", desc: "", participantes: 1, asig: "" },
-            
-            { seccion: "maestros", t: "2 min", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "2 min", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "4 min", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
-            
-            { seccion: "vida", t: "6 min", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "9 min", tit: "9. Logros de la organización para el mes de septiembre", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 8.", desc: "", participantes: 2, asig: "", asigAyudante: "" }
-        ]
-    };
-}
-
-function renderizarSelectorSemanas() {
-    const cont = document.getElementById('selectorSemanas');
-    if (!cont) return;
-    cont.innerHTML = '';
-    programaMes.forEach((s, idx) => {
-        const btn = document.createElement('button');
-        btn.onclick = () => cargarSemanaEnPlanilla(idx);
-        btn.className = `px-2.5 py-1 text-xs font-bold rounded-md border transition ${idx === semanaActivaIdx ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`;
-        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : ''}`;
-        cont.appendChild(btn);
-    });
-}
-
-function obtenerOpcionesHermanos(cat) {
-    return listaHermanos.filter(h => {
-        if (!cat) return true;
-        if (cat === 'orac') return h.orac === 'X';
-        if (cat === 'pres') return h.pres === 'X';
-        if (cat === 'disc') return h.disc === 'X';
-        if (cat === 'perlas') return h.perlas === 'X';
-        if (cat === 'lec') return h.lec === 'X';
-        if (cat === 'smm') return h.smm === 'X';
-        if (cat === 'nvc') return h.nvc === 'X';
-        if (cat === 'eb') return h.eb === 'X';
-        if (cat === 'lectorL') return h.lectorL === 'X';
-        if (cat === 'presPub') return h.presPub === 'X';
-        if (cat === 'lectorW') return h.lectorW === 'X';
-        return true;
-    });
-}
-
-function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
-    const aptos = obtenerOpcionesHermanos(cat);
-    let options = `<option value="">-- ${placeholder} --</option>`;
-    aptos.forEach(h => {
-        const sel = h.nombre === valorActual ? 'selected' : '';
-        options += `<option value="${h.nombre}" ${sel}>${h.nombre}</option>`;
-    });
-    return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
-}
-
-function guardarTextoEditable(pIndex, campo, valor) {
-    const sem = programaMes[semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes[pIndex][campo] = valor;
-        guardarPlanillaEnSupabase();
-    }
-}
-
-function cargarSemanaEnPlanilla(idx) {
-    if (!programaMes || programaMes.length === 0) return;
-    semanaActivaIdx = idx;
-    renderizarSelectorSemanas();
-    const sem = programaMes[idx];
-
-    const numSalas = sem.tipoSemana === 'viajante' ? 1 : (sem.numSalas || 1);
-    
-    const selSalas = document.getElementById('selectNumSalas');
-    if (selSalas) {
-        selSalas.value = numSalas;
-        selSalas.disabled = (sem.tipoSemana === 'viajante');
-    }
-
-    const cabecera = document.getElementById('cabeceraTablaPlanilla');
-    cabecera.innerHTML = `
-        <tr>
-            <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
-                <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
-                    <span>Semana del</span>
-                    <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
-                    <span>,</span>
-                    <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
-                </div>
-            </th>
-        </tr>
-    `;
-
-    const radios = document.getElementsByName('tipoSemana');
-    radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
-
-    const banner = document.getElementById('bannerEventoEspecial');
-    const tabla = document.getElementById('tablaPlanillaCompleta');
-
-    if (sem.tipoSemana === 'asamblea') {
-        banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-        banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
-        tabla.classList.add('opacity-30', 'pointer-events-none');
-    } else if (sem.tipoSemana === 'conmemoracion') {
-        banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
-        banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO`;
-        tabla.classList.remove('opacity-30', 'pointer-events-none');
-    } else {
-        banner.classList.add('hidden');
-        tabla.classList.remove('opacity-30', 'pointer-events-none');
-    }
-
-    const partes = sem.partes || [];
-    const cuerpo = document.getElementById('cuerpoTablaPlanilla');
-    
-    // RENDERIZADO DE LAS 7 MICROCOLUMNAS DE ASIGNACIÓN (SUMA DE COLUMNAS = 10 EXACTAS)
-    const renderSalasMaestros = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        const cantP = item.participantes || 1;
-
-        const renderSelectsGroup = (prefix, valTit, valAyu, placeholderPrefix = "") => {
-            let res = `<div class="flex flex-col justify-center h-full">`;
-            if (placeholderPrefix) {
-                res += `<span class="block text-[8px] text-slate-400 font-bold uppercase no-print">${placeholderPrefix}</span>`;
-            }
-            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
-            if (cantP === 2) {
-                res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
-                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
-            }
-            res += `</div>`;
-            return res;
-        };
-
-        let html = '';
-
-        if (numSalas === 1) {
-            // 1 SALA: Ocupa las 7 micro-columnas completas (35%)
-            html += `<td class="p-1 col-asig relative group" colspan="7">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
-            </td>`;
-        } else if (numSalas === 2) {
-            // 2 SALAS: Sala Prin (4 micro-cols) + Sala B (3 micro-cols) = 7 micro-cols (35%)
-            html += `<td class="p-1 col-asig relative group" colspan="4">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
-            </td>
-            <td class="p-1 col-asig" colspan="3">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>`;
-        } else if (numSalas === 3) {
-            // 3 SALAS: Sala Prin (3 micro-cols) + Sala B (2 micro-cols) + Sala C (2 micro-cols) = 7 micro-cols (35%)
-            html += `<td class="p-1 col-asig relative group" colspan="3">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante, "Sala C")}
-            </td>`;
-        }
-        return html;
+        partes: []
     };
 
-    const renderSalasLectura = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        if (numSalas === 1) {
-            return `<td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
-        } else if (numSalas === 2) {
-            return `<td class="px-1 py-1 col-asig" colspan="4">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>`;
-        } else {
-            return `<td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}</td>`;
-        }
-    };
+    let seccionActual = "tesoros";
 
-    // APERTURA
-    let filasHTML = `
-        <tr class="h-6">
-            <td class="c-tiempo editable-field" contenteditable="true">1 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción N° ${sem.canciones?.[0] || '161'}. Presidencia: Palabras de introducción.
-            </td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
-        </tr>
-        <tr class="h-6">
-            <td class="c-tiempo editable-field" contenteditable="true"></td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Oración</td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
-        </tr>
-    `;
+    for (let i = 0; i < lineas.length; i++) {
+        let linea = lineas[i];
 
-    let renderizoTesorosHeader = false;
-    let renderizoMaestrosHeader = false;
-    let renderizoVidaHeader = false;
-
-    partes.forEach((item, pIndex) => {
-
-        if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
-                </tr>
-            `;
-            renderizoTesorosHeader = true;
-        } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
-                </tr>
-            `;
-            renderizoMaestrosHeader = true;
-        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
-                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
-                </tr>
-                <tr>
-                    <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true">
-                        Canción Nº: ${sem.canciones?.[1] || '121'}
-                    </td>
-                </tr>
-            `;
-            renderizoVidaHeader = true;
-        }
-
-        let cat = 'smm';
-        if (item.seccion === 'tesoros') {
-            if (pIndex === 0) cat = 'disc';
-            else if (item.tit.includes('perlas')) cat = 'perlas';
-            else if (item.tit.includes('Lectura')) cat = 'lec';
-        } else if (item.seccion === 'vida') {
-            cat = 'nvc';
-        }
-
-        if (item.seccion === 'tesoros') {
-            if (item.tit.includes('Lectura')) {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        ${renderSalasLectura(pIndex, cat)}
-                    </tr>
-                `;
-            } else {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
-                    </tr>
-                `;
-            }
-        } 
-        else if (item.seccion === 'maestros') {
-            filasHTML += `
-                <tr>
-                    <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                    <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                    ${renderSalasMaestros(pIndex, cat)}
-                </tr>
-            `;
-        } 
-        else if (item.seccion === 'vida') {
-            if (item.tit.includes('Estudio bíblico')) {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
-                    </tr>
-                    <tr>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Lector:</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
-                    </tr>
-                `;
-            } else {
-                filasHTML += `
-                    <tr class="group">
-                        <td class="c-tiempo relative editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
-                            ${item.t}
-                            <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
-                        </td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
-                    </tr>
-                `;
+        // Detector de Semana y Lectura Bíblica
+        if (linea.includes("DE SEPTIEMBRE") || linea.includes("DE OCTUBRE") || linea.includes("DE NOVIEMBRE") || linea.includes("DE DICIEMBRE") || linea.match(/\d+-\d+/)) {
+            nuevaSemana.semana = linea;
+            if (lineas[i+1] && (lineas[i+1].includes("JEREMÍAS") || lineas[i+1].includes("LAMENTACIONES") || lineas[i+1].match(/^[1-2]?\s?[A-ZÁÉÍÓÚ]+/))) {
+                nuevaSemana.lectura = lineas[i+1];
             }
         }
-    });
 
-    filasHTML += `
-        <tr class="no-print bg-slate-50">
-            <td colspan="10" class="p-1 text-center">
-                <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
-                    <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
-                </button>
-            </td>
-        </tr>
-    `;
+        // Cambio de Secciones
+        if (linea.includes("TESOROS DE LA BIBLIA")) seccionActual = "tesoros";
+        if (linea.includes("SEAMOS MEJORES MAESTROS")) seccionActual = "maestros";
+        if (linea.includes("NUESTRA VIDA CRISTIANA")) seccionActual = "vida";
 
-    // CONCLUSIÓN EDITABLE
-    filasHTML += `
-        <tr>
-            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true">3 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
-        </tr>
-        <tr>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción ${sem.canciones?.[2] || '28'} y oración
-            </td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
-        </tr>
+        // Captura de Canciones
+        if (linea.startsWith("Canción") && linea.includes("y oración")) {
+            let num = linea.replace(/\D/g, '');
+            if (num) nuevaSemana.canciones[0] = num;
+        }
+        if (linea.startsWith("Canción ") && !linea.includes("y oración") && seccionActual === "vida") {
+            let num = linea.replace(/\D/g, '');
+            if (num) nuevaSemana.canciones[1] = num;
+        }
 
-        <!-- REUNIÓN PÚBLICA EDITABLE -->
-        <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true">
-                Domingo, presidencia: 
-                <div class="inline-block ml-2 w-48">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
-            </td>
-            <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true">
-                Lector: 
-                <div class="inline-block ml-2 text-left w-48">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
-            </td>
-        </tr>
-    `;
+        // Captura de Partes Numeradas (1. 2. 3. etc.)
+        let matchParte = linea.match(/^(\d+)\.\s*(.+)/);
+        if (matchParte) {
+            let numParte = matchParte[1];
+            let tituloParte = matchParte[2];
+            let tiempoParte = "5 min";
+            let descParte = "";
 
-    cuerpo.innerHTML = filasHTML;
-}
+            // Buscar tiempo en la línea actual o en la siguiente (ej: "(10 mins.)")
+            let matchTiempo = linea.match(/\((\d+\s*min[s]?\.)\)/i);
+            if (!matchTiempo && lineas[i+1]) {
+                matchTiempo = lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i);
+            }
+            if (matchTiempo) {
+                tiempoParte = matchTiempo[1].replace('.', '');
+            }
 
-window.actualizarEncabezadoSemana = async function(campo, valor) {
-    if (programaMes[semanaActivaIdx]) {
-        programaMes[semanaActivaIdx][campo] = valor;
-        await guardarPlanillaEnSupabase();
+            // Capturar descripción si existe en la línea siguiente
+            if (lineas[i+1] && !lineas[i+1].startsWith("Canción") && !lineas[i+1].match(/^\d+\./) && !lineas[i+1].includes("SEAMOS") && !lineas[i+1].includes("TESOROS")) {
+                if (!lineas[i+1].includes("min")) {
+                    descParte = lineas[i+1];
+                } else if (lineas[i+2] && !lineas[i+2].match(/^\d+\./)) {
+                    descParte = lineas[i+2];
+                }
+            }
+
+            // Determinar si lleva ayudante (Seamos mejores maestros)
+            let participantes = (seccionActual === "maestros") ? 2 : 1;
+
+            nuevaSemana.partes.push({
+                seccion: seccionActual,
+                t: tiempoParte,
+                tit: `${numParte}. ${tituloParte}`,
+                desc: descParte,
+                participantes: participantes,
+                asig: ""
+            });
+        }
     }
-};
 
-window.toggleParticipantesParte = async function(pIndex) {
-    const sem = programaMes[semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
+    // Reemplazar o actualizar semana activa
+    if (nuevaSemana.partes.length > 0) {
+        programaMes[semanaActivaIdx] = nuevaSemana;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
-    }
-};
-
-window.agregarNuevaSemana = async function() {
-    const numSem = programaMes.length + 1;
-    const nuevaSem = crearEstructuraSemanaEjemplo();
-    nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
-    programaMes.push(nuevaSem);
-    semanaActivaIdx = programaMes.length - 1;
-    renderizarSelectorSemanas();
-    cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
-};
-
-window.eliminarSemanaActiva = async function() {
-    if (!programaMes || programaMes.length === 0) return;
-    
-    if (confirm(`¿Estás seguro de que deseas eliminar la semana "${programaMes[semanaActivaIdx].semana}"?`)) {
-        programaMes.splice(semanaActivaIdx, 1);
-        if (semanaActivaIdx >= programaMes.length) {
-            semanaActivaIdx = Math.max(0, programaMes.length - 1);
-        }
-        if (programaMes.length === 0) {
-            programaMes = [crearEstructuraSemanaEjemplo()];
-            semanaActivaIdx = 0;
-        }
-        renderizarSelectorSemanas();
-        cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
-    }
-};
-
-window.agregarFilaVida = async function() {
-    const sem = programaMes[semanaActivaIdx];
-    if (!sem) return;
-    
-    const idxEBC = sem.partes.findIndex(p => p.tit.includes('Estudio bíblico'));
-    const nuevaParte = {
-        seccion: 'vida',
-        t: '15 min',
-        tit: 'Parte adicional',
-        desc: 'Análisis con el auditorio.',
-        participantes: 1,
-        asig: ''
-    };
-
-    if (idxEBC !== -1) {
-        sem.partes.splice(idxEBC, 0, nuevaParte);
-    } else {
-        sem.partes.push(nuevaParte);
-    }
-
-    cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
-};
-
-window.eliminarFilaParte = async function(pIndex) {
-    const sem = programaMes[semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes.splice(pIndex, 1);
-        cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
-    }
-};
-
-window.cambiarNumSalasSemana = async function(cantidad) {
-    if (!programaMes[semanaActivaIdx]) return;
-    programaMes[semanaActivaIdx].numSalas = parseInt(cantidad);
-    cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
-};
-
-window.guardarAsignacionSemana = async function(elemId) {
-    const el = document.getElementById(elemId);
-    if (!el) return;
-    const val = el.value;
-    const sem = programaMes[semanaActivaIdx];
-    if (!sem) return;
-
-    if (elemId === 'asig_presi') sem.presidencia = val;
-    else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
-    else if (elemId.startsWith('asig_p')) {
-        const partesId = elemId.split('_');
-        const pIndex = parseInt(partesId[1].replace('p', ''));
-        const sala = partesId[2];
-        const rol = partesId[3];
-
-        if (sem.partes && sem.partes[pIndex]) {
-            if (sala === 'A') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigAyudante = val;
-                else sem.partes[pIndex].asig = val;
-            } else if (sala === 'B') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigBAyudante = val;
-                else sem.partes[pIndex].asigB = val;
-            } else if (sala === 'C') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigCAyudante = val;
-                else sem.partes[pIndex].asigC = val;
-            }
+        if (typeof guardarPlanillaEnSupabase === 'function') {
+            guardarPlanillaEnSupabase();
         }
     }
-    else if (elemId === 'asig_repaso') sem.repaso = val;
-    else if (elemId === 'asig_orac_fin') sem.oracionFin = val;
-    else if (elemId === 'asig_dom_presi') sem.domPresi = val;
-    else if (elemId === 'asig_dom_lector') sem.domLector = val;
-
-    await guardarPlanillaEnSupabase();
-};
-
-window.actualizarTipoSemana = async function(tipo) {
-    if (!programaMes[semanaActivaIdx]) return;
-    programaMes[semanaActivaIdx].tipoSemana = tipo;
-    if (tipo === 'viajante') programaMes[semanaActivaIdx].numSalas = 1;
-    cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
-};
-
-window.cambiarPestaña = function(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById(`sec-${tab}`);
-    if (target) target.classList.remove('hidden');
-
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
-    });
-    const activeTab = document.getElementById(`tab-${tab}`);
-    if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-};
-
-function renderizarMatrizHermanos() {
-    const cuerpo = document.getElementById('cuerpoTablaHermanos');
-    if (!cuerpo) return;
-    cuerpo.innerHTML = '';
-
-    listaHermanos.forEach((h, index) => {
-        const tr = document.createElement('tr');
-        tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-        tr.innerHTML = `
-            <td class="font-bold text-slate-400">${index + 1}</td>
-            <td>
-                <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
-                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
-                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
-                </select>
-            </td>
-            ${['orac', 'pres', 'disc', 'perlas', 'lec', 'smm', 'nvc', 'eb', 'lectorL', 'presPub', 'lectorW'].map(col => `
-                <td>
-                    <input type="checkbox" ${h[col] === 'X' ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked ? 'X' : '')" class="rounded text-amber-600">
-                </td>
-            `).join('')}
-            <td class="text-left font-bold px-3">
-                <input type="text" value="${h.nombre}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
-            </td>
-            <td class="no-print">
-                <button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        `;
-        cuerpo.appendChild(tr);
-    });
-}
-
-window.actualizarHermano = async function(id, campo, valor) {
-    await actualizarHermanoBD(id, campo, valor);
-    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-};
-
-window.agregarNuevoHermano = async function() {
-    await agregarNuevoHermanoBD();
-    renderizarMatrizHermanos();
-};
-
-window.eliminarHermano = async function(id) {
-    await eliminarHermanoBD(id);
-    renderizarMatrizHermanos();
-    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
