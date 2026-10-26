@@ -1,141 +1,83 @@
-/**
- * Analiza el texto bruto pegado desde JW.org o la Guía de Actividades
- * y construye las semanas con sus partes detalladas, canciones y libro de estudio.
- */
-function procesarTextoGuiaActividades(rawText) {
-    if (!rawText || !rawText.trim()) return [];
+function procesarTextoGuiaActividades(texto) {
+    if (!texto || !texto.trim()) return [];
 
-    // Separar bloques por fechas (Ejemplo: "5-11 DE OCTUBRE")
-    const bloques = rawText.split(/\n(?=\d{1,2}-\d{1,2}\s+DE\s+)/i);
-    let nuevasSemanas = [];
+    const bloquesSemanas = texto.split(/(?=\b\d{1,2}-\d{1,2}\s+DE\s+[A-ZÁÉÍÓÚÑ]+\b)/i);
+    const semanasProcesadas = [];
 
-    bloques.forEach((bloque, idx) => {
+    bloquesSemanas.forEach(bloque => {
+        if (!bloque.trim()) return;
+
         const lineas = bloque.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (lineas.length < 2) return;
+        if (lineas.length < 3) return;
 
-        const semanaNom = lineas[0];
-        const lecturaNom = lineas[1];
+        const semHeader = lineas[0];
+        const lectura = lineas[1];
 
-        // 1. EXTRAER CANCIONES (Busca todas las apariciones de "Canción X" en la semana)
-        let canciones = [];
-        lineas.forEach(linea => {
-            const matchCancion = linea.match(/Canci[óo]n\s+(\d+)/i);
-            if (matchCancion && canciones.length < 3) {
-                canciones.push(matchCancion[1]);
+        const canciones = [];
+        lineas.forEach(l => {
+            const match = l.match(/Canción\s+(\d+)/i);
+            if (match && !canciones.includes(match[1])) {
+                canciones.push(match[1]);
             }
         });
 
-        // Si se encontraron menos de 3 canciones, rellenar vacíos
-        while (canciones.length < 3) {
-            canciones.push("");
-        }
+        const partes = {
+            p1: { t: '10 min', tit: '1. Discurso', desc: 'Discurso', asig: '' },
+            p2: { t: '10 min', tit: '2. Busquemos perlas escondidas', desc: 'Preguntas y respuestas', asig: '' },
+            p3: { t: '4 min', tit: '3. Lectura de la Biblia', desc: '', asig: '', asigB: '', asigC: '' },
+            p4: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p5: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p6: { t: '4 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p7: { t: '3 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p8: { t: '15 min', tit: '', desc: '', asig: '' },
+            p9: { t: '30 min', tit: 'Estudio bíblico de la congregación', desc: '', asig: '', lector: '' }
+        };
 
-        let partes = {};
-
-        for (let i = 0; i < lineas.length; i++) {
-            const linea = lineas[i];
-            const matchParte = linea.match(/^(\d+)\.\s+(.*)/);
-
-            if (matchParte) {
-                const numStr = matchParte[1];
-                const num = parseInt(numStr);
-                let titBruto = matchParte[2];
-
-                let t = "";
-                let desc = "";
-                let titFinal = titBruto;
-
-                // Extraer tiempo entre paréntesis
-                let matchTiempo = titBruto.match(/\((\d+\s*min[^\)]*)\)/i);
-
-                // --- CASO ESPECIAL: LECTURA DE LA BIBLIA (PARTE 3) ---
-                if (num === 3) {
-                    titFinal = "3. Lectura de la Biblia";
-                    if (i + 1 < lineas.length) {
-                        const sigLinea = lineas[i + 1];
-                        const matchSigTiempo = sigLinea.match(/\((\d+\s*min[^\)]*)\)/i);
-                        if (matchSigTiempo) {
-                            t = matchSigTiempo[1];
-                            desc = sigLinea.replace(/\([^\)]*min[^\)]*\)/gi, '').trim();
-                        } else {
-                            desc = sigLinea;
-                        }
-                    }
-                    if (!t) t = "4 min o menos";
-                    titFinal = `3. Lectura de la Biblia: ${desc}`;
-                    desc = "";
-                } 
-                // --- CASO ESPECIAL: ESTUDIO BÍBLICO DE LA CONGREGACIÓN (PARTE 9) ---
-                else if (num === 9) {
-                    titFinal = "9. Estudio bíblico de la congregación";
-                    t = "30 min";
+        let smmIdx = 4;
+        for (let i = 2; i < lineas.length; i++) {
+            const l = lineas[i];
+            
+            if (l.match(/^\d+\.\s+Empiece|^\d+\.\s+Haga|^\d+\.\s+Explique|^\d+\.\s+Discurso|^\d+\.\s+Video/i)) {
+                if (smmIdx <= 7) {
+                    const matchMin = l.match(/\((\d+)\s*min/i);
+                    const mins = matchMin ? `${matchMin[1]} min` : '3 min';
+                    const titSolo = l.replace(/^\d+\.\s*/, '').replace(/\(\d+\s*mins?\.\)/i, '').trim();
                     
-                    // Extraer la porción del libro (Ejemplo: "wcg cap. 11" o "(30 mins.) wcg cap. 11")
-                    let textoLibro = titBruto.replace(/\([^\)]*\)/g, '').replace(/Estudio b[íi]blico de la congregaci[óo]n:?/i, '').trim();
-                    
-                    // Si no venía en la misma línea, buscar en el renglón de abajo
-                    if (!textoLibro && i + 1 < lineas.length) {
-                        textoLibro = lineas[i + 1].replace(/\([^\)]*\)/g, '').trim();
+                    let descText = '';
+                    if (i + 1 < lineas.length && lineas[i+1].includes('(')) {
+                        descText = lineas[i+1];
                     }
 
-                    if (textoLibro) {
-                        titFinal = `9. Estudio bíblico de la congregación: ${textoLibro}`;
-                    }
+                    partes[`p${smmIdx}`] = {
+                        t: mins,
+                        tit: `${smmIdx}. ${titSolo}`,
+                        desc: descText,
+                        asig: '', asigB: '', asigC: ''
+                    };
+                    smmIdx++;
                 }
-                // --- RESTO DE PARTES ---
-                else {
-                    if (matchTiempo) {
-                        t = matchTiempo[1];
-                        titFinal = `${num}. ` + titBruto.replace(/\([^\)]*\)/g, '').trim();
-                    } else if (i + 1 < lineas.length) {
-                        const sigLinea = lineas[i + 1];
-                        const matchSigTiempo = sigLinea.match(/\((\d+\s*min[^\)]*)\)/i);
-                        if (matchSigTiempo) {
-                            t = matchSigTiempo[1];
-                            desc = sigLinea.replace(/\([^\)]*min[^\)]*\)/gi, '').trim();
-                        }
-                    }
+            }
 
-                    if (num === 1) desc = "Discurso";
-                    else if (num === 2) desc = `Preguntas y respuestas ${lecturaNom}`;
-                }
-
-                // Categorización
-                let cat = "smm";
-                if (num === 1) cat = "disc";
-                else if (num === 2) cat = "perlas";
-                else if (num === 3) cat = "lec";
-                else if (num >= 8 && num < 9) cat = "nvc";
-                else if (num >= 9) cat = "eb";
-
-                partes[`p${num}`] = {
-                    t: t,
-                    tit: titFinal,
-                    desc: desc,
-                    cat: cat,
-                    asig: "",
-                    asigB: "",
-                    asigC: ""
-                };
+            if (l.includes('Estudio bíblico de la congregación')) {
+                partes.p9.tit = l;
             }
         }
 
-        nuevasSemanas.push({
-            idSemana: idx,
-            semana: semanaNom,
-            lectura: lecturaNom,
-            tipoSemana: "normal",
-            numSalas: 1,
+        semanasProcesadas.push({
+            semana: semHeader,
+            lectura: lectura,
             canciones: canciones,
-            partes: partes,
-            presidencia: "",
-            oracionIni: "",
-            repaso: "",
-            oracionFin: "",
-            domPresi: "",
-            domLector: ""
+            tipoSemana: 'normal',
+            numSalas: 1,
+            presidencia: '',
+            oracionIni: '',
+            repaso: '',
+            oracionFin: '',
+            domPresi: '',
+            domLector: '',
+            partes: partes
         });
     });
 
-    return nuevasSemanas;
+    return semanasProcesadas;
 }
