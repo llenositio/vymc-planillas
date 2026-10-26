@@ -18,7 +18,7 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* 1. CONTROL RIGIDO DE LA TABLA */
+        /* 1. CONTROL RÍGIDO DE LA TABLA */
         #tablaPlanillaCompleta { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -34,29 +34,24 @@
             overflow: hidden; 
         }
 
-        /* 2. CONTROL DIRECTO DE ANCHOS POR COLUMNA */
-        /* Columna 1 (Tiempo): Compacta al mínimo */
-        #tablaPlanillaCompleta tr td:nth-child(1) {
-            width: 55px !important;
-            max-width: 55px !important;
-            min-width: 55px !important;
+        /* 2. CLASES DIRECTAS DE ANCHO (Sin depender de nth-child) */
+        .col-tiempo {
+            width: 42px !important;
+            max-width: 42px !important;
+            min-width: 42px !important;
             text-align: center !important;
             white-space: nowrap !important;
         }
 
-        /* Columna 2 (Título): 20% del ancho */
-        #tablaPlanillaCompleta tr td:nth-child(2) {
-            width: 20% !important;
+        .col-titulo {
+            width: 25% !important;
         }
 
-        /* Columna 3 (Descripción/Lección): 20% del ancho */
-        #tablaPlanillaCompleta tr td:nth-child(3) {
-            width: 20% !important;
+        .col-desc {
+            width: 25% !important;
         }
 
-        /* Columna 4 (Asignaciones): 50% del ancho libre (¡Gran espacio para salas!) */
-        #tablaPlanillaCompleta tr td:nth-child(4),
-        #tablaPlanillaCompleta tr td[colspan="2"]:last-child {
+        .col-asig {
             width: 50% !important;
         }
 
