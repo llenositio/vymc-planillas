@@ -108,10 +108,10 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <colgroup>
-            <col style="width: 50px !important;">
-            <col style="width: 28% !important;">
-            <col style="width: 28% !important;">
-            <col style="width: 44% !important;">
+            <col class="col-tiempo">
+            <col class="col-titulo">
+            <col class="col-desc">
+            <col class="col-asig">
         </colgroup>
         <tr>
             <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
