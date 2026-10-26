@@ -1,6 +1,9 @@
 /**
- * Parser dinámico que mapea la Guía de Actividades directamente
- * al modelo de 4 columnas de la planilla Excel VyMC.
+ * Parser ajustado para mapear exactamente las 4 columnas del modelo Excel VyMC:
+ * Columna 1: Tiempo
+ * Columna 2: Título / Punto
+ * Columna 3: Modalidad / Lección / Detalle
+ * Columna 4: Asignaciones
  */
 function procesarTextoGuiaActividades(texto) {
     if (!texto || !texto.trim()) return [];
@@ -31,6 +34,7 @@ function procesarTextoGuiaActividades(texto) {
         for (let i = 2; i < lineas.length; i++) {
             const linea = lineas[i];
 
+            // Buscar tiempo especificado entre paréntesis
             const matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
             
             if (matchMin) {
@@ -40,6 +44,7 @@ function procesarTextoGuiaActividades(texto) {
                 let titulo = textoLimpio;
                 let descripcion = '';
 
+                // Separar Título y Modalidad/Detalle
                 if (textoLimpio.toLowerCase().includes('discurso')) {
                     titulo = textoLimpio.replace(/discurso/i, '').trim();
                     descripcion = 'Discurso';
@@ -48,6 +53,7 @@ function procesarTextoGuiaActividades(texto) {
                     descripcion = 'Preguntas y respuestas';
                 }
 
+                // Si la siguiente línea trae una lección o detalle entre paréntesis
                 if (i + 1 < lineas.length && lineas[i + 1].startsWith('(')) {
                     descripcion = lineas[i + 1];
                     i++;
