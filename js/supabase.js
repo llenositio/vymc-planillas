@@ -1,6 +1,6 @@
 // Configuración de Supabase
 const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d0iqR...'; // Reemplazar con tu clave pública completa
+const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-'; // Reemplazar con tu clave pública completa
 
 let db = null;
 if (window.supabase && window.supabase.createClient) {
