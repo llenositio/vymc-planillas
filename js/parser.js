@@ -1,12 +1,6 @@
-/**
- * Parser dinámico para la Guía de Actividades de la Reunión VyMC.
- * Extrae semanas, canciones, títulos, duraciones y lecciones
- * directamente del texto ingresado por el usuario.
- */
 function procesarTextoGuiaActividades(texto) {
     if (!texto || !texto.trim()) return [];
 
-    // Dividir el texto completo por encabezados de semana (ej: "5-11 DE OCTUBRE")
     const bloquesSemanas = texto.split(/(?=\b\d{1,2}-\d{1,2}\s+DE\s+[A-ZÁÉÍÓÚÑ]+\b)/i);
     const semanasProcesadas = [];
 
@@ -19,7 +13,6 @@ function procesarTextoGuiaActividades(texto) {
         const semHeader = lineas[0];
         const lectura = lineas[1] || '';
 
-        // Extraer números de canción
         const canciones = [];
         lineas.forEach(l => {
             const match = l.match(/Canción\s+(\d+)/i);
@@ -28,39 +21,62 @@ function procesarTextoGuiaActividades(texto) {
             }
         });
 
-        const partes = {};
-        let parteCounter = 1;
+        // Estructura base limpia
+        const partes = {
+            p1: { t: '10 min', tit: '1. Discurso', desc: '', asig: '' },
+            p2: { t: '10 min', tit: '2. Busquemos perlas escondidas', desc: 'Preguntas y respuestas', asig: '' },
+            p3: { t: '4 min', tit: '3. Lectura de la Biblia', desc: '', asig: '', asigB: '', asigC: '' },
+            p4: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p5: { t: '2 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p6: { t: '4 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p7: { t: '3 min', tit: '', desc: '', asig: '', asigB: '', asigC: '' },
+            p8: { t: '15 min', tit: '', desc: '', asig: '' },
+            p9: { t: '30 min', tit: 'Estudio bíblico de la congregación', desc: '', asig: '', lector: '' }
+        };
+
+        let smmCounter = 4;
 
         for (let i = 2; i < lineas.length; i++) {
             const linea = lineas[i];
 
-            // Si la línea contiene una duración entre paréntesis (ej: "(10 min)" o "(4 mins.)")
-            const matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
-            
-            if (matchMin) {
-                const minutos = `${matchMin[1]} min`;
-                
-                // Limpiar el título quitando el tiempo en paréntesis
-                let tituloLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-                let descripcion = '';
+            // Detectar el primer discurso de Tesoros
+            if (linea.match(/^\b1\.\s+/i) || (linea.includes('(10 min)') && !linea.includes('perlas'))) {
+                const matchMin = linea.match(/\((\d+)\s*min/i);
+                partes.p1.t = matchMin ? `${matchMin[1]} min` : '10 min';
+                partes.p1.tit = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
+                partes.p1.desc = 'Discurso';
+            }
+            // Detectar SMM (Seamos Mejores Maestros)
+            else if (linea.match(/^\d+\.\s*(Empiece|Haga|Explique|Discurso|Video)/i) && smmCounter <= 7) {
+                const matchMin = linea.match(/\((\d+)\s*min/i);
+                const mins = matchMin ? `${matchMin[1]} min` : '3 min';
+                const titLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
 
-                // Si la línea siguiente es una lección o detalle entre paréntesis, extraerla como descripción
+                let descText = '';
                 if (i + 1 < lineas.length && lineas[i + 1].startsWith('(')) {
-                    descripcion = lineas[i + 1];
-                    i++; // Avanzar el índice al haber consumido la descripción
+                    descText = lineas[i + 1];
+                    i++;
                 }
 
-                // Guardar la parte leída dinámicamente
-                partes[`p${parteCounter}`] = {
-                    t: minutos,
-                    tit: tituloLimpio,
-                    desc: descripcion,
-                    asig: '',
-                    asigB: '',
-                    asigC: ''
+                partes[`p${smmCounter}`] = {
+                    t: mins,
+                    tit: titLimpio,
+                    desc: descText,
+                    asig: '', asigB: '', asigC: ''
                 };
-
-                parteCounter++;
+                smmCounter++;
+            }
+            // Detectar NVC (Nuestra Vida Cristiana)
+            else if (linea.includes('(15 min)') || linea.includes('(10 min)') && i > 8) {
+                if (!linea.includes('Estudio bíblico')) {
+                    const matchMin = linea.match(/\((\d+)\s*min/i);
+                    partes.p8 = {
+                        t: matchMin ? `${matchMin[1]} min` : '15 min',
+                        tit: linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim(),
+                        desc: '',
+                        asig: ''
+                    };
+                }
             }
         }
 
