@@ -19,7 +19,6 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* ESTRUCTURA BASE DE 10 COLUMNAS (1 FIJA + 9 PORCENTUALES = 100%) */
         #tablaPlanillaCompleta { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -28,7 +27,6 @@
             border: 1.5px solid #000 !important;
         }
 
-        /* COLUMNA 1 CONGELADA A 40PX ABSOLUTOS (TIEMPO) */
         #tablaPlanillaCompleta col.c-tiempo,
         #tablaPlanillaCompleta td.c-tiempo,
         #tablaPlanillaCompleta th.c-tiempo { 
@@ -52,7 +50,6 @@
             vertical-align: middle;
         }
 
-        /* FORMATO EDITABLE TOTALMENTE GRISADO COMO SUGERENCIA */
         .editable-field {
             outline: none;
             color: #64748b !important;
@@ -66,7 +63,6 @@
             background-color: #fef08a !important;
         }
 
-        /* FORMATO DE DESPLEGABLES DE ASIGNACIONES */
         .select-asig { 
             width: 100%; 
             background: transparent; 
@@ -143,6 +139,9 @@
                         <button onclick="agregarNuevaSemana()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
                             <i class="fa-solid fa-plus"></i> Nueva
                         </button>
+                        <button onclick="abrirModalImportador()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Extraer Programa
+                        </button>
                         <button onclick="eliminarSemanaActiva()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1 ml-1">
                             <i class="fa-solid fa-trash"></i> Eliminar Semana
                         </button>
@@ -199,7 +198,6 @@
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
-                <!-- 10 COLUMNAS: C1=40px, C2=25%, C3=35%, C4 a C10 = 5% c/u (35% total) -->
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
@@ -259,6 +257,55 @@
             </div>
         </section>
 
+    </div>
+
+    <!-- MODAL DE EXTRACCIÓN EN 3 PASOS -->
+    <div id="modalImportador" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+                <h3 class="font-extrabold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Extractor de Texto a Formato Delimitado (//)
+                </h3>
+                <button onclick="cerrarModalImportador()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- PASO 1: PEGAR TEXTO CRUDO -->
+            <div id="pasoModalTextoCrudo" class="p-4 flex-1 overflow-y-auto space-y-3">
+                <p class="text-xs text-slate-600 font-medium">
+                    1. Pega aquí el <strong>texto crudo copiado directamente</strong> de la guía o del sitio web:
+                </p>
+                <textarea id="inputTextoCrudo" rows="12" class="w-full p-3 font-mono text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed" placeholder="Pega el texto del programa aquí..."></textarea>
+            </div>
+
+            <!-- PASO 2: VISTA DEL TEXTO CONVERTIDO A // (EDITABLE) -->
+            <div id="pasoModalFormateado" class="p-4 flex-1 overflow-y-auto space-y-3 hidden">
+                <div class="flex justify-between items-center">
+                    <p class="text-xs text-emerald-700 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-check-circle"></i> 2. Texto procesado con delimitadores <code class="bg-slate-100 px-1 py-0.5 rounded font-mono">//</code>. Puedes revisar o ajustar cualquier línea antes de cargarlo:
+                    </p>
+                    <button onclick="volverAPasoTextoCrudo()" class="text-xs text-slate-500 hover:text-slate-800 underline font-semibold">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Volver al texto original
+                    </button>
+                </div>
+                <textarea id="outputTextoDelimitado" rows="12" class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed text-slate-800"></textarea>
+            </div>
+
+            <div class="bg-slate-50 p-3 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="cerrarModalImportador()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                    Cancelar
+                </button>
+                <button id="btnConvertirCrudo" onclick="convertirTextoCrudoADelimitado()" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear"></i> Generar Formato //
+                </button>
+                <button id="btnCargarAPlanilla" onclick="cargarDelimitadoAPlanilla()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition hidden flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Cargar a la Planilla
+                </button>
+            </div>
+
+        </div>
     </div>
 
     <script src="js/supabase.js"></script>
