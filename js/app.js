@@ -105,10 +105,10 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <colgroup>
-            <col style="width: 42px; max-width: 42px;">
-            <col style="width: 24%;">
-            <col style="width: 24%;">
-            <col style="width: 52%;">
+            <col style="width: 42px;">
+            <col style="width: 22%;">
+            <col style="width: 22%;">
+            <col style="width: 50%;">
         </colgroup>
         <tr>
             <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
@@ -141,14 +141,14 @@ function cargarSemanaEnPlanilla(idx) {
     const p = sem.partes || {};
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // Generador de celdas para salas aprovechando el 52% del ancho
+    // Generador de celdas para salas aprovechando el 50% del ancho
     const renderSalasCelda = (parteKey, cat) => {
         const item = p[parteKey] || {};
         if (numSalas === 1) {
-            return `<td class="px-2">${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig)}</td>`;
+            return `<td class="px-2" style="width: 50%;">${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig)}</td>`;
         }
         
-        let html = `<td class="px-1 py-1">
+        let html = `<td class="px-1 py-1" style="width: 50%;">
             <div class="grid grid-cols-${numSalas} gap-1 text-[10px]">
                 <div class="border-r border-slate-300 pr-1">
                     <span class="block text-[8px] text-slate-400 font-bold uppercase">Prin.</span>
@@ -170,35 +170,35 @@ function cargarSemanaEnPlanilla(idx) {
 
     cuerpo.innerHTML = `
         <tr class="h-6">
-            <td class="text-center font-bold text-xs">1 min</td>
-            <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
-            <td class="px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">1 min</td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
         <tr class="h-6">
-            <td></td>
-            <td class="px-2 font-medium" colspan="2">Oración</td>
-            <td class="px-2">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
+            <td style="width: 42px;"></td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">Oración</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
 
         <tr>
             <th colspan="4" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
         </tr>
         <tr>
-            <td class="text-center font-bold text-xs">${p.p1?.t || '10 min'}</td>
-            <td class="px-2 font-medium">${p.p1?.tit || '1. Discurso'}</td>
-            <td class="px-2 font-semibold text-slate-700">${p.p1?.desc || 'Discurso'}</td>
-            <td class="px-2">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p.p1?.t || '10 min'}</td>
+            <td class="px-2 font-medium" style="width: 22%;">${p.p1?.tit || '1. Discurso'}</td>
+            <td class="px-2 font-semibold text-slate-700" style="width: 22%;">${p.p1?.desc || 'Discurso'}</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
         </tr>
         <tr>
-            <td class="text-center font-bold text-xs">${p.p2?.t || '10 min'}</td>
-            <td class="px-2 font-medium">${p.p2?.tit || '2. Busquemos perlas escondidas'}</td>
-            <td class="px-2 font-semibold text-slate-700">${p.p2?.desc || 'Preguntas y respuestas'}</td>
-            <td class="px-2">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p.p2?.t || '10 min'}</td>
+            <td class="px-2 font-medium" style="width: 22%;">${p.p2?.tit || '2. Busquemos perlas escondidas'}</td>
+            <td class="px-2 font-semibold text-slate-700" style="width: 22%;">${p.p2?.desc || 'Preguntas y respuestas'}</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
         </tr>
         <tr>
-            <td class="text-center font-bold text-xs">${p.p3?.t || '4 min'}</td>
-            <td class="px-2 font-medium">3. Lectura de la Biblia</td>
-            <td class="px-2 font-medium text-slate-700">${p.p3?.desc || ''}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p.p3?.t || '4 min'}</td>
+            <td class="px-2 font-medium" style="width: 22%;">3. Lectura de la Biblia</td>
+            <td class="px-2 font-medium text-slate-700" style="width: 22%;">${p.p3?.desc || ''}</td>
             ${renderSalasCelda('p3', 'lec')}
         </tr>
 
@@ -207,9 +207,9 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         ${['p4', 'p5', 'p6', 'p7'].map(pk => p[pk]?.tit ? `
         <tr>
-            <td class="text-center font-bold text-xs">${p[pk].t}</td>
-            <td class="px-2 font-medium">${p[pk].tit}</td>
-            <td class="px-2 text-slate-700">${p[pk].desc}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p[pk].t}</td>
+            <td class="px-2 font-medium" style="width: 22%;">${p[pk].tit}</td>
+            <td class="px-2 text-slate-700" style="width: 22%;">${p[pk].desc}</td>
             ${renderSalasCelda(pk, 'smm')}
         </tr>` : '').join('')}
 
@@ -221,39 +221,39 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         ${p.p8?.tit ? `
         <tr>
-            <td class="text-center font-bold text-xs">${p.p8.t}</td>
-            <td class="px-2 font-medium">${p.p8.tit}</td>
-            <td class="px-2 text-slate-700">${p.p8.desc}</td>
-            <td class="px-2">${crearSelectHTML('asig_p8', 'nvc', p.p8.asig)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p.p8.t}</td>
+            <td class="px-2 font-medium" style="width: 22%;">${p.p8.tit}</td>
+            <td class="px-2 text-slate-700" style="width: 22%;">${p.p8.desc}</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_p8', 'nvc', p.p8.asig)}</td>
         </tr>` : ''}
         <tr>
-            <td class="text-center font-bold text-xs">${p.p9?.t || '30 min'}</td>
-            <td class="px-2 font-medium" colspan="2">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
-            <td class="px-2">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">${p.p9?.t || '30 min'}</td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
         </tr>
         ${sem.tipoSemana !== 'viajante' ? `
         <tr>
-            <td></td>
-            <td class="px-2 font-medium" colspan="2">Lector del Estudio Bíblico:</td>
-            <td class="px-2">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
+            <td style="width: 42px;"></td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">Lector del Estudio Bíblico:</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
         </tr>` : ''}
         <tr class="h-6">
-            <td class="text-center font-bold text-xs">3 min</td>
-            <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
+            <td class="text-center font-bold text-xs" style="width: 42px;">3 min</td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">Repaso de esta reunión y adelanto de la próxima.</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
         <tr class="h-6">
-            <td></td>
-            <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
-            <td class="px-2">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
+            <td style="width: 42px;"></td>
+            <td class="px-2 font-medium" colspan="2" style="width: 44%;">Canción ${sem.canciones?.[2] || ''} y oración</td>
+            <td class="px-2" style="width: 50%;">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5" colspan="2">
+            <td class="px-2 font-bold py-1.5" colspan="2" style="width: 46%;">
                 Domingo, presidencia: 
                 <div class="inline-block ml-2 w-48">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
             </td>
-            <td class="px-2 font-bold py-1.5 text-right" colspan="2">
+            <td class="px-2 font-bold py-1.5 text-right" colspan="2" style="width: 54%;">
                 Lector La Atalaya: 
                 <div class="inline-block ml-2 text-left w-48">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
             </td>
