@@ -1,5 +1,5 @@
-let programaMes = [];
-let listaHermanos = [];
+if (typeof programaMes === 'undefined') window.programaMes = [];
+if (typeof listaHermanos === 'undefined') window.listaHermanos = [];
 let semanaActivaIdx = 0;
 
 window.onload = async function() {
