@@ -52,21 +52,7 @@
             font-size: 11px !important;
         }
 
-        /* ESTILOS DE CAMPOS EDITABLES */
-        .input-live {
-            width: 100%;
-            background: transparent;
-            border: none;
-            outline: none;
-            font-family: inherit;
-            font-size: 11.5px;
-            color: inherit;
-            padding: 1px 2px;
-            border-radius: 3px;
-        }
-        .input-live:hover { background-color: #f1f5f9; }
-        .input-live:focus { background-color: #fef08a; font-weight: 600; }
-
+        /* FORMATO DE DESPLEGABLES Y ASIGNADOS (MARRÓN Y NEGRITA ESTILO EXCEL) */
         .select-asig { 
             width: 100%; 
             background: transparent; 
@@ -76,7 +62,7 @@
             outline: none; 
             cursor: pointer; 
             padding: 1px 0; 
-            font-size: 11px; 
+            font-size: 11.5px; 
             text-transform: uppercase;
         }
         .select-asig:focus { background-color: #fef08a; }
@@ -87,15 +73,14 @@
             .print-area { box-shadow: none !important; border: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
             #tablaPlanillaCompleta { border: 1.5px solid #000 !important; }
             #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { border: 1px solid #000 !important; padding: 2px 3px !important; font-size: 10px !important; }
-            .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 10px !important; }
-            .input-live { border: none !important; padding: 0 !important; }
+            .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 10px !important; font-weight: 800 !important; }
             @page { size: A4 portrait; margin: 0.5cm; }
         }
     </style>
 </head>
 <body class="pb-12">
 
-    <!-- BARRA NAVEGACIÓN -->
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 no-print">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
@@ -104,11 +89,10 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-tight">Gestor VyMC - Planilla y Asignaciones</h1>
-                    <p class="text-xs text-slate-400">Edición Directa y Persistencia en Supabase</p>
+                    <p class="text-xs text-slate-400">Modelo Fiel Excel • Sincronización en Supabase</p>
                 </div>
             </div>
 
-            <!-- Pestañas -->
             <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-xl text-xs font-semibold">
                 <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
                     <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
@@ -172,7 +156,6 @@
                         </div>
                     </div>
 
-                    <!-- Selector Dinámico de Cantidad de Salas -->
                     <div class="flex items-center gap-2 bg-white px-2.5 py-1 rounded border border-slate-300">
                         <span class="font-bold text-slate-700">Salas Activas:</span>
                         <select id="selectNumSalas" onchange="cambiarNumSalasSemana(this.value)" class="font-bold text-amber-800 bg-transparent outline-none cursor-pointer">
@@ -184,7 +167,7 @@
                 </div>
             </div>
 
-            <!-- TABLA DE PLANILLA EDITABLE EN VIVO -->
+            <!-- CONTENEDOR DE LA PLANILLA (IMPRESIÓN / EXPORTACIÓN) -->
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
@@ -238,7 +221,7 @@
 
     </div>
 
-    <!-- SCRIPTS -->
+    <!-- CARGA ORDENADA DE SCRIPTS -->
     <script src="js/supabase.js"></script>
     <script src="js/parser.js"></script>
     <script src="js/app.js"></script>
