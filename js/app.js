@@ -185,7 +185,6 @@ function cargarSemanaEnPlanilla(idx) {
     let seccionActual = '';
 
     partes.forEach((item, pIndex) => {
-        // Detectar cambio de sección dinámicamente según la posición/índice de las partes
         if (pIndex === 0 && seccionActual !== 'tesoros') {
             filasHTML += `
                 <tr>
@@ -215,7 +214,6 @@ function cargarSemanaEnPlanilla(idx) {
             seccionActual = 'vida';
         }
 
-        // Determinar categoría para filtros de la lista de hermanos
         let cat = 'smm';
         if (pIndex === 0) cat = 'disc';
         else if (pIndex === 1) cat = 'perlas';
@@ -224,7 +222,7 @@ function cargarSemanaEnPlanilla(idx) {
 
         const esMultiSala = (pIndex >= 2 && pIndex <= 6);
 
-        // Renderizar respetando las 4 columnas
+        // Si hay descripción renderiza las 2 columnas del medio separadas. Si no, ocupa ambas.
         if (item.desc) {
             filasHTML += `
                 <tr>
