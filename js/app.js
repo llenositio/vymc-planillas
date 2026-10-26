@@ -22,11 +22,12 @@ window.onload = async function() {
     cargarSemanaEnPlanilla(0);
 };
 
+/* ESTRUCTURA BASE 100% VACÍA SIN TEXTO HARCODEADO */
 function crearEstructuraSemanaEjemplo() {
     return {
-        semana: "14-20 DE SEPTIEMBRE",
-        lectura: "JEREMÍAS 34, 35",
-        canciones: ["161", "121", "28"],
+        semana: "",
+        lectura: "",
+        canciones: ["", "", ""],
         tipoSemana: "normal",
         numSalas: 1,
         presidencia: "",
@@ -36,18 +37,18 @@ function crearEstructuraSemanaEjemplo() {
         domPresi: "",
         domLector: "",
         partes: [
-            { seccion: "tesoros", t: "10 min", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 34, 35", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5).", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
             
-            { seccion: "maestros", t: "2 min", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "2 min", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia a una persona que en otra ocasión le dijo que estaba preocupada por algo que vio en las noticias (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "4 min", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
             
-            { seccion: "vida", t: "6 min", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "9 min", tit: "9. Logros de la organización para el mes de septiembre", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 8.", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "vida", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" }
         ]
     };
 }
@@ -60,7 +61,7 @@ function renderizarSelectorSemanas() {
         const btn = document.createElement('button');
         btn.onclick = () => cargarSemanaEnPlanilla(idx);
         btn.className = `px-2.5 py-1 text-xs font-bold rounded-md border transition ${idx === semanaActivaIdx ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`;
-        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : ''}`;
+        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : 'S/N'}`;
         cont.appendChild(btn);
     });
 }
@@ -123,9 +124,9 @@ function cargarSemanaEnPlanilla(idx) {
                 <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                     <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                         <span>Semana del</span>
-                        <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
+                        <input type="text" value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]" placeholder="FECHA">
                         <span>,</span>
-                        <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
+                        <input type="text" value="${sem.lectura || ''}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]" placeholder="LECTURA">
                     </div>
                 </th>
             </tr>
@@ -229,7 +230,7 @@ function cargarSemanaEnPlanilla(idx) {
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true">1 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción N° ${sem.canciones?.[0] || '161'}. Presidencia: Palabras de introducción.
+                Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
@@ -269,7 +270,7 @@ function cargarSemanaEnPlanilla(idx) {
                 </tr>
                 <tr>
                     <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true">
-                        Canción Nº: ${sem.canciones?.[1] || '121'}
+                        Canción Nº: ${sem.canciones?.[1] || ''}
                     </td>
                 </tr>
             `;
@@ -362,7 +363,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         <tr>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción ${sem.canciones?.[2] || '28'} y oración
+                Canción ${sem.canciones?.[2] || ''} y oración
             </td>
             <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
@@ -405,18 +406,7 @@ window.volverAPasoTextoCrudo = function() {
     if (btn2) btn2.classList.add('hidden');
 };
 
-/* BOTÓN DE AYUDA / ASISTENTE EN MODAL */
-window.insertarPlantilla = function(tipo) {
-    const txt = document.getElementById('outputTextoDelimitado');
-    if (!txt) return;
-
-    if (tipo === 'cancionVida') {
-        txt.value += "\nCancion 121";
-    } else if (tipo === 'parteStandard') {
-        txt.value += "\n10 mins // Título de la parte // Descripción breve";
-    }
-};
-
+/* ALGORITMO EXTACTO DE CONVERSIÓN A SINTAXIS // */
 window.convertirTextoCrudoADelimitado = function() {
     const rawEl = document.getElementById('inputTextoCrudo');
     if (!rawEl || !rawEl.value.trim()) {
@@ -431,18 +421,27 @@ window.convertirTextoCrudoADelimitado = function() {
     let semanaTexto = "";
     let lecturaTexto = "";
 
+    // 1. Obtener encabezados principales
+    for (let i = 0; i < lineas.length; i++) {
+        let l = lineas[i];
+        if (l.match(/\d+-\d+\s+DE\s+[A-Z]+/i)) {
+            semanaTexto = l;
+            if (lineas[i+1] && !lineas[i+1].includes('Canción')) {
+                lecturaTexto = lineas[i+1];
+            }
+            break;
+        }
+    }
+
+    if (semanaTexto) {
+        resultadoLineas.push(`Semana del ${semanaTexto} // ${lecturaTexto}`);
+    }
+
+    // 2. Procesar el cuerpo del programa
     for (let i = 0; i < lineas.length; i++) {
         let l = lineas[i];
 
-        if (l.match(/\d+-\d+\s+DE\s+[A-Z]+/i) || l.match(/Semana del/i)) {
-            semanaTexto = l.replace(/Semana del/i, '').trim();
-            if (lineas[i+1] && !lineas[i+1].includes('Canción') && !lineas[i+1].includes('TESOROS')) {
-                lecturaTexto = lineas[i+1];
-            }
-            resultadoLineas.push(`Semana del "${semanaTexto}"; "${lecturaTexto}"`);
-            continue;
-        }
-
+        // Secciones
         if (l.includes("TESOROS DE LA BIBLIA")) {
             resultadoLineas.push("\nTESOROS DE LA BIBLIA");
             continue;
@@ -456,37 +455,66 @@ window.convertirTextoCrudoADelimitado = function() {
             continue;
         }
 
+        // Introducción
         if (l.startsWith("Canción") && l.includes("introducción")) {
-            let matchMin = l.match(/\((\d+\s*min[s]?\.)\)/i);
-            let t = matchMin ? matchMin[1] : "1 min";
-            resultadoLineas.push(`${t} // ${l}`);
+            let partesIntro = l.split('|');
+            resultadoLineas.push(`${partesIntro[0].trim()} // ${partesIntro[1] ? partesIntro[1].trim() : ''}`);
+            resultadoLineas.push("Oracion");
             continue;
         }
 
-        if (l.startsWith("Canción") && !l.includes("y oración") && !l.includes("introducción")) {
+        // Canción intermedia (Vida Cristiana)
+        if (l.startsWith("Canción") && !l.includes("oración") && !l.includes("introducción")) {
             resultadoLineas.push(l);
             continue;
         }
 
+        // Conclusión
+        if (l.includes("Palabras de conclusión")) {
+            let partesFin = l.split('|');
+            resultadoLineas.push(`${partesFin[0].trim()} |`);
+            if (partesFin[1]) resultadoLineas.push(partesFin[1].trim());
+            continue;
+        }
+
+        // Partes numeradas (1. 2. 3. etc)
         let matchNum = l.match(/^(\d+)\.\s*(.+)/);
         if (matchNum) {
-            let numTit = l;
-            let tiempo = "5 min";
-            let desc = "";
+            let numParte = matchNum[1];
+            let restTexto = matchNum[2];
+            let tiempo = "";
 
-            if (lineas[i+1] && lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)) {
-                tiempo = lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)[1];
-                if (lineas[i+2] && !lineas[i+2].match(/^\d+\./) && !lineas[i+2].startsWith('-') && !lineas[i+2].startsWith('PREGÚNTESE')) {
-                    desc = lineas[i+2];
+            // Buscar tiempo en las líneas siguientes cercanas
+            for (let j = i; j <= Math.min(i + 4, lineas.length - 1); j++) {
+                let matchTiempo = lineas[j].match(/\((\d+\s*min[s]?\.)\)/i);
+                if (matchTiempo) {
+                    tiempo = matchTiempo[0];
+                    break;
                 }
-            } else if (l.match(/\((\d+\s*min[s]?\.)\)/i)) {
-                tiempo = l.match(/\((\d+\s*min[s]?\.)\)/i)[1];
             }
 
-            if (desc) {
-                resultadoLineas.push(`${tiempo} // ${numTit} // ${desc}`);
-            } else {
-                resultadoLineas.push(`${tiempo} // ${numTit}`);
+            // Reglas específicas según el tipo de parte
+            if (numParte === "1") {
+                resultadoLineas.push(`${l}//\nDiscurso\n${tiempo}\n`);
+            } 
+            else if (numParte === "2") {
+                resultadoLineas.push(`${l}//Preguntas y respuestas, ${lecturaTexto}\n${tiempo}\n\n`);
+            } 
+            else if (numParte === "3") {
+                let detLectura = restTexto.replace(/\(\d+\s*min[s]?\.\)/i, '').trim();
+                resultadoLineas.push(`3. Lectura de la Biblia//${detLectura}${tiempo}\n`);
+            } 
+            else {
+                // Partes de Maestros y Vida Cristiana
+                let partesLinea = restTexto.split('.');
+                let titulo = `${numParte}. ${partesLinea[0].trim()}`;
+                let descripcion = partesLinea.slice(1).join('.').replace(/\(\d+\s*min[s]?\.\)/i, '').trim();
+
+                if (descripcion) {
+                    resultadoLineas.push(`${titulo}// ${descripcion}\n${tiempo}\n`);
+                } else {
+                    resultadoLineas.push(`${titulo}//\n${tiempo}\n`);
+                }
             }
         }
     }
@@ -508,9 +536,9 @@ window.cargarDelimitadoAPlanilla = async function() {
     const lineas = textoDelimitado.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
     let nuevaSemana = {
-        semana: "14-20 DE SEPTIEMBRE",
+        semana: "",
         lectura: "",
-        canciones: ["161", "121", "28"],
+        canciones: ["", "", ""],
         tipoSemana: "normal",
         numSalas: 1,
         partes: []
@@ -525,28 +553,41 @@ window.cargarDelimitadoAPlanilla = async function() {
 
         if (linea.startsWith("Cancion") || linea.startsWith("Canción")) {
             let num = linea.replace(/\D/g, '');
-            if (num) nuevaSemana.canciones[1] = num;
+            if (num && !linea.includes("introducción") && !linea.includes("oración")) {
+                nuevaSemana.canciones[1] = num;
+            }
             return;
         }
 
         if (linea.startsWith("Semana del")) {
-            const partesHead = linea.replace('Semana del', '').split(';');
-            if (partesHead[0]) nuevaSemana.semana = partesHead[0].replace(/"/g, '').trim();
-            if (partesHead[1]) nuevaSemana.lectura = partesHead[1].replace(/"/g, '').trim();
+            const partesHead = linea.split('//');
+            if (partesHead[0]) nuevaSemana.semana = partesHead[0].replace('Semana del', '').trim();
+            if (partesHead[1]) nuevaSemana.lectura = partesHead[1].trim();
             return;
         }
 
         const segmentos = linea.split('//').map(s => s.trim());
-        if (segmentos.length >= 1 && !linea.startsWith("Canción")) {
-            const tiempoStr = segmentos[0].replace(/"/g, '');
-            const titStr = segmentos[1] ? segmentos[1].replace(/"/g, '') : '';
-            const descStr = segmentos[2] ? segmentos[2].replace(/"/g, '') : '';
+        if (segmentos.length >= 1 && !linea.startsWith("Canción") && !linea.startsWith("Palabras") && !linea.startsWith("Oracion")) {
+            let t = "";
+            let tit = "";
+            let desc = "";
+
+            if (segmentos.length === 1) {
+                tit = segmentos[0];
+            } else if (segmentos.length === 2) {
+                tit = segmentos[0];
+                desc = segmentos[1];
+            } else if (segmentos.length >= 3) {
+                t = segmentos[0];
+                tit = segmentos[1];
+                desc = segmentos[2];
+            }
 
             nuevaSemana.partes.push({
                 seccion: seccionActual,
-                t: tiempoStr,
-                tit: titStr,
-                desc: descStr,
+                t: t,
+                tit: tit,
+                desc: desc,
                 participantes: seccionActual === 'maestros' ? 2 : 1,
                 asig: ''
             });
@@ -583,7 +624,7 @@ window.toggleParticipantesParte = async function(pIndex) {
 window.agregarNuevaSemana = async function() {
     const numSem = programaMes.length + 1;
     const nuevaSem = crearEstructuraSemanaEjemplo();
-    nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
+    nuevaSem.semana = `SEMANA ${numSem}`;
     programaMes.push(nuevaSem);
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
@@ -616,9 +657,9 @@ window.agregarFilaVida = async function() {
     const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
     const nuevaParte = {
         seccion: 'vida',
-        t: '15 min',
-        tit: 'Parte adicional',
-        desc: 'Análisis con el auditorio.',
+        t: '',
+        tit: '',
+        desc: '',
         participantes: 1,
         asig: ''
     };
