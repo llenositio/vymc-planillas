@@ -91,6 +91,14 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
 }
 
+function guardarTextoEditable(pIndex, campo, valor) {
+    const sem = programaMes[semanaActivaIdx];
+    if (sem && sem.partes && sem.partes[pIndex]) {
+        sem.partes[pIndex][campo] = valor;
+        guardarPlanillaEnSupabase();
+    }
+}
+
 function cargarSemanaEnPlanilla(idx) {
     if (!programaMes || programaMes.length === 0) return;
     semanaActivaIdx = idx;
@@ -141,7 +149,7 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // RENDER DE SALAS DINÁMICO SEGÚN COLUMNAS 4, 5 Y 6
+    // RENDER DE SALAS RIGIDAMENTE BALANCEADAS EN ANCHO (COLUMNAS 4, 5 Y 6)
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
@@ -163,7 +171,7 @@ function cargarSemanaEnPlanilla(idx) {
         let html = '';
 
         if (numSalas === 1) {
-            // 1 SALA: Col 4, 5 y 6 se unen en colspan="3"
+            // 1 SALA: Abarca las 3 columnas iguales de asignación
             html += `<td class="p-1 col-asig relative group" colspan="3">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -171,7 +179,7 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
             </td>`;
         } else if (numSalas === 2) {
-            // 2 SALAS: Prin ocupa Col 4 y 5 (colspan="2"), Sala B ocupa Col 6 (colspan="1")
+            // 2 SALAS: Sala Prin (Col 4 y 5 iguales), Sala B (Col 6)
             html += `<td class="p-1 col-asig relative group" colspan="2">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -182,7 +190,7 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
             </td>`;
         } else if (numSalas === 3) {
-            // 3 SALAS: Prin (Col 4), Sala B (Col 5), Sala C (Col 6)
+            // 3 SALAS: Col 4, Col 5, Col 6 (Anchos 100% idénticos de 18% cada una)
             html += `<td class="p-1 col-asig relative group" colspan="1">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -279,17 +287,17 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo">${item.t}</td>
-                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
+                        <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
                     </tr>
                 `;
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
-                        <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
+                        <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
                     </tr>
                 `;
@@ -298,9 +306,9 @@ function cargarSemanaEnPlanilla(idx) {
         else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr>
-                    <td class="c-tiempo">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
-                    <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
+                    <td class="c-tiempo editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                    <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
                 </tr>
             `;
@@ -309,8 +317,8 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo" rowspan="2">${item.t}</td>
-                        <td class="px-2 font-medium" colspan="2">${item.tit}</td>
+                        <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
                     </tr>
                     <tr>
@@ -321,12 +329,12 @@ function cargarSemanaEnPlanilla(idx) {
             } else {
                 filasHTML += `
                     <tr class="group">
-                        <td class="c-tiempo relative">
+                        <td class="c-tiempo relative editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
                             ${item.t}
                             <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
                         </td>
-                        <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
-                        <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
+                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" contenteditable="true" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
                     </tr>
                 `;
