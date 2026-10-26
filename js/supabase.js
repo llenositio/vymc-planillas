@@ -1,6 +1,6 @@
 // Configuración de Supabase
 const SUPABASE_URL = 'https://logscbqojxfyrewfoqas.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-'; // Reemplazar con tu clave pública completa
+const SUPABASE_KEY = 'sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-';
 
 let db = null;
 if (window.supabase && window.supabase.createClient) {
@@ -11,7 +11,6 @@ let listaHermanos = [];
 let mesActualClave = "2026-10";
 let programaMes = [];
 
-// Cargar Hermanos desde Supabase
 async function cargarHermanosDesdeSupabase() {
     if (!db) return [];
     const { data, error } = await db.from('hermanos').select('*').order('id');
@@ -40,7 +39,6 @@ async function cargarHermanosDesdeSupabase() {
     return listaHermanos;
 }
 
-// Cargar Planilla del mes activo desde Supabase
 async function cargarPlanillaDesdeSupabase() {
     if (!db) return [];
     const { data, error } = await db.from('planillas').select('datos').eq('mes_ano', mesActualClave).single();
@@ -50,7 +48,6 @@ async function cargarPlanillaDesdeSupabase() {
     return programaMes;
 }
 
-// Guardar Planilla del mes activo en Supabase
 async function guardarPlanillaEnSupabase() {
     if (!db) return;
     const el = document.getElementById('estadoGuardado');
@@ -67,7 +64,6 @@ async function guardarPlanillaEnSupabase() {
     }, 1800);
 }
 
-// Actualizar un campo de la matriz de hermanos
 async function actualizarHermanoBD(id, campo, valor) {
     const h = listaHermanos.find(item => item.id === id);
     if (!h) return;
@@ -91,7 +87,6 @@ async function actualizarHermanoBD(id, campo, valor) {
     }
 }
 
-// Agregar hermano en BD
 async function agregarNuevoHermanoBD() {
     if (db) {
         const { data, error } = await db.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
@@ -106,7 +101,6 @@ async function agregarNuevoHermanoBD() {
     });
 }
 
-// Eliminar hermano en BD
 async function eliminarHermanoBD(id) {
     if (db) {
         await db.from('hermanos').delete().eq('id', id);
