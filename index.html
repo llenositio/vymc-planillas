@@ -52,6 +52,19 @@
             vertical-align: middle;
         }
 
+        /* FORMATO EDITABLE CON SUGERENCIA EN GRIS */
+        .editable-field {
+            outline: none;
+            color: #64748b !important; /* Gris sutil de sugerencia */
+            transition: color 0.2s, background-color 0.2s;
+            border-radius: 2px;
+            padding: 1px 2px;
+        }
+        .editable-field:focus {
+            color: #0f172a !important; /* Negro al editar */
+            background-color: #fef08a !important; /* Resaltado amarillo de edición */
+        }
+
         /* FORMATO DE DESPLEGABLES AJUSTADO */
         .select-asig { 
             width: 100%; 
@@ -87,6 +100,7 @@
             #tablaPlanillaCompleta { width: 100% !important; border: 1.5px solid #000 !important; }
             #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { border: 1px solid #000 !important; padding: 2px 3px !important; font-size: 9.5px !important; }
             .select-asig { color: #78350f !important; appearance: none; -webkit-appearance: none; font-size: 9px !important; font-weight: 800 !important; }
+            .editable-field { color: #0f172a !important; } /* Imprimir siempre en negro */
             @page { size: A4 portrait; margin: 0.5cm; }
         }
     </style>
@@ -187,11 +201,11 @@
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
-                        <col style="width: 17% !important;">
-                        <col style="width: 25% !important;">
-                        <col style="width: 19.3% !important;">
-                        <col style="width: 19.3% !important;">
-                        <col style="width: 19.3% !important;">
+                        <col style="width: 18% !important;">
+                        <col style="width: 28% !important;">
+                        <col style="width: 18% !important;">
+                        <col style="width: 18% !important;">
+                        <col style="width: 18% !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
