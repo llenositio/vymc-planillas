@@ -1,10 +1,12 @@
+let programaMes = [];
+let listaHermanos = [];
 let semanaActivaIdx = 0;
 
 window.onload = async function() {
     try {
         if (typeof db !== 'undefined' && db) {
-            await cargarHermanosDesdeSupabase();
-            await cargarPlanillaDesdeSupabase();
+            if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
+            if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
         }
     } catch (err) {
         console.error("Error inicializando:", err);
@@ -40,7 +42,7 @@ function crearEstructuraSemanaEjemplo() {
             
             { seccion: "maestros", t: "2 min", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
             { seccion: "maestros", t: "2 min", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia a una persona que en otra ocasión le dijo que estaba preocupada por algo que vio en las noticias (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
             { seccion: "maestros", t: "4 min", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
             
             { seccion: "vida", t: "6 min", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
@@ -64,6 +66,7 @@ function renderizarSelectorSemanas() {
 }
 
 function obtenerOpcionesHermanos(cat) {
+    if (!Array.isArray(listaHermanos)) return [];
     return listaHermanos.filter(h => {
         if (!cat) return true;
         if (cat === 'orac') return h.orac === 'X';
@@ -91,13 +94,13 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
 }
 
-function guardarTextoEditable(pIndex, campo, valor) {
+window.guardarTextoEditable = function(pIndex, campo, valor) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex][campo] = valor;
-        guardarPlanillaEnSupabase();
+        if (typeof guardarPlanillaEnSupabase === 'function') guardarPlanillaEnSupabase();
     }
-}
+};
 
 function cargarSemanaEnPlanilla(idx) {
     if (!programaMes || programaMes.length === 0) return;
@@ -114,18 +117,20 @@ function cargarSemanaEnPlanilla(idx) {
     }
 
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
-    cabecera.innerHTML = `
-        <tr>
-            <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
-                <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
-                    <span>Semana del</span>
-                    <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
-                    <span>,</span>
-                    <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
-                </div>
-            </th>
-        </tr>
-    `;
+    if (cabecera) {
+        cabecera.innerHTML = `
+            <tr>
+                <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
+                    <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
+                        <span>Semana del</span>
+                        <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
+                        <span>,</span>
+                        <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
+                    </div>
+                </th>
+            </tr>
+        `;
+    }
 
     const radios = document.getElementsByName('tipoSemana');
     radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
@@ -133,23 +138,25 @@ function cargarSemanaEnPlanilla(idx) {
     const banner = document.getElementById('bannerEventoEspecial');
     const tabla = document.getElementById('tablaPlanillaCompleta');
 
-    if (sem.tipoSemana === 'asamblea') {
-        banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-        banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
-        tabla.classList.add('opacity-30', 'pointer-events-none');
-    } else if (sem.tipoSemana === 'conmemoracion') {
-        banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
-        banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO`;
-        tabla.classList.remove('opacity-30', 'pointer-events-none');
-    } else {
-        banner.classList.add('hidden');
-        tabla.classList.remove('opacity-30', 'pointer-events-none');
+    if (banner && tabla) {
+        if (sem.tipoSemana === 'asamblea') {
+            banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
+            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
+            tabla.classList.add('opacity-30', 'pointer-events-none');
+        } else if (sem.tipoSemana === 'conmemoracion') {
+            banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
+            banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO`;
+            tabla.classList.remove('opacity-30', 'pointer-events-none');
+        } else {
+            banner.classList.add('hidden');
+            tabla.classList.remove('opacity-30', 'pointer-events-none');
+        }
     }
 
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
+    if (!cuerpo) return;
     
-    // RENDERIZADO DE LAS 7 MICROCOLUMNAS DE ASIGNACIÓN (SUMA DE COLUMNAS = 10 EXACTAS)
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
@@ -171,7 +178,6 @@ function cargarSemanaEnPlanilla(idx) {
         let html = '';
 
         if (numSalas === 1) {
-            // 1 SALA: Ocupa las 7 micro-columnas completas (35%)
             html += `<td class="p-1 col-asig relative group" colspan="7">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -179,7 +185,6 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
             </td>`;
         } else if (numSalas === 2) {
-            // 2 SALAS: Sala Prin (4 micro-cols) + Sala B (3 micro-cols) = 7 micro-cols (35%)
             html += `<td class="p-1 col-asig relative group" colspan="4">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -190,7 +195,6 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
             </td>`;
         } else if (numSalas === 3) {
-            // 3 SALAS: Sala Prin (3 micro-cols) + Sala B (2 micro-cols) + Sala C (2 micro-cols) = 7 micro-cols (35%)
             html += `<td class="p-1 col-asig relative group" colspan="3">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -221,7 +225,6 @@ function cargarSemanaEnPlanilla(idx) {
         }
     };
 
-    // APERTURA
     let filasHTML = `
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true">1 min</td>
@@ -242,7 +245,6 @@ function cargarSemanaEnPlanilla(idx) {
     let renderizoVidaHeader = false;
 
     partes.forEach((item, pIndex) => {
-
         if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
             filasHTML += `
                 <tr>
@@ -352,7 +354,6 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    // CONCLUSIÓN EDITABLE
     filasHTML += `
         <tr>
             <td class="c-tiempo editable-field" rowspan="2" contenteditable="true">3 min</td>
@@ -366,7 +367,6 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
-        <!-- REUNIÓN PÚBLICA EDITABLE -->
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
             <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true">
                 Domingo, presidencia: 
@@ -382,10 +382,170 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
+/* LÓGICA DE EXTRACCIÓN Y CONVERSIÓN A SINTAXIS // */
+window.abrirModalImportador = function() {
+    document.getElementById('modalImportador').classList.remove('hidden');
+    volverAPasoTextoCrudo();
+};
+
+window.cerrarModalImportador = function() {
+    document.getElementById('modalImportador').classList.add('hidden');
+};
+
+window.volverAPasoTextoCrudo = function() {
+    document.getElementById('pasoModalTextoCrudo').classList.remove('hidden');
+    document.getElementById('pasoModalFormateado').classList.add('hidden');
+    document.getElementById('btnConvertirCrudo').classList.remove('hidden');
+    document.getElementById('btnCargarAPlanilla').classList.add('hidden');
+};
+
+window.convertirTextoCrudoADelimitado = function() {
+    const raw = document.getElementById('inputTextoCrudo').value;
+    if (!raw.trim()) {
+        alert("Pega primero el texto del programa.");
+        return;
+    }
+
+    const lineas = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let resultadoLineas = [];
+
+    let semanaTexto = "";
+    let lecturaTexto = "";
+    let seccionActual = "";
+
+    for (let i = 0; i < lineas.length; i++) {
+        let l = lineas[i];
+
+        // Encabezados de Semana y Lectura
+        if (l.match(/\d+-\d+\s+DE\s+[A-Z]+/i) || l.match(/Semana del/i)) {
+            semanaTexto = l.replace(/Semana del/i, '').trim();
+            if (lineas[i+1] && !lineas[i+1].includes('Canción') && !lineas[i+1].includes('TESOROS')) {
+                lecturaTexto = lineas[i+1];
+            }
+            resultadoLineas.push(`Semana del "${semanaTexto}"; "${lecturaTexto}"`);
+            continue;
+        }
+
+        // Secciones principales
+        if (l.includes("TESOROS DE LA BIBLIA")) {
+            seccionActual = "TESOROS DE LA BIBLIA";
+            resultadoLineas.push("\nTESOROS DE LA BIBLIA");
+            continue;
+        }
+        if (l.includes("SEAMOS MEJORES MAESTROS")) {
+            seccionActual = "SEAMOS MEJORES MAESTROS";
+            resultadoLineas.push("\nSEAMOS MEJORES MAESTROS");
+            continue;
+        }
+        if (l.includes("NUESTRA VIDA CRISTIANA")) {
+            seccionActual = "NUESTRA VIDA CRISTIANA";
+            resultadoLineas.push("\nNUESTRA VIDA CRISTIANA");
+            continue;
+        }
+
+        // Introducción / Canciones
+        if (l.startsWith("Canción") && l.includes("introducción")) {
+            let matchMin = l.match(/\((\d+\s*min[s]?\.)\)/i);
+            let t = matchMin ? matchMin[1] : "1 min";
+            resultadoLineas.push(`${t} // ${l}`);
+            continue;
+        }
+
+        // Partes numeradas (1. 2. 3. etc)
+        let matchNum = l.match(/^(\d+)\.\s*(.+)/);
+        if (matchNum) {
+            let numTit = l;
+            let tiempo = "5 min";
+            let desc = "";
+
+            // Buscar tiempo en la línea siguiente
+            if (lineas[i+1] && lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)) {
+                tiempo = lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)[1];
+                // La línea posterior al tiempo puede ser la descripción
+                if (lineas[i+2] && !lineas[i+2].match(/^\d+\./) && !lineas[i+2].startsWith('-') && !lineas[i+2].startsWith('PREGÚNTESE')) {
+                    desc = lineas[i+2];
+                }
+            } else if (l.match(/\((\d+\s*min[s]?\.)\)/i)) {
+                tiempo = l.match(/\((\d+\s*min[s]?\.)\)/i)[1];
+            }
+
+            if (desc) {
+                resultadoLineas.push(`${tiempo} // ${numTit} // ${desc}`);
+            } else {
+                resultadoLineas.push(`${tiempo} // ${numTit}`);
+            }
+        }
+    }
+
+    document.getElementById('outputTextoDelimitado').value = resultadoLineas.join('\n');
+
+    document.getElementById('pasoModalTextoCrudo').classList.add('hidden');
+    document.getElementById('pasoModalFormateado').classList.remove('hidden');
+    document.getElementById('btnConvertirCrudo').classList.add('hidden');
+    document.getElementById('btnCargarAPlanilla').classList.remove('hidden');
+};
+
+window.cargarDelimitadoAPlanilla = async function() {
+    const textoDelimitado = document.getElementById('outputTextoDelimitado').value;
+    if (!textoDelimitado.trim()) return;
+
+    const lineas = textoDelimitado.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    
+    let nuevaSemana = {
+        semana: "14-20 DE SEPTIEMBRE",
+        lectura: "",
+        canciones: ["161", "121", "28"],
+        tipoSemana: "normal",
+        numSalas: 1,
+        partes: []
+    };
+
+    let seccionActual = "tesoros";
+
+    lineas.forEach(linea => {
+        if (linea.startsWith("TESOROS DE LA BIBLIA")) { seccionActual = "tesoros"; return; }
+        if (linea.startsWith("SEAMOS MEJORES MAESTROS")) { seccionActual = "maestros"; return; }
+        if (linea.startsWith("NUESTRA VIDA CRISTIANA")) { seccionActual = "vida"; return; }
+
+        if (linea.startsWith("Semana del")) {
+            const partesHead = linea.replace('Semana del', '').split(';');
+            if (partesHead[0]) nuevaSemana.semana = partesHead[0].replace(/"/g, '').trim();
+            if (partesHead[1]) nuevaSemana.lectura = partesHead[1].replace(/"/g, '').trim();
+            return;
+        }
+
+        const segmentos = linea.split('//').map(s => s.trim());
+        if (segmentos.length >= 1 && !linea.startsWith("Canción")) {
+            const tiempoStr = segmentos[0].replace(/"/g, '');
+            const titStr = segmentos[1] ? segmentos[1].replace(/"/g, '') : '';
+            const descStr = segmentos[2] ? segmentos[2].replace(/"/g, '') : '';
+
+            nuevaSemana.partes.push({
+                seccion: seccionActual,
+                t: tiempoStr,
+                tit: titStr,
+                desc: descStr,
+                participantes: seccionActual === 'maestros' ? 2 : 1,
+                asig: ''
+            });
+        }
+    });
+
+    if (nuevaSemana.partes.length > 0) {
+        programaMes[semanaActivaIdx] = nuevaSemana;
+        cargarSemanaEnPlanilla(semanaActivaIdx);
+        if (typeof guardarPlanillaEnSupabase === 'function') {
+            await guardarPlanillaEnSupabase();
+        }
+    }
+
+    cerrarModalImportador();
+};
+
 window.actualizarEncabezadoSemana = async function(campo, valor) {
     if (programaMes[semanaActivaIdx]) {
         programaMes[semanaActivaIdx][campo] = valor;
-        await guardarPlanillaEnSupabase();
+        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
     }
 };
 
@@ -394,7 +554,7 @@ window.toggleParticipantesParte = async function(pIndex) {
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
+        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
     }
 };
 
@@ -406,7 +566,7 @@ window.agregarNuevaSemana = async function() {
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
+    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
 };
 
 window.eliminarSemanaActiva = async function() {
@@ -423,7 +583,7 @@ window.eliminarSemanaActiva = async function() {
         }
         renderizarSelectorSemanas();
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
+        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
     }
 };
 
@@ -431,7 +591,7 @@ window.agregarFilaVida = async function() {
     const sem = programaMes[semanaActivaIdx];
     if (!sem) return;
     
-    const idxEBC = sem.partes.findIndex(p => p.tit.includes('Estudio bíblico'));
+    const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
     const nuevaParte = {
         seccion: 'vida',
         t: '15 min',
@@ -448,7 +608,7 @@ window.agregarFilaVida = async function() {
     }
 
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
+    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
 };
 
 window.eliminarFilaParte = async function(pIndex) {
@@ -456,7 +616,7 @@ window.eliminarFilaParte = async function(pIndex) {
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes.splice(pIndex, 1);
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        await guardarPlanillaEnSupabase();
+        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
     }
 };
 
@@ -464,7 +624,7 @@ window.cambiarNumSalasSemana = async function(cantidad) {
     if (!programaMes[semanaActivaIdx]) return;
     programaMes[semanaActivaIdx].numSalas = parseInt(cantidad);
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
+    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
 };
 
 window.guardarAsignacionSemana = async function(elemId) {
@@ -500,7 +660,7 @@ window.guardarAsignacionSemana = async function(elemId) {
     else if (elemId === 'asig_dom_presi') sem.domPresi = val;
     else if (elemId === 'asig_dom_lector') sem.domLector = val;
 
-    await guardarPlanillaEnSupabase();
+    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
 };
 
 window.actualizarTipoSemana = async function(tipo) {
@@ -508,7 +668,7 @@ window.actualizarTipoSemana = async function(tipo) {
     programaMes[semanaActivaIdx].tipoSemana = tipo;
     if (tipo === 'viajante') programaMes[semanaActivaIdx].numSalas = 1;
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    await guardarPlanillaEnSupabase();
+    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
 };
 
 window.cambiarPestaña = function(tab) {
@@ -527,6 +687,8 @@ function renderizarMatrizHermanos() {
     const cuerpo = document.getElementById('cuerpoTablaHermanos');
     if (!cuerpo) return;
     cuerpo.innerHTML = '';
+
+    if (!Array.isArray(listaHermanos)) return;
 
     listaHermanos.forEach((h, index) => {
         const tr = document.createElement('tr');
@@ -556,17 +718,17 @@ function renderizarMatrizHermanos() {
 }
 
 window.actualizarHermano = async function(id, campo, valor) {
-    await actualizarHermanoBD(id, campo, valor);
+    if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
 
 window.agregarNuevoHermano = async function() {
-    await agregarNuevoHermanoBD();
+    if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
     renderizarMatrizHermanos();
 };
 
 window.eliminarHermano = async function(id) {
-    await eliminarHermanoBD(id);
+    if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
     renderizarMatrizHermanos();
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
