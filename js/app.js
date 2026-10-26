@@ -108,18 +108,18 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <colgroup>
-            <col class="col-tiempo">
-            <col class="col-titulo">
-            <col class="col-desc">
-            <col class="col-asig">
+            <col style="width: 50px !important;">
+            <col style="width: 28% !important;">
+            <col style="width: 28% !important;">
+            <col style="width: 44% !important;">
         </colgroup>
         <tr>
             <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                 <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                     <span>Semana del</span>
-                    <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline w-56">
+                    <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
                     <span>,</span>
-                    <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline w-48">
+                    <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
                 </div>
             </th>
         </tr>
@@ -377,7 +377,6 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-// FUNCIONES EXPUESTAS GLOBALMENTE
 window.actualizarEncabezadoSemana = async function(campo, valor) {
     if (programaMes[semanaActivaIdx]) {
         programaMes[semanaActivaIdx][campo] = valor;
