@@ -149,7 +149,7 @@ function cargarSemanaEnPlanilla(idx) {
     if (banner && tabla) {
         if (sem.tipoSemana === 'asamblea') {
             banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA`;
+            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
             tabla.classList.add('opacity-30', 'pointer-events-none');
         } else if (sem.tipoSemana === 'conmemoracion') {
             banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
@@ -837,4 +837,63 @@ window.eliminarHermano = async function(id) {
     if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
     renderizarMatrizHermanos();
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
+};
+
+/* GESTIÓN DE IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
+window.prepararEImprimir = function() {
+    const areaPrint = document.querySelector('.print-area');
+    if (!areaPrint) {
+        window.print();
+        return;
+    }
+
+    const contenidoOriginal = areaPrint.innerHTML;
+    let htmlTotalPrint = '';
+
+    programaMes.forEach((sem, idx) => {
+        htmlTotalPrint += `
+            <div class="semana-bloque-print">
+                <table class="tabla-semana-print">
+                    <colgroup>
+                        <col class="c-tiempo">
+                        <col style="width: 25% !important;">
+                        <col style="width: 35% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th colspan="10" class="py-1 text-center bg-white border-b-2 border-slate-900 font-black text-sm text-slate-900">
+                                Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        cargarSemanaEnPlanilla(idx);
+        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
+        if (cuerpoActual) {
+            htmlTotalPrint += cuerpoActual.innerHTML;
+        }
+
+        htmlTotalPrint += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    areaPrint.innerHTML = htmlTotalPrint;
+
+    setTimeout(() => {
+        window.print();
+        areaPrint.innerHTML = contenidoOriginal;
+        cargarSemanaEnPlanilla(semanaActivaIdx);
+    }, 200);
 };
