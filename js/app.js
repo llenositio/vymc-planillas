@@ -141,7 +141,7 @@ function cargarSemanaEnPlanilla(idx) {
     if (banner && tabla) {
         if (sem.tipoSemana === 'asamblea') {
             banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
+            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA / CONMEMORACIÓN`;
             tabla.classList.add('opacity-30', 'pointer-events-none');
         } else if (sem.tipoSemana === 'conmemoracion') {
             banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
