@@ -34,18 +34,18 @@ function crearEstructuraSemanaEjemplo() {
         domPresi: "",
         domLector: "",
         partes: [
-            { seccion: "tesoros", t: "10 mins.", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "10 mins.", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 34, 35", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "4 mins.", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5).", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 34, 35", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5).", desc: "", participantes: 1, asig: "" },
             
-            { seccion: "maestros", t: "2 mins.", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "2 mins.", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "3 mins.", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "4 mins.", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "2 min", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "2 min", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "4 min", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
             
-            { seccion: "vida", t: "6 mins.", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "9 mins.", tit: "9. Logros de la organización para el mes de septiembre", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
-            { seccion: "vida", t: "30 mins.", tit: "Estudio bíblico de la congregación: wcg cap. 8.", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+            { seccion: "vida", t: "6 min", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
+            { seccion: "vida", t: "9 min", tit: "9. Logros de la organización para el mes de septiembre", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
+            { seccion: "vida", t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 8.", desc: "", participantes: 2, asig: "", asigAyudante: "" }
         ]
     };
 }
@@ -107,14 +107,8 @@ function cargarSemanaEnPlanilla(idx) {
 
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
-        <colgroup>
-            <col class="col-tiempo">
-            <col class="col-titulo">
-            <col class="col-desc">
-            <col class="col-asig">
-        </colgroup>
         <tr>
-            <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
+            <th colspan="6" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                 <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                     <span>Semana del</span>
                     <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
@@ -147,12 +141,16 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
+    // RENDER DE SALAS DINÁMICO SEGÚN COLUMNAS 4, 5 Y 6
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
 
-        const renderSelectsSala = (prefix, valTit, valAyu) => {
+        const renderSelectsGroup = (prefix, valTit, valAyu, placeholderPrefix = "") => {
             let res = `<div class="flex flex-col justify-center h-full">`;
+            if (placeholderPrefix) {
+                res += `<span class="block text-[8px] text-slate-400 font-bold uppercase no-print">${placeholderPrefix}</span>`;
+            }
             res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNADO");
             if (cantP === 2) {
                 res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
@@ -162,73 +160,72 @@ function cargarSemanaEnPlanilla(idx) {
             return res;
         };
 
-        let html = `<td class="p-1 col-asig relative group">`;
-        html += `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10" title="Alternar 1 o 2 participantes">
-            ${cantP === 1 ? '1 Asig' : '2 Asig'}
-        </button>`;
+        let html = '';
 
         if (numSalas === 1) {
-            html += renderSelectsSala(`asig_p${pIndex}_A`, item.asig, item.asigAyudante);
-        } else {
-            html += `<div class="grid grid-cols-${numSalas} gap-1 text-[10px] h-full">
-                <div class="border-r border-slate-300 pr-1">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Prin.</span>
-                    ${renderSelectsSala(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
-                </div>
-                <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala B</span>
-                    ${renderSelectsSala(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante)}
-                </div>`;
-            if (numSalas === 3) {
-                html += `<div>
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala C</span>
-                    ${renderSelectsSala(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante)}
-                </div>`;
-            }
-            html += `</div>`;
+            // 1 SALA: Col 4, 5 y 6 se unen en colspan="3"
+            html += `<td class="p-1 col-asig relative group" colspan="3">
+                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
+                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
+                </button>
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
+            </td>`;
+        } else if (numSalas === 2) {
+            // 2 SALAS: Prin ocupa Col 4 y 5 (colspan="2"), Sala B ocupa Col 6 (colspan="1")
+            html += `<td class="p-1 col-asig relative group" colspan="2">
+                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
+                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
+                </button>
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
+            </td>
+            <td class="p-1 col-asig" colspan="1">
+                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
+            </td>`;
+        } else if (numSalas === 3) {
+            // 3 SALAS: Prin (Col 4), Sala B (Col 5), Sala C (Col 6)
+            html += `<td class="p-1 col-asig relative group" colspan="1">
+                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
+                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
+                </button>
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
+            </td>
+            <td class="p-1 col-asig" colspan="1">
+                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
+            </td>
+            <td class="p-1 col-asig" colspan="1">
+                ${renderSelectsGroup(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante, "Sala C")}
+            </td>`;
         }
-        html += `</td>`;
         return html;
     };
 
     const renderSalasLectura = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         if (numSalas === 1) {
-            return `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
+            return `<td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
+        } else if (numSalas === 2) {
+            return `<td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
+                    <td class="px-1 py-1 col-asig" colspan="1">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>`;
+        } else {
+            return `<td class="px-1 py-1 col-asig" colspan="1">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
+                    <td class="px-1 py-1 col-asig" colspan="1">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>
+                    <td class="px-1 py-1 col-asig" colspan="1">${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}</td>`;
         }
-        let html = `<td class="px-1 py-1 col-asig">
-            <div class="grid grid-cols-${numSalas} gap-1 text-[10px]">
-                <div class="border-r border-slate-300 pr-1">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Prin.</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
-                </div>
-                <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala B</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
-                </div>`;
-        if (numSalas === 3) {
-            html += `<div>
-                    <span class="block text-[8px] text-slate-400 font-bold uppercase no-print">Sala C</span>
-                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
-                </div>`;
-        }
-        html += `</div></td>`;
-        return html;
     };
 
     // APERTURA
     let filasHTML = `
         <tr class="h-6">
-            <td class="col-tiempo">1 min</td>
+            <td class="c-tiempo">1 min</td>
             <td class="px-2 font-medium" colspan="2">
                 Canción N° ${sem.canciones?.[0] || '161'}. Presidencia: Palabras de introducción.
             </td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
+            <td class="px-2 col-asig" colspan="3">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
         <tr class="h-6">
-            <td class="col-tiempo"></td>
+            <td class="c-tiempo"></td>
             <td class="px-2 font-medium" colspan="2">Oración</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
+            <td class="px-2 col-asig" colspan="3">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
     `;
 
@@ -241,27 +238,27 @@ function cargarSemanaEnPlanilla(idx) {
         if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
             filasHTML += `
                 <tr>
-                    <th class="bg-tesoros text-white text-center col-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+                    <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
+                    <th colspan="5" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
                 </tr>
             `;
             renderizoTesorosHeader = true;
         } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
             filasHTML += `
                 <tr>
-                    <th class="bg-maestros text-white text-center col-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="3" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                    <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                    <th colspan="5" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
                 </tr>
             `;
             renderizoMaestrosHeader = true;
         } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
             filasHTML += `
                 <tr>
-                    <th class="bg-vida text-white text-center col-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
-                    <th colspan="3" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                    <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
+                    <th colspan="5" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold" colspan="4">
+                    <td class="px-2 font-bold" colspan="6">
                         Canción Nº: ${sem.canciones?.[1] || '121'}
                     </td>
                 </tr>
@@ -282,7 +279,7 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo">${item.t}</td>
+                        <td class="c-tiempo">${item.t}</td>
                         <td class="px-2 font-medium" colspan="2">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
                     </tr>
@@ -290,10 +287,10 @@ function cargarSemanaEnPlanilla(idx) {
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium">${item.tit}</td>
-                        <td class="px-2 col-desc text-slate-700">${item.desc}</td>
-                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
+                        <td class="c-tiempo">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
+                        <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
+                        <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
                     </tr>
                 `;
             }
@@ -301,9 +298,9 @@ function cargarSemanaEnPlanilla(idx) {
         else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr>
-                    <td class="col-tiempo">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium">${item.tit}</td>
-                    <td class="px-2 col-desc text-slate-700">${item.desc}</td>
+                    <td class="c-tiempo">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
+                    <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
                 </tr>
             `;
@@ -312,25 +309,25 @@ function cargarSemanaEnPlanilla(idx) {
             if (item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr>
-                        <td class="col-tiempo" rowspan="2">${item.t}</td>
+                        <td class="c-tiempo" rowspan="2">${item.t}</td>
                         <td class="px-2 font-medium" colspan="2">${item.tit}</td>
-                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
                     </tr>
                     <tr>
                         <td class="px-2 font-medium" colspan="2">Lector:</td>
-                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
+                        <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
                     </tr>
                 `;
             } else {
                 filasHTML += `
                     <tr class="group">
-                        <td class="col-tiempo relative">
+                        <td class="c-tiempo relative">
                             ${item.t}
                             <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
                         </td>
-                        <td class="px-2 col-titulo font-medium">${item.tit}</td>
-                        <td class="px-2 col-desc text-slate-700">${item.desc}</td>
-                        <td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
+                        <td class="px-2 col-titulo font-medium" colspan="1">${item.tit}</td>
+                        <td class="px-2 col-desc text-slate-700" colspan="1">${item.desc}</td>
+                        <td class="px-2 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
                     </tr>
                 `;
             }
@@ -339,7 +336,7 @@ function cargarSemanaEnPlanilla(idx) {
 
     filasHTML += `
         <tr class="no-print bg-slate-50">
-            <td colspan="4" class="p-1 text-center">
+            <td colspan="6" class="p-1 text-center">
                 <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
                     <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
                 </button>
@@ -350,24 +347,24 @@ function cargarSemanaEnPlanilla(idx) {
     // CONCLUSIÓN
     filasHTML += `
         <tr>
-            <td class="col-tiempo" rowspan="2">3 mins.</td>
+            <td class="c-tiempo" rowspan="2">3 min</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
+            <td class="px-2 col-asig" colspan="3">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
         <tr>
             <td class="px-2 font-medium" colspan="2">
                 Canción ${sem.canciones?.[2] || '28'} y oración
             </td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
+            <td class="px-2 col-asig" colspan="3">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
         <!-- REUNIÓN PÚBLICA -->
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5" colspan="2">
+            <td class="px-2 font-bold py-1.5" colspan="3">
                 Domingo, presidencia: 
                 <div class="inline-block ml-2 w-48">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
             </td>
-            <td class="px-2 font-bold py-1.5 text-right" colspan="2">
+            <td class="px-2 font-bold py-1.5 text-right" colspan="3">
                 Lector: 
                 <div class="inline-block ml-2 text-left w-48">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
             </td>
@@ -429,7 +426,7 @@ window.agregarFilaVida = async function() {
     const idxEBC = sem.partes.findIndex(p => p.tit.includes('Estudio bíblico'));
     const nuevaParte = {
         seccion: 'vida',
-        t: '15 mins.',
+        t: '15 min',
         tit: 'Parte adicional',
         desc: 'Análisis con el auditorio.',
         participantes: 1,
