@@ -143,7 +143,6 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // Render de celdas de asignación para Seamos Mejores Maestros (1 o 2 participantes y multisalas)
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
@@ -161,7 +160,6 @@ function cargarSemanaEnPlanilla(idx) {
 
         let html = `<td class="p-1 col-asig relative group">`;
         
-        // Botón toggle 1 vs 2 participantes
         html += `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10" title="Cambiar a 1 o 2 asignados">
             ${cantP === 1 ? '1 Asig' : '2 Asig'}
         </button>`;
@@ -190,7 +188,6 @@ function cargarSemanaEnPlanilla(idx) {
         return html;
     };
 
-    // Render de celdas para Lectura de la Biblia (Salas A, B, C con 1 solo participante)
     const renderSalasLectura = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         if (numSalas === 1) {
@@ -217,7 +214,7 @@ function cargarSemanaEnPlanilla(idx) {
         return html;
     };
 
-    // APERTURA DE LA REUNIÓN
+    // APERTURA
     let filasHTML = `
         <tr class="h-6">
             <td class="col-tiempo">1 min</td>
@@ -237,7 +234,6 @@ function cargarSemanaEnPlanilla(idx) {
 
     partes.forEach((item, pIndex) => {
 
-        // ENCABEZADOS DE SECCIÓN
         if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
             filasHTML += `
                 <tr>
@@ -276,7 +272,6 @@ function cargarSemanaEnPlanilla(idx) {
             cat = 'nvc';
         }
 
-        // RENDERIZADO DE FILAS SEGÚN LA SECCIÓN
         if (item.seccion === 'tesoros') {
             if (item.tit.includes('Lectura')) {
                 filasHTML += `
@@ -309,7 +304,6 @@ function cargarSemanaEnPlanilla(idx) {
         } 
         else if (item.seccion === 'vida') {
             if (item.tit.includes('Estudio bíblico')) {
-                // Estudio Bíblico de la Congregación (Filas 17/18 con rowspan)
                 filasHTML += `
                     <tr>
                         <td class="col-tiempo" rowspan="2">${item.t}</td>
@@ -322,7 +316,6 @@ function cargarSemanaEnPlanilla(idx) {
                     </tr>
                 `;
             } else {
-                // Partes normales editables de Nuestra Vida Cristiana
                 filasHTML += `
                     <tr class="group">
                         <td class="col-tiempo relative">
@@ -342,7 +335,6 @@ function cargarSemanaEnPlanilla(idx) {
         }
     });
 
-    // Botón no-print para agregar fila en Nuestra Vida Cristiana
     filasHTML += `
         <tr class="no-print bg-slate-50">
             <td colspan="4" class="p-1 text-center">
@@ -353,7 +345,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    // CONCLUSIÓN Y CIERRE (Filas 19/20)
+    // CONCLUSIÓN Y FIN DE SEMANA
     filasHTML += `
         <tr>
             <td class="col-tiempo" rowspan="2">3 mins.</td>
@@ -365,7 +357,6 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
-        <!-- REUNIÓN PÚBLICA / PREDETERMINADA -->
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
             <td class="px-2 font-bold py-1.5" colspan="2">
                 Domingo, presidencia: 
@@ -381,7 +372,6 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-// Alternar entre 1 o 2 participantes en asignaciones estudiantiles
 async function toggleParticipantesParte(pIndex) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
@@ -391,7 +381,6 @@ async function toggleParticipantesParte(pIndex) {
     }
 }
 
-// Modificar textos manualmente en filas de Vida Cristiana
 async function actualizarTextoParte(pIndex, campo, valor) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
@@ -400,12 +389,10 @@ async function actualizarTextoParte(pIndex, campo, valor) {
     }
 }
 
-// Agregar fila dinámica a Nuestra Vida Cristiana
 async function agregarFilaVida() {
     const sem = programaMes[semanaActivaIdx];
     if (!sem) return;
     
-    // Insertar antes del Estudio Bíblico
     const idxEBC = sem.partes.findIndex(p => p.tit.includes('Estudio bíblico'));
     const nuevaParte = {
         seccion: 'vida',
@@ -426,7 +413,6 @@ async function agregarFilaVida() {
     await guardarPlanillaEnSupabase();
 }
 
-// Eliminar fila de Nuestra Vida Cristiana
 async function eliminarFilaVida(pIndex) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
