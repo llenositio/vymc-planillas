@@ -27,7 +27,7 @@ function mostrarEstadoTablaVacia() {
     if (cuerpo) {
         cuerpo.innerHTML = `
             <tr>
-                <td colspan="6" class="py-12 text-center text-slate-400">
+                <td colspan="4" class="py-12 text-center text-slate-400">
                     <i class="fa-solid fa-calendar-plus text-4xl mb-3 text-slate-300"></i>
                     <p class="font-bold text-sm">No hay un programa cargado para este mes.</p>
                     <p class="text-xs text-slate-400 mt-1">Ve a la pestaña <b>"Cargar Programa"</b> para pegar el texto de la Guía de Actividades.</p>
@@ -45,8 +45,6 @@ function cambiarPestaña(tab) {
         btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
     });
     document.getElementById(`tab-${tab}`).className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-
-    if (tab === 'envio') generarListaPartesEnvio();
 }
 
 function renderizarSelectorSemanas() {
@@ -80,9 +78,9 @@ function obtenerOpcionesHermanos(cat) {
     });
 }
 
-function crearSelectHTML(id, cat, valorActual = "", labelSala = "") {
+function crearSelectHTML(id, cat, valorActual = "", placeholder = "Seleccionar") {
     const aptos = obtenerOpcionesHermanos(cat);
-    let options = `<option value="">-- ${labelSala ? labelSala : 'Seleccionar'} --</option>`;
+    let options = `<option value="">-- ${placeholder} --</option>`;
     aptos.forEach(h => {
         const sel = h.nombre === valorActual ? 'selected' : '';
         options += `<option value="${h.nombre}" ${sel}>${h.nombre}</option>`;
@@ -96,10 +94,8 @@ function cargarSemanaEnPlanilla(idx) {
     renderizarSelectorSemanas();
     const sem = programaMes[idx];
 
-    // Control de Salas y Viajante
     const numSalas = sem.tipoSemana === 'viajante' ? 1 : (sem.numSalas || 1);
     
-    // Actualizar selector visual de salas
     const selSalas = document.getElementById('selectNumSalas');
     if (selSalas) {
         selSalas.value = numSalas;
@@ -109,7 +105,7 @@ function cargarSemanaEnPlanilla(idx) {
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
     cabecera.innerHTML = `
         <tr>
-            <th colspan="${2 + numSalas + 1}" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
+            <th colspan="4" class="py-2.5 px-3 bg-white text-center border-b-2 border-slate-900">
                 <span class="text-lg sm:text-2xl font-black text-slate-900">
                     Semana del ${sem.semana}, ${sem.lectura}
                 </span>
@@ -139,104 +135,119 @@ function cargarSemanaEnPlanilla(idx) {
     const p = sem.partes || {};
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // Función auxiliar para renderizar columnas de salas en SMM y Lectura
-    const renderSalasCols = (parteKey, cat) => {
+    // Generador elegante de celdas para salas
+    const renderSalasCelda = (parteKey, cat) => {
         const item = p[parteKey] || {};
-        let html = `<td class="px-2">${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig, numSalas > 1 ? "Sala Principal" : "")}</td>`;
-        if (numSalas >= 2) {
-            html += `<td class="px-2">${crearSelectHTML(`asig_${parteKey}_B`, cat, item.asigB, "Sala B")}</td>`;
+        if (numSalas === 1) {
+            return `<td class="w-64 px-2">${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig)}</td>`;
         }
+        
+        let html = `<td class="w-80 px-1 py-1">
+            <div class="grid grid-cols-${numSalas} gap-1 text-[11px]">
+                <div class="border-r border-slate-300 pr-1">
+                    <span class="block text-[9px] text-slate-400 font-bold uppercase">Prin.</span>
+                    ${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig, "Principal")}
+                </div>
+                <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
+                    <span class="block text-[9px] text-slate-400 font-bold uppercase">Sala B</span>
+                    ${crearSelectHTML(`asig_${parteKey}_B`, cat, item.asigB, "Sala B")}
+                </div>`;
         if (numSalas === 3) {
-            html += `<td class="px-2">${crearSelectHTML(`asig_${parteKey}_C`, cat, item.asigC, "Sala C")}</td>`;
+            html += `<div>
+                    <span class="block text-[9px] text-slate-400 font-bold uppercase">Sala C</span>
+                    ${crearSelectHTML(`asig_${parteKey}_C`, cat, item.asigC, "Sala C")}
+                </div>`;
         }
+        html += `</div></td>`;
         return html;
     };
 
     cuerpo.innerHTML = `
         <tr class="h-6">
-            <td class="w-12 text-center font-bold">1 min</td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
+            <td class="w-14 text-center font-bold">1 min</td>
+            <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
             <td class="w-64 px-2">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
         <tr class="h-6">
             <td></td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">Oración</td>
+            <td class="px-2 font-medium" colspan="2">Oración</td>
             <td class="px-2">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
 
         <tr>
-            <th colspan="${2 + numSalas + 1}" class="bg-tesoros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+            <th colspan="4" class="bg-tesoros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
         </tr>
         <tr>
-            <td class="text-center font-bold w-12">${p.p1?.t || '10 min'}</td>
-            <td class="px-2 font-medium w-64">${p.p1?.tit || '1. Discurso'}</td>
-            <td class="px-2 font-semibold w-56" colspan="${numSalas}">${p.p1?.desc || 'Discurso'}</td>
+            <td class="text-center font-bold w-14">${p.p1?.t || '10 min'}</td>
+            <td class="px-2 font-medium w-72">${p.p1?.tit || '1. Discurso'}</td>
+            <td class="px-2 font-semibold">${p.p1?.desc || 'Discurso'}</td>
             <td class="px-2">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
         </tr>
         <tr>
             <td class="text-center font-bold">${p.p2?.t || '10 min'}</td>
             <td class="px-2 font-medium">${p.p2?.tit || '2. Busquemos perlas escondidas'}</td>
-            <td class="px-2 font-semibold" colspan="${numSalas}">${p.p2?.desc || 'Preguntas y respuestas'}</td>
+            <td class="px-2 font-semibold">${p.p2?.desc || 'Preguntas y respuestas'}</td>
             <td class="px-2">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
         </tr>
         <tr>
-            <td class="text-center font-bold">${p.p3?.t || '4 min o menos'}</td>
-            <td class="px-2 font-medium" colspan="2">${p.p3?.tit || '3. Lectura de la Biblia'}</td>
-            ${renderSalasCols('p3', 'lec')}
+            <td class="text-center font-bold">${p.p3?.t || '4 min'}</td>
+            <td class="px-2 font-medium">3. Lectura de la Biblia</td>
+            <td class="px-2 font-medium text-slate-700">${p.p3?.desc || ''}</td>
+            ${renderSalasCelda('p3', 'lec')}
         </tr>
 
         <tr>
-            <th colspan="${2 + numSalas + 1}" class="bg-maestros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+            <th colspan="4" class="bg-maestros text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
         </tr>
         ${['p4', 'p5', 'p6', 'p7'].map(pk => p[pk]?.tit ? `
         <tr>
             <td class="text-center font-bold">${p[pk].t}</td>
             <td class="px-2 font-medium">${p[pk].tit}</td>
-            <td class="px-2">${p[pk].desc}</td>
-            ${renderSalasCols(pk, 'smm')}
+            <td class="px-2 text-slate-700">${p[pk].desc}</td>
+            ${renderSalasCelda(pk, 'smm')}
         </tr>` : '').join('')}
 
         <tr>
-            <th colspan="${2 + numSalas + 1}" class="bg-vida text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+            <th colspan="4" class="bg-vida text-white py-1.5 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
         </tr>
         <tr>
-            <td class="px-2 font-bold" colspan="${2 + numSalas + 1}">Canción N°: ${sem.canciones?.[1] || ''}</td>
+            <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
         </tr>
         ${p.p8?.tit ? `
         <tr>
             <td class="text-center font-bold">${p.p8.t}</td>
             <td class="px-2 font-medium">${p.p8.tit}</td>
-            <td class="px-2" colspan="${numSalas}">${p.p8.desc}</td>
+            <td class="px-2 text-slate-700">${p.p8.desc}</td>
             <td class="px-2">${crearSelectHTML('asig_p8', 'nvc', p.p8.asig)}</td>
         </tr>` : ''}
         <tr>
             <td class="text-center font-bold">${p.p9?.t || '30 min'}</td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
+            <td class="px-2 font-medium" colspan="2">${p.p9?.tit || 'Estudio bíblico de la congregación'}</td>
             <td class="px-2">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
         </tr>
         ${sem.tipoSemana !== 'viajante' ? `
         <tr>
             <td></td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">Lector del Estudio Bíblico:</td>
+            <td class="px-2 font-medium" colspan="2">Lector del Estudio Bíblico:</td>
             <td class="px-2">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
         </tr>` : ''}
         <tr class="h-6">
             <td class="text-center font-bold">3 min</td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">Repaso de esta reunión y adelanto de la próxima.</td>
+            <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
             <td class="px-2">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
         <tr class="h-6">
             <td></td>
-            <td class="px-2 font-medium" colspan="${numSalas + 1}">Canción ${sem.canciones?.[2] || ''} y oración</td>
+            <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
             <td class="px-2">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5" colspan="${Math.ceil((2 + numSalas + 1) / 2)}">
+            <td class="px-2 font-bold py-1.5" colspan="2">
                 Domingo, presidencia: 
                 <div class="w-48 inline-block ml-2">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
             </td>
-            <td class="px-2 font-bold py-1.5 text-right" colspan="${Math.floor((2 + numSalas + 1) / 2)}">
+            <td class="px-2 font-bold py-1.5 text-right" colspan="2">
                 Lector La Atalaya: 
                 <div class="w-48 inline-block ml-2 text-left">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
             </td>
@@ -353,11 +364,12 @@ function cargarEjemploDemoMes() {
     document.getElementById('textoMesCompleto').value = 
 `5-11 DE OCTUBRE
 JEREMÍAS 40, 41
-Canciones: 33, 17, 38
+Canción 33
 1. Tengamos un punto de vista equilibrado de la protección de Jehová (10 min)
 2. Busquemos perlas escondidas (10 min)
 3. Lectura de la Biblia
 (4 mins.) Jer 40:1-10 (th lección 2).
+Canción 17
 4. Empiece conversaciones
 (2 mins.) DE CASA EN CASA. (lmd lección 2 punto 3).
 5. Empiece conversaciones
@@ -367,7 +379,9 @@ Canciones: 33, 17, 38
 7. Explique sus creencias
 (3 mins.) Escenificación. ¿Quién es Jehová? (th lección 17).
 8. Jehová protege a las viudas (15 min)
-9. Estudio bíblico de la congregación: wcg cap. 11 (30 min)`;
+9. Estudio bíblico de la congregación
+(30 mins.) wcg cap. 11
+Canción 38 y oración`;
 
     alert("Texto de demostración cargado en el cuadro.");
 }
