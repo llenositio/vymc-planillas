@@ -114,7 +114,7 @@ function cargarSemanaEnPlanilla(idx) {
         </colgroup>
         <tr>
             <th colspan="4" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
-                <span class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+                <span class="text-base font-black text-slate-900 tracking-tight">
                     Semana del ${sem.semana}, ${sem.lectura}
                 </span>
             </th>
@@ -169,10 +169,9 @@ function cargarSemanaEnPlanilla(idx) {
         return html;
     };
 
-    // Estructura idéntica al modelo original Excel
     let filasHTML = `
         <tr class="h-6">
-            <td class="col-tiempo font-bold text-xs">1 min</td>
+            <td class="col-tiempo">1 min</td>
             <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
@@ -180,6 +179,11 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="col-tiempo"></td>
             <td class="px-2 font-medium" colspan="2">Oración</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
+        </tr>
+
+        <tr>
+            <th class="bg-tesoros text-white text-center"><i class="fa-solid fa-gem text-xs"></i></th>
+            <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
         </tr>
     `;
 
@@ -189,15 +193,22 @@ function cargarSemanaEnPlanilla(idx) {
         const item = p[pk];
         if (!item || !item.tit) return;
 
-        // Encabezados de sección idénticos a la imagen modelo
-        if (index === 0) {
-            filasHTML += `<tr><th colspan="4" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th></tr>`;
-        } else if (index === 3) {
-            filasHTML += `<tr><th colspan="4" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th></tr>`;
+        if (index === 3) {
+            filasHTML += `
+                <tr>
+                    <th class="bg-maestros text-white text-center"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                    <th colspan="3" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                </tr>
+            `;
         } else if (index === 7) {
             filasHTML += `
-                <tr><th colspan="4" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th></tr>
-                <tr><td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td></tr>
+                <tr>
+                    <th class="bg-vida text-white text-center"><i class="fa-solid fa-sheep text-xs"></i></th>
+                    <th colspan="3" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                </tr>
+                <tr>
+                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
+                </tr>
             `;
         }
 
@@ -209,11 +220,10 @@ function cargarSemanaEnPlanilla(idx) {
 
         const esParteMultiSala = (index >= 2 && index <= 6);
 
-        // Si la parte tiene título y descripción separados o si va combinada
         if (item.desc) {
             filasHTML += `
                 <tr>
-                    <td class="col-tiempo font-bold text-xs">${item.t || ''}</td>
+                    <td class="col-tiempo">${item.t || ''}</td>
                     <td class="px-2 col-titulo font-medium">${item.tit}</td>
                     <td class="px-2 col-desc text-slate-700">${item.desc}</td>
                     ${esParteMultiSala ? renderSalasCelda(pk, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_${pk}`, cat, item.asig)}</td>`}
@@ -222,7 +232,7 @@ function cargarSemanaEnPlanilla(idx) {
         } else {
             filasHTML += `
                 <tr>
-                    <td class="col-tiempo font-bold text-xs">${item.t || ''}</td>
+                    <td class="col-tiempo">${item.t || ''}</td>
                     <td class="px-2 font-medium" colspan="2">${item.tit}</td>
                     ${esParteMultiSala ? renderSalasCelda(pk, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_${pk}`, cat, item.asig)}</td>`}
                 </tr>
@@ -232,7 +242,7 @@ function cargarSemanaEnPlanilla(idx) {
 
     filasHTML += `
         <tr class="h-6">
-            <td class="col-tiempo font-bold text-xs">3 min</td>
+            <td class="col-tiempo">3 min</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
         </tr>
