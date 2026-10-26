@@ -149,7 +149,7 @@ function cargarSemanaEnPlanilla(idx) {
     const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    // COMBINACIÓN SIMÉTRICA DE LAS 7 MICRO-COLUMNAS DE ASIGNACIONES (35% TOTAL)
+    // RENDERIZADO DE LAS 7 MICROCOLUMNAS DE ASIGNACIÓN (SUMA DE COLUMNAS = 10 EXACTAS)
     const renderSalasMaestros = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
@@ -171,7 +171,7 @@ function cargarSemanaEnPlanilla(idx) {
         let html = '';
 
         if (numSalas === 1) {
-            // 1 SALA: Toma las 7 micro-columnas de asignación (35% total)
+            // 1 SALA: Ocupa las 7 micro-columnas completas (35%)
             html += `<td class="p-1 col-asig relative group" colspan="7">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -179,7 +179,7 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
             </td>`;
         } else if (numSalas === 2) {
-            // 2 SALAS: Sala Principal (4 micro-cols) y Sala B (3 micro-cols) o repartidas de manera idéntica 17.5% - 17.5%
+            // 2 SALAS: Sala Prin (4 micro-cols) + Sala B (3 micro-cols) = 7 micro-cols (35%)
             html += `<td class="p-1 col-asig relative group" colspan="4">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
@@ -190,7 +190,7 @@ function cargarSemanaEnPlanilla(idx) {
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
             </td>`;
         } else if (numSalas === 3) {
-            // 3 SALAS: Sala Principal (3 micro-cols), Sala B (2 micro-cols), Sala C (2 micro-cols)
+            // 3 SALAS: Sala Prin (3 micro-cols) + Sala B (2 micro-cols) + Sala C (2 micro-cols) = 7 micro-cols (35%)
             html += `<td class="p-1 col-asig relative group" colspan="3">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
