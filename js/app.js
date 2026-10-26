@@ -140,40 +140,39 @@ function cargarSemanaEnPlanilla(idx) {
         tabla.classList.remove('opacity-30', 'pointer-events-none');
     }
 
-    const p = sem.partes || {};
+    const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
     
-    const renderSalasCelda = (parteKey, cat) => {
-        const item = p[parteKey] || {};
+    const renderSalasCelda = (pIndex, cat) => {
+        const item = partes[pIndex] || {};
         if (numSalas === 1) {
-            return `<td class="px-2 col-asig">${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig)}</td>`;
+            return `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`;
         }
         
         let html = `<td class="px-1 py-1 col-asig">
             <div class="grid grid-cols-${numSalas} gap-1 text-[10px]">
                 <div class="border-r border-slate-300 pr-1">
                     <span class="block text-[8px] text-slate-400 font-bold uppercase">Prin.</span>
-                    ${crearSelectHTML(`asig_${parteKey}_A`, cat, item.asig, "Principal")}
+                    ${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig, "Principal")}
                 </div>
                 <div class="${numSalas === 3 ? 'border-r border-slate-300 pr-1' : ''}">
                     <span class="block text-[8px] text-slate-400 font-bold uppercase">Sala B</span>
-                    ${crearSelectHTML(`asig_${parteKey}_B`, cat, item.asigB, "Sala B")}
+                    ${crearSelectHTML(`asig_p${pIndex}_B`, cat, item.asigB, "Sala B")}
                 </div>`;
         if (numSalas === 3) {
             html += `<div>
                     <span class="block text-[8px] text-slate-400 font-bold uppercase">Sala C</span>
-                    ${crearSelectHTML(`asig_${parteKey}_C`, cat, item.asigC, "Sala C")}
+                    ${crearSelectHTML(`asig_p${pIndex}_C`, cat, item.asigC, "Sala C")}
                 </div>`;
         }
         html += `</div></td>`;
         return html;
     };
 
-    // MAQUETADO LÍNEA POR LÍNEA CALCADO A TU MODELO EXCEL
     let filasHTML = `
         <tr class="h-6">
             <td class="col-tiempo">1 min</td>
-            <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || '33'}. Presidencia: Palabras de introducción.</td>
+            <td class="px-2 font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
         <tr class="h-6">
@@ -181,85 +180,72 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2 font-medium" colspan="2">Oración</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
         </tr>
+    `;
 
-        <!-- TESOROS DE LA BIBLIA -->
-        <tr>
-            <th class="bg-tesoros text-white text-center"><i class="fa-solid fa-gem text-xs"></i></th>
-            <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p1?.t || '10 min'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p1?.tit || '1. Tengamos un punto de vista equilibrado de la protección de Jehová'}</td>
-            <td class="px-2 col-desc font-semibold text-slate-700">${p.p1?.desc || 'Discurso'}</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_p1', 'disc', p.p1?.asig)}</td>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p2?.t || '10 min'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p2?.tit || '2. Busquemos perlas escondidas.'}</td>
-            <td class="px-2 col-desc font-semibold text-slate-700">${p.p2?.desc || 'Preguntas y respuestas ' + (sem.lectura || '')}</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_p2', 'perlas', p.p2?.asig)}</td>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p3?.t || '4 min o menos'}</td>
-            <td class="px-2 font-medium" colspan="2">${p.p3?.tit || '3. Lectura de la Biblia:'} ${p.p3?.desc || 'Jer 40:1-10 (th lección 2).'}</td>
-            ${renderSalasCelda('p3', 'lec')}
-        </tr>
+    let seccionActual = '';
 
-        <!-- SEAMOS MEJORES MAESTROS -->
-        <tr>
-            <th class="bg-maestros text-white text-center"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-            <th colspan="3" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p4?.t || '2 mins.'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p4?.tit || '4. Empiece conversaciones'}</td>
-            <td class="px-2 col-desc text-slate-700">${p.p4?.desc || 'DE CASA EN CASA. (lmd lección 2 punto 3).'}</td>
-            ${renderSalasCelda('p4', 'smm')}
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p5?.t || '2 mins.'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p5?.tit || '5. Empiece conversaciones'}</td>
-            <td class="px-2 col-desc text-slate-700">${p.p5?.desc || 'PREDICACIÓN INFORMAL. (lmd lección 2 punto 5).'}</td>
-            ${renderSalasCelda('p5', 'smm')}
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p6?.t || '4 mins.'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p6?.tit || '6. Empiece conversaciones'}</td>
-            <td class="px-2 col-desc text-slate-700">${p.p6?.desc || 'PREDICACIÓN PÚBLICA. Una persona se queda mirando el carrito de publicaciones (lmd lección 5 punto 3).'}</td>
-            ${renderSalasCelda('p6', 'smm')}
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p7?.t || '3 mins.'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p7?.tit || '7. Explique sus creencias'}</td>
-            <td class="px-2 col-desc text-slate-700">${p.p7?.desc || 'Escenificación. ijwbq artículo 103. Tema: ¿Quién es Jehová? (th lección 17).'}</td>
-            ${renderSalasCelda('p7', 'smm')}
-        </tr>
+    partes.forEach((item, pIndex) => {
+        // Detectar cambio de sección dinámicamente según la posición/índice de las partes
+        if (pIndex === 0 && seccionActual !== 'tesoros') {
+            filasHTML += `
+                <tr>
+                    <th class="bg-tesoros text-white text-center"><i class="fa-solid fa-gem text-xs"></i></th>
+                    <th colspan="3" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+                </tr>
+            `;
+            seccionActual = 'tesoros';
+        } else if (pIndex === 3 && seccionActual !== 'maestros') {
+            filasHTML += `
+                <tr>
+                    <th class="bg-maestros text-white text-center"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                    <th colspan="3" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                </tr>
+            `;
+            seccionActual = 'maestros';
+        } else if (pIndex === 7 && seccionActual !== 'vida') {
+            filasHTML += `
+                <tr>
+                    <th class="bg-vida text-white text-center"><i class="fa-solid fa-sheep text-xs"></i></th>
+                    <th colspan="3" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                </tr>
+                <tr>
+                    <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || ''}</td>
+                </tr>
+            `;
+            seccionActual = 'vida';
+        }
 
-        <!-- NUESTRA VIDA CRISTIANA -->
-        <tr>
-            <th class="bg-vida text-white text-center"><i class="fa-solid fa-sheep text-xs"></i></th>
-            <th colspan="3" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
-        </tr>
-        <tr>
-            <td class="px-2 font-bold" colspan="4">Canción N°: ${sem.canciones?.[1] || '17'}</td>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p8?.t || '15 mins.'}</td>
-            <td class="px-2 col-titulo font-medium">${p.p8?.tit || '8. Jehová protege a las viudas'}</td>
-            <td class="px-2 col-desc text-slate-700">${p.p8?.desc || 'Análisis con el auditorio. Ponga el VIDEO A pesar de perder a mi esposo, vuelvo a ser feliz.'}</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_p8', 'nvc', p.p8?.asig)}</td>
-        </tr>
-        <tr>
-            <td class="col-tiempo">${p.p9?.t || '30 min'}</td>
-            <td class="px-2 font-medium" colspan="2">${p.p9?.tit || 'Estudio bíblico de la congregación: wcg cap. 11.'}</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_p9', 'eb', p.p9?.asig)}</td>
-        </tr>
-        ${sem.tipoSemana !== 'viajante' ? `
-        <tr>
-            <td class="col-tiempo"></td>
-            <td class="px-2 font-medium" colspan="2">Lector:</td>
-            <td class="px-2 col-asig">${crearSelectHTML('asig_lector_eb', 'lectorL', p.p9?.lector)}</td>
-        </tr>` : ''}
+        // Determinar categoría para filtros de la lista de hermanos
+        let cat = 'smm';
+        if (pIndex === 0) cat = 'disc';
+        else if (pIndex === 1) cat = 'perlas';
+        else if (pIndex === 2) cat = 'lec';
+        else if (pIndex >= 7) cat = 'nvc';
+
+        const esMultiSala = (pIndex >= 2 && pIndex <= 6);
+
+        // Renderizar respetando las 4 columnas
+        if (item.desc) {
+            filasHTML += `
+                <tr>
+                    <td class="col-tiempo">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium">${item.tit}</td>
+                    <td class="px-2 col-desc text-slate-700">${item.desc}</td>
+                    ${esMultiSala ? renderSalasCelda(pIndex, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`}
+                </tr>
+            `;
+        } else {
+            filasHTML += `
+                <tr>
+                    <td class="col-tiempo">${item.t}</td>
+                    <td class="px-2 font-medium" colspan="2">${item.tit}</td>
+                    ${esMultiSala ? renderSalasCelda(pIndex, cat) : `<td class="px-2 col-asig">${crearSelectHTML(`asig_p${pIndex}_A`, cat, item.asig)}</td>`}
+                </tr>
+            `;
+        }
+    });
+
+    filasHTML += `
         <tr class="h-6">
             <td class="col-tiempo">3 min</td>
             <td class="px-2 font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
@@ -267,7 +253,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         <tr class="h-6">
             <td class="col-tiempo"></td>
-            <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || '38'} y oración</td>
+            <td class="px-2 font-medium" colspan="2">Canción ${sem.canciones?.[2] || ''} y oración</td>
             <td class="px-2 col-asig">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
 
@@ -302,36 +288,17 @@ async function guardarAsignacionSemana(elemId) {
 
     if (elemId === 'asig_presi') sem.presidencia = val;
     else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
-    else if (elemId === 'asig_p1') sem.partes.p1.asig = val;
-    else if (elemId === 'asig_p2') sem.partes.p2.asig = val;
-    else if (elemId.startsWith('asig_p3_')) {
-        if (elemId.endsWith('_A')) sem.partes.p3.asig = val;
-        if (elemId.endsWith('_B')) sem.partes.p3.asigB = val;
-        if (elemId.endsWith('_C')) sem.partes.p3.asigC = val;
+    else if (elemId.startsWith('asig_p')) {
+        const partes = elemId.split('_');
+        const pIndex = parseInt(partes[1].replace('p', ''));
+        const sala = partes[2];
+
+        if (sem.partes && sem.partes[pIndex]) {
+            if (sala === 'A') sem.partes[pIndex].asig = val;
+            else if (sala === 'B') sem.partes[pIndex].asigB = val;
+            else if (sala === 'C') sem.partes[pIndex].asigC = val;
+        }
     }
-    else if (elemId.startsWith('asig_p4_')) {
-        if (elemId.endsWith('_A')) sem.partes.p4.asig = val;
-        if (elemId.endsWith('_B')) sem.partes.p4.asigB = val;
-        if (elemId.endsWith('_C')) sem.partes.p4.asigC = val;
-    }
-    else if (elemId.startsWith('asig_p5_')) {
-        if (elemId.endsWith('_A')) sem.partes.p5.asig = val;
-        if (elemId.endsWith('_B')) sem.partes.p5.asigB = val;
-        if (elemId.endsWith('_C')) sem.partes.p5.asigC = val;
-    }
-    else if (elemId.startsWith('asig_p6_')) {
-        if (elemId.endsWith('_A')) sem.partes.p6.asig = val;
-        if (elemId.endsWith('_B')) sem.partes.p6.asigB = val;
-        if (elemId.endsWith('_C')) sem.partes.p6.asigC = val;
-    }
-    else if (elemId.startsWith('asig_p7_')) {
-        if (elemId.endsWith('_A')) sem.partes.p7.asig = val;
-        if (elemId.endsWith('_B')) sem.partes.p7.asigB = val;
-        if (elemId.endsWith('_C')) sem.partes.p7.asigC = val;
-    }
-    else if (elemId === 'asig_p8') sem.partes.p8.asig = val;
-    else if (elemId === 'asig_p9') sem.partes.p9.asig = val;
-    else if (elemId === 'asig_lector_eb') sem.partes.p9.lector = val;
     else if (elemId === 'asig_repaso') sem.repaso = val;
     else if (elemId === 'asig_orac_fin') sem.oracionFin = val;
     else if (elemId === 'asig_dom_presi') sem.domPresi = val;
@@ -399,22 +366,7 @@ async function eliminarHermano(id) {
 function cargarEjemploDemoMes() {
     const txt = document.getElementById('textoMesCompleto');
     if (txt) {
-        txt.value = 
-`5-11 DE OCTUBRE
-JEREMÍAS 40, 41
-Canción 33
-1. Tengamos un punto de vista equilibrado de la protección de Jehová (10 min) Discurso
-2. Busquemos perlas escondidas (10 min) Preguntas y respuestas
-3. Lectura de la Biblia (4 mins.) Jer 40:1-10 (th lección 2).
-Canción 17
-4. Empiece conversaciones (2 mins.) DE CASA EN CASA. (lmd lección 2 punto 3).
-5. Empiece conversaciones (2 mins.) PREDICACIÓN INFORMAL. (lmd lección 2 punto 5).
-6. Empiece conversaciones (4 mins.) PREDICACIÓN PÚBLICA. Carrito (lmd lección 5 punto 3).
-7. Explique sus creencias (3 mins.) Escenificación (th lección 17).
-8. Jehová protege a las viudas (15 min) Análisis con el auditorio.
-9. Estudio bíblico de la congregación (30 min) wcg cap. 11
-Canción 38 y oración`;
-        alert("Texto de demostración cargado en el cuadro.");
+        txt.value = "";
     }
 }
 
