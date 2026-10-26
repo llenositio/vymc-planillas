@@ -1,5 +1,6 @@
 function procesarTextoGuiaActividades(texto) {
-    if (!texto || !texto.trim()) return [];
+    return [];
+}
 
     const bloquesSemanas = texto.split(/(?=\b\d{1,2}-\d{1,2}\s+DE\s+[A-ZÁÉÍÓÚÑ]+\b)/i);
     const semanasProcesadas = [];
