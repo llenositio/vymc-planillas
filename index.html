@@ -45,8 +45,9 @@
 
         #tablaPlanillaCompleta td, #tablaPlanillaCompleta th { 
             border: 1px solid #475569 !important; 
-            padding: 3px 4px !important; 
-            font-size: 11px; 
+            padding: 2px 3px !important; 
+            font-size: 10px !important; 
+            line-height: 1.25 !important;
             word-wrap: break-word; 
             overflow: hidden; 
             vertical-align: middle;
@@ -75,8 +76,8 @@
             border: none; 
             outline: none; 
             cursor: pointer; 
-            padding: 1px 0; 
-            font-size: 10px; 
+            padding: 0 !important; 
+            font-size: 9.5px !important; 
             text-transform: uppercase;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -142,6 +143,9 @@
                         <div id="selectorSemanas" class="flex gap-1 flex-wrap"></div>
                         <button onclick="agregarNuevaSemana()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
                             <i class="fa-solid fa-plus"></i> Nueva
+                        </button>
+                        <button onclick="abrirModalImportador()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Extraer Programa
                         </button>
                         <button onclick="eliminarSemanaActiva()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1 ml-1">
                             <i class="fa-solid fa-trash"></i> Eliminar Semana
@@ -259,6 +263,56 @@
             </div>
         </section>
 
+    </div>
+
+    <!-- MODAL DE EXTRACCIÓN Y BORRADOR -->
+    <div id="modalImportador" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+                <h3 class="font-extrabold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Extractor e Importador de Programa
+                </h3>
+                <button onclick="cerrarModalImportador()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- PASO 1: PEGAR TEXTO CRUDO -->
+            <div id="pasoModalTextoCrudo" class="p-4 flex-1 overflow-y-auto space-y-3">
+                <p class="text-xs text-slate-600 font-medium">
+                    Pega aquí el <strong>texto copiado directamente de la guía</strong>:
+                </p>
+                <textarea id="inputTextoCrudo" rows="12" class="w-full p-3 font-mono text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed" placeholder="Pega el programa aquí..."></textarea>
+            </div>
+
+            <!-- PASO 2: BORRADOR FORMATO // -->
+            <div id="pasoModalFormateado" class="p-4 flex-1 overflow-y-auto space-y-3 hidden">
+                <div class="flex flex-wrap justify-between items-center gap-2 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                    <span class="text-xs text-amber-900 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info text-amber-600"></i> Revisa el borrador con sintaxis <code class="bg-white px-1 py-0.5 rounded font-mono font-bold text-amber-800 border border-amber-300">//</code> antes de inyectar a la planilla.
+                    </span>
+                    <button onclick="volverAPasoTextoCrudo()" class="text-xs text-slate-500 hover:text-slate-800 underline font-semibold">
+                        Volver al texto original
+                    </button>
+                </div>
+
+                <textarea id="outputTextoDelimitado" rows="12" class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed text-slate-800"></textarea>
+            </div>
+
+            <div class="bg-slate-50 p-3 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="cerrarModalImportador()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                    Cancelar
+                </button>
+                <button id="btnConvertirCrudo" onclick="convertirTextoCrudoADelimitado()" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear"></i> Generar Borrador
+                </button>
+                <button id="btnCargarAPlanilla" onclick="cargarDelimitadoAPlanilla()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition hidden flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Cargar a la Planilla
+                </button>
+            </div>
+
+        </div>
     </div>
 
     <script src="js/supabase.js"></script>
