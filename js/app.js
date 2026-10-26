@@ -382,41 +382,47 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-/* LÓGICA DE EXTRACCIÓN Y CONVERSIÓN A SINTAXIS // */
+/* FUNCIONES DEL MODAL DE EXTRACCIÓN (GLOBALES) */
 window.abrirModalImportador = function() {
-    document.getElementById('modalImportador').classList.remove('hidden');
-    volverAPasoTextoCrudo();
+    const m = document.getElementById('modalImportador');
+    if (m) m.classList.remove('hidden');
+    window.volverAPasoTextoCrudo();
 };
 
 window.cerrarModalImportador = function() {
-    document.getElementById('modalImportador').classList.add('hidden');
+    const m = document.getElementById('modalImportador');
+    if (m) m.classList.add('hidden');
 };
 
 window.volverAPasoTextoCrudo = function() {
-    document.getElementById('pasoModalTextoCrudo').classList.remove('hidden');
-    document.getElementById('pasoModalFormateado').classList.add('hidden');
-    document.getElementById('btnConvertirCrudo').classList.remove('hidden');
-    document.getElementById('btnCargarAPlanilla').classList.add('hidden');
+    const paso1 = document.getElementById('pasoModalTextoCrudo');
+    const paso2 = document.getElementById('pasoModalFormateado');
+    const btn1 = document.getElementById('btnConvertirCrudo');
+    const btn2 = document.getElementById('btnCargarAPlanilla');
+
+    if (paso1) paso1.classList.remove('hidden');
+    if (paso2) paso2.classList.add('hidden');
+    if (btn1) btn1.classList.remove('hidden');
+    if (btn2) btn2.classList.add('hidden');
 };
 
 window.convertirTextoCrudoADelimitado = function() {
-    const raw = document.getElementById('inputTextoCrudo').value;
-    if (!raw.trim()) {
+    const rawEl = document.getElementById('inputTextoCrudo');
+    if (!rawEl || !rawEl.value.trim()) {
         alert("Pega primero el texto del programa.");
         return;
     }
 
+    const raw = rawEl.value;
     const lineas = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     let resultadoLineas = [];
 
     let semanaTexto = "";
     let lecturaTexto = "";
-    let seccionActual = "";
 
     for (let i = 0; i < lineas.length; i++) {
         let l = lineas[i];
 
-        // Encabezados de Semana y Lectura
         if (l.match(/\d+-\d+\s+DE\s+[A-Z]+/i) || l.match(/Semana del/i)) {
             semanaTexto = l.replace(/Semana del/i, '').trim();
             if (lineas[i+1] && !lineas[i+1].includes('Canción') && !lineas[i+1].includes('TESOROS')) {
@@ -426,24 +432,19 @@ window.convertirTextoCrudoADelimitado = function() {
             continue;
         }
 
-        // Secciones principales
         if (l.includes("TESOROS DE LA BIBLIA")) {
-            seccionActual = "TESOROS DE LA BIBLIA";
             resultadoLineas.push("\nTESOROS DE LA BIBLIA");
             continue;
         }
         if (l.includes("SEAMOS MEJORES MAESTROS")) {
-            seccionActual = "SEAMOS MEJORES MAESTROS";
             resultadoLineas.push("\nSEAMOS MEJORES MAESTROS");
             continue;
         }
         if (l.includes("NUESTRA VIDA CRISTIANA")) {
-            seccionActual = "NUESTRA VIDA CRISTIANA";
             resultadoLineas.push("\nNUESTRA VIDA CRISTIANA");
             continue;
         }
 
-        // Introducción / Canciones
         if (l.startsWith("Canción") && l.includes("introducción")) {
             let matchMin = l.match(/\((\d+\s*min[s]?\.)\)/i);
             let t = matchMin ? matchMin[1] : "1 min";
@@ -451,17 +452,14 @@ window.convertirTextoCrudoADelimitado = function() {
             continue;
         }
 
-        // Partes numeradas (1. 2. 3. etc)
         let matchNum = l.match(/^(\d+)\.\s*(.+)/);
         if (matchNum) {
             let numTit = l;
             let tiempo = "5 min";
             let desc = "";
 
-            // Buscar tiempo en la línea siguiente
             if (lineas[i+1] && lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)) {
                 tiempo = lineas[i+1].match(/\((\d+\s*min[s]?\.)\)/i)[1];
-                // La línea posterior al tiempo puede ser la descripción
                 if (lineas[i+2] && !lineas[i+2].match(/^\d+\./) && !lineas[i+2].startsWith('-') && !lineas[i+2].startsWith('PREGÚNTESE')) {
                     desc = lineas[i+2];
                 }
@@ -477,7 +475,8 @@ window.convertirTextoCrudoADelimitado = function() {
         }
     }
 
-    document.getElementById('outputTextoDelimitado').value = resultadoLineas.join('\n');
+    const outEl = document.getElementById('outputTextoDelimitado');
+    if (outEl) outEl.value = resultadoLineas.join('\n');
 
     document.getElementById('pasoModalTextoCrudo').classList.add('hidden');
     document.getElementById('pasoModalFormateado').classList.remove('hidden');
@@ -486,9 +485,10 @@ window.convertirTextoCrudoADelimitado = function() {
 };
 
 window.cargarDelimitadoAPlanilla = async function() {
-    const textoDelimitado = document.getElementById('outputTextoDelimitado').value;
-    if (!textoDelimitado.trim()) return;
+    const outEl = document.getElementById('outputTextoDelimitado');
+    if (!outEl || !outEl.value.trim()) return;
 
+    const textoDelimitado = outEl.value;
     const lineas = textoDelimitado.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
     let nuevaSemana = {
@@ -539,7 +539,7 @@ window.cargarDelimitadoAPlanilla = async function() {
         }
     }
 
-    cerrarModalImportador();
+    window.cerrarModalImportador();
 };
 
 window.actualizarEncabezadoSemana = async function(campo, valor) {
