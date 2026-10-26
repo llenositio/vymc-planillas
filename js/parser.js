@@ -1,7 +1,3 @@
-/**
- * Parser de la Guía de Actividades VyMC.
- * Extrae semanas, canciones, tiempos, puntos y modalidades separando adecuadamente las columnas B y C.
- */
 function procesarTextoGuiaActividades(texto) {
     if (!texto || !texto.trim()) return [];
 
@@ -31,7 +27,7 @@ function procesarTextoGuiaActividades(texto) {
         for (let i = 2; i < lineas.length; i++) {
             const linea = lineas[i];
 
-            // Descartar frases de apertura/cierre para evitar filas duplicadas
+            // Ignorar textos sueltos de introducción/conclusión
             if (/Palabras de introducción/i.test(linea) || /Palabras de conclusión/i.test(linea)) {
                 continue;
             }
@@ -40,67 +36,62 @@ function procesarTextoGuiaActividades(texto) {
             if (/SEAMOS MEJORES MAESTROS/i.test(linea)) { seccionActual = 'maestros'; continue; }
             if (/NUESTRA VIDA CRISTIANA/i.test(linea)) { seccionActual = 'vida'; continue; }
 
-            const matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
-            
-            if (matchMin) {
-                const minutos = `${matchMin[1]} mins.`;
-                let titulo = '';
+            // Buscar números de punto (1., 2., 3., 4., etc.)
+            const matchPunto = linea.match(/^(\d+)\.\s*(.+)/);
+
+            if (matchPunto) {
+                const numPunto = matchPunto[1];
+                let titulo = `${numPunto}. ${matchPunto[2]}`;
+                let minutos = '5 mins.';
                 let descripcion = '';
                 let participantes = 1;
 
-                if (seccionActual === 'tesoros') {
-                    if (/^\d+\./.test(linea)) {
-                        titulo = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-                    } else if (i > 0 && /^\d+\./.test(lineas[i - 1])) {
-                        titulo = lineas[i - 1];
-                    }
+                // Buscar el tiempo en la misma línea o en la siguiente
+                let matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
+                if (!matchMin && i + 1 < lineas.length) {
+                    matchMin = lineas[i + 1].match(/\((\d+)\s*mins?\b\.?\)/i);
+                }
 
-                    if (/perlas/i.test(titulo)) {
-                        titulo = '2. Busquemos perlas escondidas.';
-                        descripcion = `Preguntas y respuestas ${lectura.toUpperCase()}`;
-                    } else if (/Lectura/i.test(titulo)) {
-                        let det = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-                        titulo = `3. Lectura de la Biblia: ${det}`;
-                        descripcion = '';
-                    } else {
+                if (matchMin) {
+                    minutos = `${matchMin[1]} mins.`;
+                }
+
+                // Extraer detalles según la sección
+                if (seccionActual === 'tesoros') {
+                    if (numPunto === '1') {
                         let tieneVideo = false;
-                        for (let j = i; j < Math.min(i + 4, lineas.length); j++) {
+                        for (let j = i; j < Math.min(i + 5, lineas.length); j++) {
                             if (/video/i.test(lineas[j])) { tieneVideo = true; break; }
                         }
                         descripcion = tieneVideo ? 'Discurso con video' : 'Discurso';
+                    } else if (numPunto === '2') {
+                        titulo = '2. Busquemos perlas escondidas.';
+                        descripcion = `Preguntas y respuestas ${lectura.toUpperCase()}`;
+                    } else if (numPunto === '3') {
+                        let det = '';
+                        if (i + 1 < lineas.length) det = lineas[i + 1].replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
+                        titulo = `3. Lectura de la Biblia: ${det}`;
+                        descripcion = '';
                     }
                 } 
                 else if (seccionActual === 'maestros') {
-                    let textoLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-                    
-                    // Separar Título (Col 2) de Modalidad/Circunstancias (Col 3)
-                    const posSeparador = textoLimpio.search(/\s[A-Z]{2,}\b/);
-                    if (posSeparador !== -1) {
-                        titulo = textoLimpio.substring(0, posSeparador).trim();
-                        descripcion = textoLimpio.substring(posSeparador).trim();
-                    } else {
-                        titulo = textoLimpio;
-                        if (i + 1 < lineas.length && !/^\d+\./.test(lineas[i + 1])) {
-                            descripcion = lineas[i + 1];
-                            i++;
-                        }
+                    // La descripción/circunstancia está en la línea siguiente
+                    if (i + 1 < lineas.length && !/^\d+\./.test(lineas[i + 1]) && !/NUESTRA VIDA/i.test(lineas[i + 1])) {
+                        descripcion = lineas[i + 1].replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
                     }
-
-                    if (/conversaciones|revisitas|discípulos/i.test(titulo) || /DE CASA|PREDICACIÓN/i.test(descripcion)) {
-                        participantes = 2;
-                    }
+                    participantes = 2; // Por defecto 2 para SMM
                 } 
                 else if (seccionActual === 'vida') {
-                    titulo = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
-
-                    if (i + 1 < lineas.length && (lineas[i + 1].startsWith('Análisis') || lineas[i + 1].startsWith('Ponga') || lineas[i + 1].startsWith('Discurso'))) {
-                        descripcion = lineas[i + 1];
-                        i++;
+                    if (i + 1 < lineas.length && !/^\d+\./.test(lineas[i + 1]) && !/Estudio bíblico/i.test(lineas[i + 1])) {
+                        descripcion = lineas[i + 1].replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
                     }
 
                     if (/Estudio bíblico/i.test(titulo)) {
-                        let matchPub = linea.match(/wcg\s+cap\.\s*\d+/i) || (lineas[i+1] ? lineas[i+1].match(/wcg\s+cap\.\s*\d+/i) : null);
-                        let pubStr = matchPub ? matchPub[0] : 'wcg cap.';
+                        let pubStr = 'wcg cap.';
+                        for (let j = i; j < Math.min(i + 3, lineas.length); j++) {
+                            let matchPub = lineas[j].match(/wcg\s+cap\.\s*\d+/i);
+                            if (matchPub) { pubStr = matchPub[0]; break; }
+                        }
                         titulo = `Estudio bíblico de la congregación: ${pubStr}`;
                         descripcion = '';
                     }
