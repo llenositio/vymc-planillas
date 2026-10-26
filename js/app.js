@@ -22,12 +22,11 @@ window.onload = async function() {
     cargarSemanaEnPlanilla(0);
 };
 
-/* ESTRUCTURA BASE 100% VACÍA SIN TEXTO HARCODEADO */
 function crearEstructuraSemanaEjemplo() {
     return {
-        semana: "",
-        lectura: "",
-        canciones: ["", "", ""],
+        semana: "14-20 DE SEPTIEMBRE",
+        lectura: "JEREMÍAS 34, 35",
+        canciones: ["161", "121", "28"],
         tipoSemana: "normal",
         numSalas: 1,
         presidencia: "",
@@ -37,18 +36,18 @@ function crearEstructuraSemanaEjemplo() {
         domPresi: "",
         domLector: "",
         partes: [
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "1. Jehová recompensa a los que siempre le obedecen", desc: "Discurso", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "2. Busquemos perlas escondidas.", desc: "Preguntas y respuestas JEREMÍAS 34, 35", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia: Jer 35:1-14 (th lección 5).", desc: "", participantes: 1, asig: "" },
             
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "2 min", tit: "4. Empiece conversaciones", desc: "DE CASA EN CASA. Ofrezca un curso de la Biblia (lmd lección 3 punto 3).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "2 min", tit: "5. Empiece conversaciones", desc: "DE CASA EN CASA. Presente un video del kit de enseñanza (lmd lección 3 punto 5).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "3 min", tit: "6. Haga revisitas", desc: "PREDICACIÓN INFORMAL. Ofrézcale un curso de la Biblia a una persona que en otra ocasión le dijo que estaba preocupada por algo que vio en las noticias (lmd lección 7 punto 4).", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "4 min", tit: "7. Haga discípulos", desc: "Converse con su estudiante de la Biblia (th lección 11).", participantes: 2, asig: "", asigAyudante: "" },
             
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+            { seccion: "vida", t: "6 min", tit: "8. El autocontrol nos ayuda a obedecer", desc: "Análisis con el auditorio.", participantes: 1, asig: "" },
+            { seccion: "vida", t: "9 min", tit: "9. Logros de la organización para el mes de septiembre", desc: "Ponga el VIDEO. Luego haga las preguntas.", participantes: 1, asig: "" },
+            { seccion: "vida", t: "30 min", tit: "Estudio bíblico de la congregación: wcg cap. 8.", desc: "", participantes: 2, asig: "", asigAyudante: "" }
         ]
     };
 }
@@ -61,7 +60,7 @@ function renderizarSelectorSemanas() {
         const btn = document.createElement('button');
         btn.onclick = () => cargarSemanaEnPlanilla(idx);
         btn.className = `px-2.5 py-1 text-xs font-bold rounded-md border transition ${idx === semanaActivaIdx ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`;
-        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : 'S/N'}`;
+        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : ''}`;
         cont.appendChild(btn);
     });
 }
@@ -124,9 +123,9 @@ function cargarSemanaEnPlanilla(idx) {
                 <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                     <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                         <span>Semana del</span>
-                        <input type="text" value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]" placeholder="FECHA">
+                        <input type="text" value="${sem.semana}" onchange="actualizarEncabezadoSemana('semana', this.value)" class="input-inline max-w-[200px]">
                         <span>,</span>
-                        <input type="text" value="${sem.lectura || ''}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]" placeholder="LECTURA">
+                        <input type="text" value="${sem.lectura}" onchange="actualizarEncabezadoSemana('lectura', this.value)" class="input-inline max-w-[180px]">
                     </div>
                 </th>
             </tr>
@@ -230,7 +229,7 @@ function cargarSemanaEnPlanilla(idx) {
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true">1 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
+                Canción N° ${sem.canciones?.[0] || '161'}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
         </tr>
@@ -270,7 +269,7 @@ function cargarSemanaEnPlanilla(idx) {
                 </tr>
                 <tr>
                     <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true">
-                        Canción Nº: ${sem.canciones?.[1] || ''}
+                        Canción Nº: ${sem.canciones?.[1] || '121'}
                     </td>
                 </tr>
             `;
@@ -363,7 +362,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
         <tr>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true">
-                Canción ${sem.canciones?.[2] || ''} y oración
+                Canción ${sem.canciones?.[2] || '28'} y oración
             </td>
             <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
         </tr>
@@ -536,9 +535,9 @@ window.cargarDelimitadoAPlanilla = async function() {
     const lineas = textoDelimitado.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     
     let nuevaSemana = {
-        semana: "",
+        semana: "14-20 DE SEPTIEMBRE",
         lectura: "",
-        canciones: ["", "", ""],
+        canciones: ["161", "121", "28"],
         tipoSemana: "normal",
         numSalas: 1,
         partes: []
@@ -568,7 +567,7 @@ window.cargarDelimitadoAPlanilla = async function() {
 
         const segmentos = linea.split('//').map(s => s.trim());
         if (segmentos.length >= 1 && !linea.startsWith("Canción") && !linea.startsWith("Palabras") && !linea.startsWith("Oracion")) {
-            let t = "";
+            let t = "5 min";
             let tit = "";
             let desc = "";
 
@@ -624,7 +623,7 @@ window.toggleParticipantesParte = async function(pIndex) {
 window.agregarNuevaSemana = async function() {
     const numSem = programaMes.length + 1;
     const nuevaSem = crearEstructuraSemanaEjemplo();
-    nuevaSem.semana = `SEMANA ${numSem}`;
+    nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
     programaMes.push(nuevaSem);
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
@@ -657,9 +656,9 @@ window.agregarFilaVida = async function() {
     const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
     const nuevaParte = {
         seccion: 'vida',
-        t: '',
-        tit: '',
-        desc: '',
+        t: '15 min',
+        tit: 'Parte adicional',
+        desc: 'Análisis con el auditorio.',
         participantes: 1,
         asig: ''
     };
