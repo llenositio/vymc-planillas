@@ -6,7 +6,6 @@
 function procesarTextoGuiaActividades(texto) {
     if (!texto || !texto.trim()) return [];
 
-    // Dividir el texto continuo en bloques por encabezado de semana
     const bloquesSemanas = texto.split(/(?=\b\d{1,2}-\d{1,2}\s+DE\s+[A-ZÁÉÍÓÚÑ]+\b)/i);
     const semanasProcesadas = [];
 
@@ -19,7 +18,6 @@ function procesarTextoGuiaActividades(texto) {
         const semHeader = lineas[0];
         const lectura = lineas[1] || '';
 
-        // Extraer números de canciones
         const canciones = [];
         lineas.forEach(l => {
             const match = l.match(/Canción\s+(\d+)/i);
@@ -33,20 +31,20 @@ function procesarTextoGuiaActividades(texto) {
         for (let i = 2; i < lineas.length; i++) {
             const linea = lineas[i];
 
-            // Detectar cualquier tiempo entre paréntesis (ej: "(10 min)", "(4 mins.)")
+            // Detectar tiempo entre paréntesis (ej: "(10 min)", "(4 mins.)")
             const matchMin = linea.match(/\((\d+)\s*mins?\b\.?\)/i);
             
             if (matchMin) {
                 const minutos = `${matchMin[1]} min`;
-                let textoSinTiempo = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
+                let textoLimpio = linea.replace(/\(\d+\s*mins?\b\.?\)/i, '').trim();
 
-                let titulo = textoSinTiempo;
+                let titulo = textoLimpio;
                 let descripcion = '';
 
-                // Si la misma línea trae lección/modalidad o si la siguiente línea viene entre paréntesis
-                if (i + 1 < lineas.length && lineas[i + 1].startsWith('(')) {
+                // Si la línea siguiente es una lección o detalle entre paréntesis
+                if (i + 1 < lineas.length && (lineas[i + 1].startsWith('(') || lineas[i + 1].startsWith('DE CASA') || lineas[i + 1].startsWith('PREDICACIÓN') || lineas[i + 1].startsWith('Escenificación') || lineas[i + 1].startsWith('Análisis') || lineas[i + 1].startsWith('Discurso') || lineas[i + 1].startsWith('Preguntas'))) {
                     descripcion = lineas[i + 1];
-                    i++; // Consumir la línea de descripción
+                    i++;
                 }
 
                 partes.push({
