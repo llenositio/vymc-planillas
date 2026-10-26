@@ -19,7 +19,7 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* ESTRUCTURA BASE DE 9 COLUMNAS (SIMETRÍA PERFECTA) */
+        /* ESTRUCTURA BASE DE 10 COLUMNAS (1 FIJA + 9 PORCENTUALES) */
         #tablaPlanillaCompleta { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -28,7 +28,7 @@
             border: 1.5px solid #000 !important;
         }
 
-        /* COLUMNA 1 CONGELADA A 40PX ABSOLUTOS */
+        /* COLUMNA 1 CONGELADA A 40PX ABSOLUTOS (MINUTOS) */
         #tablaPlanillaCompleta col.c-tiempo,
         #tablaPlanillaCompleta td.c-tiempo,
         #tablaPlanillaCompleta th.c-tiempo { 
@@ -55,15 +55,15 @@
         /* FORMATO EDITABLE TOTALMENTE GRISADO COMO SUGERENCIA */
         .editable-field {
             outline: none;
-            color: #64748b !important; /* Gris elegante de sugerencia/plantilla */
+            color: #64748b !important;
             transition: color 0.2s, background-color 0.2s;
             border-radius: 2px;
             padding: 1px 2px;
             cursor: text;
         }
         .editable-field:focus {
-            color: #0f172a !important; /* Texto negro al editar */
-            background-color: #fef08a !important; /* Resaltado de edición */
+            color: #0f172a !important;
+            background-color: #fef08a !important;
         }
 
         /* FORMATO DE DESPLEGABLES DE ASIGNACIONES */
@@ -116,7 +116,7 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-lg leading-tight">Gestor VyMC - Planilla y Asignaciones</h1>
-                    <p class="text-xs text-slate-400">Matriz de 9 Micro-Columnas • Simetría Total 100% Editable</p>
+                    <p class="text-xs text-slate-400">Matriz de 10 Micro-Columnas • Cobertura Exacta y Simétrica</p>
                 </div>
             </div>
 
@@ -199,18 +199,19 @@
             <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
                 <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
 
-                <!-- ESTRUCTURA BASE DE 9 COLUMNAS PERFECTAMENTE PROPORCIONADAS -->
+                <!-- ESTRUCTURA DE 10 COLUMNAS: C1=40px, C2=25%, C3=35%, C4-C10=5% c/u (35% total) -->
                 <table class="excel-table" id="tablaPlanillaCompleta">
                     <colgroup>
                         <col class="c-tiempo">
-                        <col style="width: 15% !important;">
                         <col style="width: 25% !important;">
-                        <col style="width: 10% !important;">
-                        <col style="width: 10% !important;">
-                        <col style="width: 10% !important;">
-                        <col style="width: 10% !important;">
-                        <col style="width: 10% !important;">
-                        <col style="width: 10% !important;">
+                        <col style="width: 35% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
