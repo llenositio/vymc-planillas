@@ -161,6 +161,9 @@
                 <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
                     <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
                 </button>
+                <button onclick="cambiarPestaña('historial')" id="tab-historial" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                    <i class="fa-solid fa-chart-column mr-1"></i> Historial y Estadísticas
+                </button>
                 <button onclick="cambiarPestaña('hermanos')" id="tab-hermanos" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
                     <i class="fa-solid fa-users mr-1"></i> Lista de Hermanos (Matriz)
                 </button>
@@ -170,6 +173,7 @@
 
     <div class="max-w-7xl mx-auto px-2 sm:px-4 mt-4">
 
+        <!-- PLANILLA MENSUAL -->
         <section id="sec-planilla" class="tab-content">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4 no-print">
                 
@@ -277,6 +281,26 @@
             </div>
         </section>
 
+        <!-- HISTORIAL Y ESTADÍSTICAS -->
+        <section id="sec-historial" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-amber-600"></i> Historial y Estadísticas Acumuladas
+                        </h2>
+                        <p class="text-xs text-slate-500">Conteo automático dinámico por hermano y categoría</p>
+                    </div>
+                    <button onclick="renderizarTablaHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate mr-1"></i> Actualizar Conteo
+                    </button>
+                </div>
+
+                <div id="contenedorTablaHistorial" class="overflow-x-auto"></div>
+            </div>
+        </section>
+
+        <!-- LISTA DE HERMANOS (MATRIZ) -->
         <section id="sec-hermanos" class="tab-content hidden">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -371,8 +395,10 @@
         </div>
     </div>
 
+    <!-- CARGA DE SCRIPTS -->
     <script src="js/supabase.js"></script>
     <script src="js/whatsapp.js"></script>
+    <script src="js/historial.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
