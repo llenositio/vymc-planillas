@@ -40,7 +40,10 @@
             overflow: hidden !important;
         }
 
-        td, th { 
+        /* REGLAS ESPECÍFICAS DE PLANILLA Y MATRIZ DE HERMANOS */
+        #tablaPlanillaCompleta td, #tablaPlanillaCompleta th,
+        .tabla-semana-print td, .tabla-semana-print th,
+        .excel-table td, .excel-table th { 
             border: 1px solid #475569 !important; 
             padding: 1px 2px !important; 
             font-size: 9.5px !important; 
@@ -48,6 +51,15 @@
             word-wrap: break-word; 
             overflow: hidden; 
             vertical-align: middle;
+        }
+
+        /* REGLAS EXCLUSIVAS DE ALTA LEGIBILIDAD PARA EL HISTORIAL */
+        #contenedorTablaHistorial td, #contenedorTablaHistorial th {
+            padding: 10px 6px !important;
+            font-size: 13px !important;
+            line-height: 1.4 !important;
+            word-wrap: normal !important;
+            overflow: visible !important;
         }
 
         .editable-field {
