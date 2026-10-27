@@ -23,7 +23,7 @@ window.onload = async function() {
     renderizarMatrizHermanos();
 
     if (!programaMes || programaMes.length === 0) {
-        inicializarMesDefault(4); // Inicializa con 4 semanas por defecto
+        inicializarMesDefault(4);
     }
 
     const inputMes = document.getElementById('inputNombreMes');
@@ -43,7 +43,6 @@ function inicializarMesDefault(cantSemanas = 4) {
     }
 }
 
-/* ESTRUCTURA BASE 100% VACÍA SIN DATOS DE EJEMPLO */
 function crearEstructuraSemanaEjemplo() {
     return {
         semana: "",
@@ -87,22 +86,22 @@ function renderizarSelectorSemanas() {
     });
 }
 
-/* FILTRADO DE DESPLEGABLES SEGÚN LAS CUALIFICACIONES (X) DE SUPABASE */
+/* FILTRADO DE DESPLEGABLES SEGÚN LAS COLUMNAS BOOLEANAS DE SUPABASE */
 function obtenerOpcionesHermanos(cat) {
     if (!Array.isArray(listaHermanos)) return [];
     return listaHermanos.filter(h => {
         if (!cat) return true;
-        if (cat === 'orac') return h.orac === 'X';
-        if (cat === 'pres') return h.pres === 'X';
-        if (cat === 'disc') return h.disc === 'X';
-        if (cat === 'perlas') return h.perlas === 'X';
-        if (cat === 'lec') return h.lec === 'X';
-        if (cat === 'smm') return h.smm === 'X';
-        if (cat === 'nvc') return h.nvc === 'X';
-        if (cat === 'eb') return h.eb === 'X';
-        if (cat === 'lectorL') return h.lectorL === 'X';
-        if (cat === 'presPub') return h.presPub === 'X';
-        if (cat === 'lectorW') return h.lectorW === 'X';
+        if (cat === 'orac') return h.oracion === true || h.oracion === 'X';
+        if (cat === 'pres') return h.pres_vymc === true || h.pres_vymc === 'X';
+        if (cat === 'disc') return h.disc_tesoros === true || h.disc_tesoros === 'X';
+        if (cat === 'perlas') return h.perlas === true || h.perlas === 'X';
+        if (cat === 'lec') return h.lec_biblia === true || h.lec_biblia === 'X';
+        if (cat === 'smm') return h.smm === true || h.smm === 'X';
+        if (cat === 'nvc') return h.nvc === true || h.nvc === 'X';
+        if (cat === 'eb') return h.ebc === true || h.ebc === 'X';
+        if (cat === 'lectorL') return h.lector_ebc === true || h.lector_ebc === 'X';
+        if (cat === 'presPub') return h.pres_pub === true || h.pres_pub === 'X';
+        if (cat === 'lectorW') return h.lector_atalaya === true || h.lector_atalaya === 'X';
         return true;
     });
 }
@@ -420,7 +419,6 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
-/* GESTIÓN DE NOMBRE DE MES */
 window.actualizarNombreMes = function(val) {
     nombreMesGlobal = val.trim().toUpperCase();
     actualizarTextoTituloMes(nombreMesGlobal);
@@ -432,7 +430,6 @@ function actualizarTextoTituloMes(txt) {
     if (el) el.innerText = txt || "---";
 }
 
-/* AUTOGUARDADO INTEGRADO */
 async function notificarYGuardarAutosave() {
     if (typeof guardarPlanillaEnSupabase === 'function') {
         await guardarPlanillaEnSupabase();
@@ -463,6 +460,78 @@ window.resetearPlanillaMes = async function() {
         cargarSemanaEnPlanilla(0);
         await notificarYGuardarAutosave();
     }
+};
+
+/* RENDERIZADO DE LA MATRIZ COMPLETA DE HERMANOS CON LA ESTRUCTURA REAL DE SUPABASE */
+function renderizarMatrizHermanos() {
+    const cuerpo = document.getElementById('cuerpoTablaHermanos');
+    if (!cuerpo) return;
+    cuerpo.innerHTML = '';
+
+    if (!Array.isArray(listaHermanos)) return;
+
+    listaHermanos.forEach((h, index) => {
+        const tr = document.createElement('tr');
+        tr.className = index % 2 === 0 ? 'bg-white text-xs' : 'bg-slate-50/50 text-xs';
+        
+        const colsBool = [
+            'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 
+            'lec_biblia', 'smm', 'nvc', 'ebc', 'lector_ebc', 
+            'pres_pub', 'lector_atalaya'
+        ];
+
+        tr.innerHTML = `
+            <td class="font-bold text-slate-400">${index + 1}</td>
+            <td class="text-left font-bold px-2">
+                <input type="text" value="${h.nombre || ''}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" onpaste="limpiarTextoPegado(event)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
+            </td>
+            <td>
+                <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
+                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
+                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
+                </select>
+            </td>
+            <td>
+                <input type="text" value="${h.condicion || ''}" onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+            </td>
+            <td>
+                <input type="number" value="${h.grupo || ''}" onchange="actualizarHermano(${h.id}, 'grupo', parseInt(this.value) || null)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+            </td>
+            <td>
+                <input type="text" value="${h.responsabilidades || ''}" onchange="actualizarHermano(${h.id}, 'responsabilidades', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+            </td>
+            <td>
+                <input type="text" value="${h.celular || ''}" onchange="actualizarHermano(${h.id}, 'celular', this.value)" placeholder="+54..." class="w-full text-center font-mono text-slate-700 bg-transparent border-b border-transparent hover:border-slate-300">
+            </td>
+
+            ${colsBool.map(col => `
+                <td>
+                    <input type="checkbox" ${(h[col] === true || h[col] === 'X') ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked)" class="rounded text-amber-600 cursor-pointer">
+                </td>
+            `).join('')}
+
+            <td class="no-print">
+                <button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-1 py-0.5" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        `;
+        cuerpo.appendChild(tr);
+    });
+}
+
+window.actualizarHermano = async function(id, campo, valor) {
+    if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
+    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
+};
+
+window.agregarNuevoHermano = async function() {
+    if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
+    renderizarMatrizHermanos();
+};
+
+window.eliminarHermano = async function(id) {
+    if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
+    renderizarMatrizHermanos();
+    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
 
 window.agregarFilaMaestros = async function() {
@@ -845,56 +914,6 @@ window.cambiarPestaña = function(tab) {
     });
     const activeTab = document.getElementById(`tab-${tab}`);
     if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-};
-
-function renderizarMatrizHermanos() {
-    const cuerpo = document.getElementById('cuerpoTablaHermanos');
-    if (!cuerpo) return;
-    cuerpo.innerHTML = '';
-
-    if (!Array.isArray(listaHermanos)) return;
-
-    listaHermanos.forEach((h, index) => {
-        const tr = document.createElement('tr');
-        tr.className = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
-        tr.innerHTML = `
-            <td class="font-bold text-slate-400">${index + 1}</td>
-            <td>
-                <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
-                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
-                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
-                </select>
-            </td>
-            ${['orac', 'pres', 'disc', 'perlas', 'lec', 'smm', 'nvc', 'eb', 'lectorL', 'presPub', 'lectorW'].map(col => `
-                <td>
-                    <input type="checkbox" ${h[col] === 'X' ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked ? 'X' : '')" class="rounded text-amber-600">
-                </td>
-            `).join('')}
-            <td class="text-left font-bold px-3">
-                <input type="text" value="${h.nombre || ''}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" onpaste="limpiarTextoPegado(event)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
-            </td>
-            <td class="no-print">
-                <button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        `;
-        cuerpo.appendChild(tr);
-    });
-}
-
-window.actualizarHermano = async function(id, campo, valor) {
-    if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
-    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
-};
-
-window.agregarNuevoHermano = async function() {
-    if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
-    renderizarMatrizHermanos();
-};
-
-window.eliminarHermano = async function(id) {
-    if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
-    renderizarMatrizHermanos();
-    if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
 
 /* IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
