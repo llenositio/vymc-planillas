@@ -106,13 +106,29 @@ function obtenerOpcionesHermanos(cat) {
     });
 }
 
+/* FILTRADO Y AVISO DE SOBRECARGA EN DESPLEGABLES */
 function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     const aptos = obtenerOpcionesHermanos(cat);
     let options = `<option value="">-- ${placeholder} --</option>`;
+    
+    // Contabiliza asignaciones en el programa activo actual
+    const conteoActivo = {};
+    if (Array.isArray(programaMes)) {
+        programaMes.forEach(sem => {
+            if (!sem) return;
+            const personas = [sem.presidencia, sem.oracionIni, sem.repaso, sem.oracionFin, sem.domPresi, sem.domLector];
+            (sem.partes || []).forEach(p => personas.push(p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante));
+            personas.forEach(p => { if (p) conteoActivo[p] = (conteoActivo[p] || 0) + 1; });
+        });
+    }
+
     aptos.forEach(h => {
         const sel = h.nombre === valorActual ? 'selected' : '';
-        options += `<option value="${h.nombre}" ${sel}>${h.nombre}</option>`;
+        const cantMes = conteoActivo[h.nombre] || 0;
+        const badge = cantMes > 0 ? ` (⚠️ ${cantMes} asig. activa)` : '';
+        options += `<option value="${h.nombre}" ${sel}>${h.nombre}${badge}</option>`;
     });
+
     return `<select id="${id}" class="select-asig flex-1 text-xs py-1 px-1 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-500" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
 }
 
