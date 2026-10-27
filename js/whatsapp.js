@@ -1,6 +1,5 @@
 /**
  * Módulo de envío de asignaciones S-89 por WhatsApp
- * Utiliza secuencias Unicode para garantizar compatibilidad total sin caracteres corruptos.
  */
 
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
@@ -32,24 +31,17 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         numeroLimpio = '549' + numeroLimpio.substring(1);
     }
 
-    // Definición de símbolos mediante secuencias Unicode a prueba de fallos de codificación
-    const iconNombre = "\uD83D\uDC64";  // 👤
-    const iconAyudante = "\uD83D\uDC65"; // 👥
-    const iconFecha = "\uD83D\uDCC5";    // 📅
-    const iconInterv = "\uD83D\uDCCD";   // 📌
-    const iconSala = "\uD83C\uDFDB\uFE0F"; // 🏛️
-
-    // Armado del texto con saltos de línea y negritas bien delimitadas
+    // Plantilla limpia con rombos azules (🔹) súper compatibles
     let texto = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n`;
-    texto += `${iconNombre} *Nombre:* ${nombreHermano}\n`;
-    texto += `${iconAyudante} *Ayudante:* ${nombreAyudante || '---'}\n`;
-    texto += `${iconFecha} *Fecha:* ${fechaSemana || '---'}\n`;
-    texto += `${iconInterv} *Intervenc N°:* ${intervencion || '---'}\n`;
-    texto += `${iconSala} *Se presenta en:* ${sala}\n\n`;
+    texto += `🔹 *Nombre:* ${nombreHermano}\n`;
+    texto += `🔹 *Ayudante:* ${nombreAyudante || '---'}\n`;
+    texto += `🔹 *Fecha:* ${fechaSemana || '---'}\n`;
+    texto += `🔹 *Intervenc N°:* ${intervencion || '---'}\n`;
+    texto += `🔹 *Se presenta en:* ${sala}\n\n`;
     texto += `_Nota al estudiante:_\n`;
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).`;
 
-    // Generación de URL codificada
+    // Genera la URL codificada de forma segura
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
