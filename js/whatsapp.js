@@ -1,5 +1,5 @@
 /**
- * Módulo de envío de asignaciones S-89 por WhatsApp
+ * Módulo de envío de asignaciones S-89 por WhatsApp (Texto Plano / Sin Emojis)
  */
 
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
@@ -31,16 +31,13 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         numeroLimpio = '549' + numeroLimpio.substring(1);
     }
 
-    // Usar secuencias de escape Unicode para los rombos azules garantiza 0 errores de codificación
-    const rombo = "\uD83D\uDD39"; // 🔹
-
-    // Plantilla limpia
+    // Plantilla 100% texto plano con formato estándar
     let texto = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n`;
-    texto += `${rombo} *Nombre:* ${nombreHermano}\n`;
-    texto += `${rombo} *Ayudante:* ${nombreAyudante || '---'}\n`;
-    texto += `${rombo} *Fecha:* ${fechaSemana || '---'}\n`;
-    texto += `${rombo} *Intervención:* ${intervencion || '---'}\n`;
-    texto += `${rombo} *Se presenta en:* ${sala}\n\n`;
+    texto += `- *Nombre:* ${nombreHermano}\n`;
+    texto += `- *Ayudante:* ${nombreAyudante || '---'}\n`;
+    texto += `- *Fecha:* ${fechaSemana || '---'}\n`;
+    texto += `- *Intervención:* ${intervencion || '---'}\n`;
+    texto += `- *Se presenta en:* ${sala}\n\n`;
     texto += `_Nota:_\n`;
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).`;
 
