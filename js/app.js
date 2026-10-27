@@ -113,7 +113,27 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
         const sel = h.nombre === valorActual ? 'selected' : '';
         options += `<option value="${h.nombre}" ${sel}>${h.nombre}</option>`;
     });
-    return `<select id="${id}" class="select-asig" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
+    return `<select id="${id}" class="select-asig flex-1" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
+}
+
+/* BOTÓN VERDE PARA ENVIAR NOTIFICACIÓN S-89 POR WHATSAPP */
+function crearBotonWhatsAppHTML(nombreHermano, nombreAyudante = "", intervencion = "", sala = "Sala A") {
+    if (!nombreHermano) return '';
+    const sem = programaMes[semanaActivaIdx];
+    const fechaSemana = sem ? sem.semana : '';
+
+    const hTit = (nombreHermano || '').replace(/'/g, "\\'");
+    const hAyu = (nombreAyudante || '').replace(/'/g, "\\'");
+    const intTxt = (intervencion || '').replace(/'/g, "\\'");
+    const fSem = (fechaSemana || '').replace(/'/g, "\\'");
+
+    return `
+        <button onclick="enviarWhatsAppAsignacion('${hTit}', '${hAyu}', '${fSem}', '${intTxt}', '${sala}')" 
+                class="no-print ml-1 text-emerald-600 hover:text-emerald-800 transition inline-flex items-center" 
+                title="Enviar S-89 por WhatsApp">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+        </button>
+    `;
 }
 
 window.guardarTextoEditable = function(pIndex, campo, valor) {
@@ -183,16 +203,16 @@ function cargarSemanaEnPlanilla(idx) {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
 
-        const renderSelectsGroup = (prefix, valTit, valAyu, placeholderPrefix = "") => {
-            let res = `<div class="flex flex-col justify-center h-full">`;
-            if (placeholderPrefix) {
-                res += `<span class="block text-[8px] text-slate-400 font-bold uppercase no-print">${placeholderPrefix}</span>`;
-            }
+        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala A") => {
+            let res = `<div class="flex items-center justify-between w-full gap-1">`;
+            res += `<div class="flex-1">`;
             res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
             if (cantP === 2) {
                 res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
                 res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
             }
+            res += `</div>`;
+            res += crearBotonWhatsAppHTML(valTit, valAyu, item.tit, nombreSala);
             res += `</div>`;
             return res;
         };
@@ -204,14 +224,14 @@ function cargarSemanaEnPlanilla(idx) {
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante)}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>`;
         } else if (numSalas === 2) {
             html += `<td class="p-1 col-asig relative group" colspan="4">
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>
             <td class="p-1 col-asig" colspan="3">
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
@@ -221,7 +241,7 @@ function cargarSemanaEnPlanilla(idx) {
                 <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
                     ${cantP === 1 ? '1 Asig' : '2 Asig'}
                 </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Prin.")}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>
             <td class="p-1 col-asig" colspan="2">
                 ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
@@ -236,14 +256,44 @@ function cargarSemanaEnPlanilla(idx) {
     const renderSalasLectura = (pIndex, cat) => {
         const item = partes[pIndex] || {};
         if (numSalas === 1) {
-            return `<td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>`;
+            return `<td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
+                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+                </div>
+            </td>`;
         } else if (numSalas === 2) {
-            return `<td class="px-1 py-1 col-asig" colspan="4">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>`;
+            return `<td class="px-1 py-1 col-asig" colspan="4">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
+                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="3">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
+                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
+                </div>
+            </td>`;
         } else {
-            return `<td class="px-1 py-1 col-asig" colspan="3">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}</td>
-                    <td class="px-1 py-1 col-asig" colspan="2">${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}</td>`;
+            return `<td class="px-1 py-1 col-asig" colspan="3">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
+                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="2">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
+                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="2">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
+                    ${crearBotonWhatsAppHTML(item.asigC, '', item.tit, 'Sala C')}
+                </div>
+            </td>`;
         }
     };
 
@@ -253,12 +303,22 @@ function cargarSemanaEnPlanilla(idx) {
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                 Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
             </td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}
+                    ${crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia: Palabras de introducción', 'Sala Principal')}
+                </div>
+            </td>
         </tr>
         <tr class="h-6">
             <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Oración</td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}
+                    ${crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración Inicial', 'Sala Principal')}
+                </div>
+            </td>
         </tr>
     `;
 
@@ -334,7 +394,12 @@ function cargarSemanaEnPlanilla(idx) {
                         <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
+                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+                            </div>
+                        </td>
                     </tr>
                 `;
             }
@@ -358,11 +423,21 @@ function cargarSemanaEnPlanilla(idx) {
                     <tr>
                         <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}
+                                ${crearBotonWhatsAppHTML(item.asig, item.asigAyudante, item.tit, 'Sala Principal')}
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}
+                                ${crearBotonWhatsAppHTML(item.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
+                            </div>
+                        </td>
                     </tr>
                 `;
             } else {
@@ -374,7 +449,12 @@ function cargarSemanaEnPlanilla(idx) {
                         </td>
                         <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
+                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+                            </div>
+                        </td>
                     </tr>
                 `;
             }
@@ -395,23 +475,39 @@ function cargarSemanaEnPlanilla(idx) {
         <tr>
             <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
+                    ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
+                </div>
+            </td>
         </tr>
         <tr>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                 Canción ${sem.canciones?.[2] || ''} y oración
             </td>
-            <td class="px-2 col-asig" colspan="7">${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between">
+                    ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
+                    ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
+                </div>
+            </td>
         </tr>
 
         <tr class="border-t-2 border-slate-900 bg-slate-50/50">
             <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                 Domingo, presidencia: 
-                <div class="inline-block ml-2 w-48">${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}</div>
+                <div class="inline-flex items-center ml-2 w-48">
+                    ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
+                    ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
+                </div>
             </td>
             <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                 Lector: 
-                <div class="inline-block ml-2 text-left w-48">${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}</div>
+                <div class="inline-flex items-center ml-2 text-left w-48">
+                    ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
+                    ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública')}
+                </div>
             </td>
         </tr>
     `;
@@ -894,6 +990,7 @@ window.guardarAsignacionSemana = async function(elemId) {
     else if (elemId === 'asig_dom_lector') sem.domLector = val;
 
     await notificarYGuardarAutosave();
+    cargarSemanaEnPlanilla(semanaActivaIdx); // Recargar para actualizar botones de WhatsApp
 };
 
 window.actualizarTipoSemana = async function(tipo) {
