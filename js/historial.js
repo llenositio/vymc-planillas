@@ -1,6 +1,6 @@
 /**
  * Módulo de Historial y Estadísticas Dinámicas de Asignaciones
- * Con visualización limpia, columnas uniformes y control de sobrecarga en programa activo.
+ * Versión de Alta Legibilidad: Fuentes más grandes, mayor padding y columnas uniformes.
  */
 
 const ORDEN_CONDICIONES = [
@@ -16,14 +16,12 @@ window.renderizarTablaHistorial = function() {
     if (!contenedor) return;
 
     if (!Array.isArray(listaHermanos) || listaHermanos.length === 0) {
-        contenedor.innerHTML = `<div class="p-6 text-center text-slate-500 font-medium">No hay hermanos cargados en la matriz.</div>`;
+        contenedor.innerHTML = `<div class="p-8 text-center text-slate-500 font-semibold text-base">No hay hermanos cargados en la matriz.</div>`;
         return;
     }
 
-    // 1. Calcular conteos globales y conteos en la planilla activa actual
     const conteos = calcularConteosCombinados();
 
-    // 2. Agrupar hermanos según su condición actual
     const grupos = {};
     ORDEN_CONDICIONES.forEach(c => grupos[c.clave] = []);
     grupos['Otros'] = [];
@@ -37,49 +35,48 @@ window.renderizarTablaHistorial = function() {
         }
     });
 
-    // 3. Renderizar estructura HTML limpia con anchos de columna fijos
     let html = `
-        <div class="shadow-md rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <div class="shadow-md rounded-xl border border-slate-300 bg-white overflow-hidden my-2">
             <div class="overflow-x-auto">
-                <table class="w-full text-xs text-center border-collapse table-fixed min-w-[1100px]">
+                <table class="w-full text-sm text-center border-collapse table-fixed min-w-[1250px]">
                     <colgroup>
-                        <col class="w-48"> <!-- Hermano -->
-                        <col class="w-20"> <!-- Pres. Vid y Min -->
-                        <col class="w-20"> <!-- Tesoros Disc -->
-                        <col class="w-20"> <!-- Tesoros Perlas -->
-                        <col class="w-20"> <!-- SMM -->
-                        <col class="w-20"> <!-- NVC Nec. Locales -->
-                        <col class="w-20"> <!-- NVC Otro -->
-                        <col class="w-20"> <!-- Lec Libro -->
-                        <col class="w-20"> <!-- Lec Atalaya -->
-                        <col class="w-20"> <!-- Estudio Bíblico -->
-                        <col class="w-20"> <!-- Oraciones -->
-                        <col class="w-20"> <!-- P. Pública -->
-                        <col class="w-24"> <!-- PRESENCIA -->
+                        <col class="w-60"> <!-- Hermano: Ancho cómodo para nombres largos -->
+                        <col class="w-24"> <!-- Pres. Vid y Min -->
+                        <col class="w-24"> <!-- Tesoros Disc -->
+                        <col class="w-24"> <!-- Tesoros Perlas -->
+                        <col class="w-24"> <!-- SMM -->
+                        <col class="w-24"> <!-- NVC Nec. Locales -->
+                        <col class="w-24"> <!-- NVC Otro -->
+                        <col class="w-24"> <!-- Lec Libro -->
+                        <col class="w-24"> <!-- Lec Atalaya -->
+                        <col class="w-24"> <!-- Estudio Bíblico -->
+                        <col class="w-24"> <!-- Oraciones -->
+                        <col class="w-24"> <!-- P. Pública -->
+                        <col class="w-28"> <!-- PRESENCIA -->
                     </colgroup>
                     <thead>
-                        <tr class="bg-slate-900 text-white font-bold uppercase text-[11px] border-b border-slate-800">
-                            <th class="p-3 text-left border-r border-slate-800" rowspan="2">Hermano</th>
-                            <th class="p-2 border-r border-slate-800 leading-tight" rowspan="2">Pres.<br>Vid y Min</th>
-                            <th class="p-1.5 border-r border-slate-800" colspan="2">Tesoros de la Biblia</th>
-                            <th class="p-2 border-r border-slate-800" rowspan="2">SMM</th>
-                            <th class="p-1.5 border-r border-slate-800" colspan="2">Nuestra vida cristiana</th>
-                            <th class="p-1.5 border-r border-slate-800" colspan="2">Lecturas</th>
-                            <th class="p-2 border-r border-slate-800 leading-tight" rowspan="2">Estudio<br>Bíblico</th>
-                            <th class="p-2 border-r border-slate-800" rowspan="2">Oraciones</th>
-                            <th class="p-2 border-r border-slate-800 leading-tight" rowspan="2">P. Pública<br>+ Oración</th>
-                            <th class="p-2 bg-amber-600 text-white font-black" rowspan="2">PRESENCIA</th>
+                        <tr class="bg-slate-900 text-white font-extrabold uppercase text-xs tracking-wider border-b border-slate-800">
+                            <th class="py-3 px-3 text-left border-r border-slate-800" rowspan="2">HERMANO</th>
+                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Pres.<br>Vid y Min</th>
+                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Tesoros de la Biblia</th>
+                            <th class="py-3 px-1 border-r border-slate-800" rowspan="2">SMM</th>
+                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Nuestra vida cristiana</th>
+                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Lecturas</th>
+                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Estudio<br>Bíblico</th>
+                            <th class="py-3 px-1 border-r border-slate-800" rowspan="2">Oraciones</th>
+                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">P. Pública<br>+ Oración</th>
+                            <th class="py-3 px-1 bg-amber-600 text-white font-black tracking-wider" rowspan="2">PRESENCIA</th>
                         </tr>
-                        <tr class="bg-slate-800 text-slate-200 font-semibold text-[10px] uppercase border-b border-slate-700">
-                            <th class="p-2 border-r border-slate-700 leading-tight">Discurso</th>
-                            <th class="p-2 border-r border-slate-700 leading-tight">Busquemos<br>perlas</th>
-                            <th class="p-2 border-r border-slate-700 leading-tight">Necesidades<br>Locales</th>
-                            <th class="p-2 border-r border-slate-700 leading-tight">Otro</th>
-                            <th class="p-2 border-r border-slate-700 leading-tight">Libro</th>
-                            <th class="p-2 border-r border-slate-700 leading-tight">Atalaya</th>
+                        <tr class="bg-slate-800 text-slate-200 font-bold text-[11px] uppercase border-b border-slate-700">
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Discurso</th>
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Busquemos<br>perlas</th>
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Necesidades<br>Locales</th>
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Otro</th>
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Libro</th>
+                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Atalaya</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-200">
+                    <tbody class="divide-y divide-slate-200 font-medium">
     `;
 
     ORDEN_CONDICIONES.concat([{ clave: 'Otros', titulo: 'Sin Categoría' }]).forEach(grupo => {
@@ -87,8 +84,8 @@ window.renderizarTablaHistorial = function() {
         if (hermanosGrupo.length === 0) return;
 
         html += `
-            <tr class="bg-slate-100 border-y border-slate-300 font-extrabold text-slate-800 text-left">
-                <td colspan="13" class="px-3 py-2 uppercase tracking-wide bg-slate-200/80 text-xs">
+            <tr class="bg-slate-200/90 border-y border-slate-300 font-black text-slate-900 text-left">
+                <td colspan="13" class="px-4 py-2.5 uppercase tracking-wide text-xs">
                     ${grupo.titulo} (${hermanosGrupo.length})
                 </td>
             </tr>
@@ -99,9 +96,11 @@ window.renderizarTablaHistorial = function() {
 
             html += `
                 <tr class="hover:bg-slate-50 transition text-sm">
-                    <td class="p-2.5 text-left font-bold text-slate-800 border-r border-slate-200 truncate" title="${h.nombre}">
-                        ${h.nombre}
-                        ${data.totalActivo > 0 ? `<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300" title="Asignaciones en la planilla activa actual">Planilla: ${data.totalActivo}</span>` : ''}
+                    <td class="py-3 px-3 text-left font-bold text-slate-800 border-r border-slate-200 whitespace-nowrap">
+                        <div class="flex items-center justify-between gap-1">
+                            <span>${h.nombre}</span>
+                            ${data.totalActivo > 0 ? `<span class="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-black bg-amber-200 text-amber-950 border border-amber-400">Planilla: ${data.totalActivo}</span>` : ''}
+                        </div>
                     </td>
                     ${renderCeldaConteo(data.hist.presi, data.act.presi)}
                     ${renderCeldaConteo(data.hist.discurso, data.act.discurso)}
@@ -114,7 +113,7 @@ window.renderizarTablaHistorial = function() {
                     ${renderCeldaConteo(data.hist.estudioBiblico, data.act.estudioBiblico)}
                     ${renderCeldaConteo(data.hist.oraciones, data.act.oraciones)}
                     ${renderCeldaConteo(data.hist.presiDom, data.act.presiDom)}
-                    <td class="p-2 font-black border-l-2 border-slate-300 text-center ${data.hist.total > 0 ? 'bg-amber-100/80 text-amber-900' : 'bg-slate-50 text-slate-400'}">
+                    <td class="py-3 px-2 font-black border-l-2 border-slate-300 text-center text-base ${data.hist.total > 0 ? 'bg-amber-100 text-amber-950' : 'bg-slate-50 text-slate-400'}">
                         ${data.hist.total}
                     </td>
                 </tr>
@@ -132,18 +131,16 @@ window.renderizarTablaHistorial = function() {
     contenedor.innerHTML = html;
 };
 
-// Renderiza celdas destacando si hay asignación activa en el programa preparado
 function renderCeldaConteo(valorHist, valorAct) {
     if (valorAct > 0) {
-        // Alerta: el hermano ya fue asignado en la planilla en preparación
-        return `<td class="p-2 font-bold border-r border-slate-200 bg-amber-200 text-amber-950 border-2 border-amber-400">
-            ${valorHist} <span class="text-[10px] text-amber-800 font-extrabold block">(+${valorAct} act)</span>
+        return `<td class="py-3 px-2 font-black border-r border-slate-200 bg-amber-200 text-amber-950 border-2 border-amber-400 text-sm">
+            ${valorHist} <span class="text-[11px] text-amber-900 font-extrabold block leading-none mt-0.5">(+${valorAct} act)</span>
         </td>`;
     }
     if (valorHist > 0) {
-        return `<td class="p-2 font-semibold border-r border-slate-200 bg-red-50 text-red-900">${valorHist}</td>`;
+        return `<td class="py-3 px-2 font-bold border-r border-slate-200 bg-red-100 text-red-900 text-sm">${valorHist}</td>`;
     }
-    return `<td class="p-2 border-r border-slate-200 text-slate-300">0</td>`;
+    return `<td class="py-3 px-2 border-r border-slate-200 text-slate-300 text-sm">0</td>`;
 }
 
 function crearEstructuraVacia() {
@@ -176,7 +173,7 @@ function calcularConteosCombinados() {
 
     programaMes.forEach(sem => {
         if (!sem) return;
-        const esAct = true; // Todo lo cargado en programaMes es la planilla activa en preparación
+        const esAct = true;
 
         sumar(sem.presidencia, 'presi', esAct);
         sumar(sem.oracionIni, 'oraciones', esAct);
