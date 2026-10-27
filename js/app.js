@@ -117,7 +117,7 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
 }
 
 /* BOTÓN VERDE PARA ENVIAR NOTIFICACIÓN S-89 POR WHATSAPP */
-function crearBotonWhatsAppHTML(nombreHermano, nombreAyudante = "", intervencion = "", sala = "Sala A") {
+function crearBotonWhatsAppHTML(nombreHermano, nombreAyudante = "", intervencion = "", sala = "Sala Principal") {
     if (!nombreHermano) return '';
     const sem = programaMes[semanaActivaIdx];
     const fechaSemana = sem ? sem.semana : '';
@@ -203,7 +203,7 @@ function cargarSemanaEnPlanilla(idx) {
         const item = partes[pIndex] || {};
         const cantP = item.participantes || 1;
 
-        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala A") => {
+        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala Principal") => {
             let res = `<div class="flex items-center justify-between w-full gap-1">`;
             res += `<div class="flex-1">`;
             res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
@@ -530,6 +530,12 @@ async function notificarYGuardarAutosave() {
     if (typeof guardarPlanillaEnSupabase === 'function') {
         await guardarPlanillaEnSupabase();
     }
+    
+    // Si la tabla de historial está disponible, actualiza los conteos al guardar
+    if (typeof renderizarTablaHistorial === 'function') {
+        renderizarTablaHistorial();
+    }
+
     const badge = document.getElementById('estadoGuardado');
     if (badge) {
         badge.classList.remove('opacity-0');
@@ -617,17 +623,20 @@ function renderizarMatrizHermanos() {
 window.actualizarHermano = async function(id, campo, valor) {
     if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
+    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
 window.agregarNuevoHermano = async function() {
     if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
     renderizarMatrizHermanos();
+    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
 window.eliminarHermano = async function(id) {
     if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
     renderizarMatrizHermanos();
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
+    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
 window.agregarFilaMaestros = async function() {
@@ -1011,6 +1020,10 @@ window.cambiarPestaña = function(tab) {
     });
     const activeTab = document.getElementById(`tab-${tab}`);
     if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
+
+    if (tab === 'historial' && typeof renderizarTablaHistorial === 'function') {
+        renderizarTablaHistorial();
+    }
 };
 
 /* IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
