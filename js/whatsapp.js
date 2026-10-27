@@ -24,27 +24,24 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         return;
     }
 
-    // SI EL NÚMERO TIENE 10 DÍGITOS (Ej: 2604843389), LE AGREGAMOS EL CÓDIGO DE ARGENTINA (549)
+    // Formateo automático de Argentina
     if (numeroLimpio.length === 10) {
         numeroLimpio = '549' + numeroLimpio;
     } else if (numeroLimpio.length === 11 && numeroLimpio.startsWith('0')) {
-        // Si lo ingresaron como 02604843389, quita el 0 inicial y le pone 549
         numeroLimpio = '549' + numeroLimpio.substring(1);
     }
 
-    // Plantilla oficial S-89 adaptada a texto de WhatsApp
+    // Plantilla con emojis Unicode universales y texto limpio
     let texto = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n`;
     texto += `👤 *Nombre:* ${nombreHermano}\n`;
     texto += `👥 *Ayudante:* ${nombreAyudante || '---'}\n`;
     texto += `📅 *Fecha:* ${fechaSemana || '---'}\n`;
     texto += `📌 *Intervenc N°:* ${intervencion || '---'}\n`;
-    texto += `🏛 *Se presenta en:* ${sala}\n\n`;
+    texto += `🏛️ *Se presenta en:* ${sala}\n\n`;
     texto += `_Nota al estudiante:_\n`;
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).`;
 
-    // Enlace universal de API de WhatsApp
+    // Abrir WhatsApp
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
-    
-    // Abre el chat en una pestaña nueva
     window.open(url, '_blank');
 };
