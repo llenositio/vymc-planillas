@@ -31,14 +31,17 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         numeroLimpio = '549' + numeroLimpio.substring(1);
     }
 
-    // Plantilla limpia con rombos azules (🔹) súper compatibles
+    // Usar secuencias de escape Unicode para los rombos azules garantiza 0 errores de codificación
+    const rombo = "\uD83D\uDD39"; // 🔹
+
+    // Plantilla limpia
     let texto = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n`;
-    texto += `🔹 *Nombre:* ${nombreHermano}\n`;
-    texto += `🔹 *Ayudante:* ${nombreAyudante || '---'}\n`;
-    texto += `🔹 *Fecha:* ${fechaSemana || '---'}\n`;
-    texto += `🔹 *Intervenc N°:* ${intervencion || '---'}\n`;
-    texto += `🔹 *Se presenta en:* ${sala}\n\n`;
-    texto += `_Nota al estudiante:_\n`;
+    texto += `${rombo} *Nombre:* ${nombreHermano}\n`;
+    texto += `${rombo} *Ayudante:* ${nombreAyudante || '---'}\n`;
+    texto += `${rombo} *Fecha:* ${fechaSemana || '---'}\n`;
+    texto += `${rombo} *Intervención:* ${intervencion || '---'}\n`;
+    texto += `${rombo} *Se presenta en:* ${sala}\n\n`;
+    texto += `_Nota:_\n`;
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).`;
 
     // Genera la URL codificada de forma segura
