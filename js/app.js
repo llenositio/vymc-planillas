@@ -1,8 +1,9 @@
 if (typeof programaMes === 'undefined') window.programaMes = [];
 if (typeof listaHermanos === 'undefined') window.listaHermanos = [];
 let semanaActivaIdx = 0;
+let nombreMesGlobal = "";
 
-/* FUNCIÓN PARA OBLIGAR A PEGAR EN TEXTO PLANO SIN FORMATO DE ORIGEN */
+/* PREVENIR PEGAR FORMATO NO DESEADO EN CAMPOS EDITABLES */
 window.limpiarTextoPegado = function(e) {
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
@@ -22,12 +23,25 @@ window.onload = async function() {
     renderizarMatrizHermanos();
 
     if (!programaMes || programaMes.length === 0) {
-        programaMes = [crearEstructuraSemanaEjemplo()];
+        inicializarMesDefault(4); // Inicializa con 4 semanas por defecto
+    }
+
+    const inputMes = document.getElementById('inputNombreMes');
+    if (inputMes && nombreMesGlobal) {
+        inputMes.value = nombreMesGlobal;
+        actualizarTextoTituloMes(nombreMesGlobal);
     }
     
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(0);
 };
+
+function inicializarMesDefault(cantSemanas = 4) {
+    programaMes = [];
+    for (let i = 0; i < cantSemanas; i++) {
+        programaMes.push(crearEstructuraSemanaEjemplo());
+    }
+}
 
 /* ESTRUCTURA BASE 100% VACÍA SIN DATOS DE EJEMPLO */
 function crearEstructuraSemanaEjemplo() {
@@ -73,6 +87,7 @@ function renderizarSelectorSemanas() {
     });
 }
 
+/* FILTRADO DE DESPLEGABLES SEGÚN LAS CUALIFICACIONES (X) DE SUPABASE */
 function obtenerOpcionesHermanos(cat) {
     if (!Array.isArray(listaHermanos)) return [];
     return listaHermanos.filter(h => {
@@ -106,7 +121,7 @@ window.guardarTextoEditable = function(pIndex, campo, valor) {
     const sem = programaMes[semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex][campo] = valor;
-        if (typeof guardarPlanillaEnSupabase === 'function') guardarPlanillaEnSupabase();
+        notificarYGuardarAutosave();
     }
 };
 
@@ -405,6 +420,51 @@ function cargarSemanaEnPlanilla(idx) {
     cuerpo.innerHTML = filasHTML;
 }
 
+/* GESTIÓN DE NOMBRE DE MES */
+window.actualizarNombreMes = function(val) {
+    nombreMesGlobal = val.trim().toUpperCase();
+    actualizarTextoTituloMes(nombreMesGlobal);
+    notificarYGuardarAutosave();
+};
+
+function actualizarTextoTituloMes(txt) {
+    const el = document.getElementById('txtNombreMes');
+    if (el) el.innerText = txt || "---";
+}
+
+/* AUTOGUARDADO INTEGRADO */
+async function notificarYGuardarAutosave() {
+    if (typeof guardarPlanillaEnSupabase === 'function') {
+        await guardarPlanillaEnSupabase();
+    }
+    const badge = document.getElementById('estadoGuardado');
+    if (badge) {
+        badge.classList.remove('opacity-0');
+        setTimeout(() => badge.classList.add('opacity-0'), 2000);
+    }
+}
+
+window.guardarMesManual = async function() {
+    await notificarYGuardarAutosave();
+    alert("¡Trabajo del mes guardado correctamente!");
+};
+
+window.resetearPlanillaMes = async function() {
+    if (confirm("¿Estás seguro de resetear la planilla para iniciar un NUEVO MES? Esto limpiará las semanas actuales.")) {
+        nombreMesGlobal = "";
+        const inputMes = document.getElementById('inputNombreMes');
+        if (inputMes) inputMes.value = "";
+        actualizarTextoTituloMes("");
+
+        inicializarMesDefault(4);
+        semanaActivaIdx = 0;
+        
+        renderizarSelectorSemanas();
+        cargarSemanaEnPlanilla(0);
+        await notificarYGuardarAutosave();
+    }
+};
+
 window.agregarFilaMaestros = async function() {
     const sem = programaMes[semanaActivaIdx];
     if (!sem) return;
@@ -431,7 +491,7 @@ window.agregarFilaMaestros = async function() {
     }
 
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.abrirModalImportador = function() {
@@ -640,9 +700,7 @@ window.cargarDelimitadoAPlanilla = async function() {
     if (nuevaSemana.partes.length > 0) {
         programaMes[semanaActivaIdx] = nuevaSemana;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        if (typeof guardarPlanillaEnSupabase === 'function') {
-            await guardarPlanillaEnSupabase();
-        }
+        await notificarYGuardarAutosave();
     }
 
     window.cerrarModalImportador();
@@ -651,7 +709,7 @@ window.cargarDelimitadoAPlanilla = async function() {
 window.actualizarEncabezadoSemana = async function(campo, valor) {
     if (programaMes[semanaActivaIdx]) {
         programaMes[semanaActivaIdx][campo] = valor;
-        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+        await notificarYGuardarAutosave();
     }
 };
 
@@ -660,7 +718,7 @@ window.toggleParticipantesParte = async function(pIndex) {
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+        await notificarYGuardarAutosave();
     }
 };
 
@@ -672,7 +730,7 @@ window.agregarNuevaSemana = async function() {
     semanaActivaIdx = programaMes.length - 1;
     renderizarSelectorSemanas();
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.eliminarSemanaActiva = async function() {
@@ -689,7 +747,7 @@ window.eliminarSemanaActiva = async function() {
         }
         renderizarSelectorSemanas();
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+        await notificarYGuardarAutosave();
     }
 };
 
@@ -714,7 +772,7 @@ window.agregarFilaVida = async function() {
     }
 
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.eliminarFilaParte = async function(pIndex) {
@@ -722,7 +780,7 @@ window.eliminarFilaParte = async function(pIndex) {
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes.splice(pIndex, 1);
         cargarSemanaEnPlanilla(semanaActivaIdx);
-        if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+        await notificarYGuardarAutosave();
     }
 };
 
@@ -730,7 +788,7 @@ window.cambiarNumSalasSemana = async function(cantidad) {
     if (!programaMes[semanaActivaIdx]) return;
     programaMes[semanaActivaIdx].numSalas = parseInt(cantidad);
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.guardarAsignacionSemana = async function(elemId) {
@@ -766,7 +824,7 @@ window.guardarAsignacionSemana = async function(elemId) {
     else if (elemId === 'asig_dom_presi') sem.domPresi = val;
     else if (elemId === 'asig_dom_lector') sem.domLector = val;
 
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.actualizarTipoSemana = async function(tipo) {
@@ -774,7 +832,7 @@ window.actualizarTipoSemana = async function(tipo) {
     programaMes[semanaActivaIdx].tipoSemana = tipo;
     if (tipo === 'viajante') programaMes[semanaActivaIdx].numSalas = 1;
     cargarSemanaEnPlanilla(semanaActivaIdx);
-    if (typeof guardarPlanillaEnSupabase === 'function') await guardarPlanillaEnSupabase();
+    await notificarYGuardarAutosave();
 };
 
 window.cambiarPestaña = function(tab) {
@@ -839,7 +897,7 @@ window.eliminarHermano = async function(id) {
     if (programaMes.length > 0) cargarSemanaEnPlanilla(semanaActivaIdx);
 };
 
-/* GESTIÓN DE IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
+/* IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
 window.prepararEImprimir = function() {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) {
@@ -848,7 +906,11 @@ window.prepararEImprimir = function() {
     }
 
     const contenidoOriginal = areaPrint.innerHTML;
-    let htmlTotalPrint = '';
+    let htmlTotalPrint = `<div class="text-center mb-4 border-b-2 border-slate-900 pb-2">
+        <h2 class="text-xl font-black text-slate-900 uppercase tracking-widest">
+            PROGRAMA DE REUNIONES - MES DE ${nombreMesGlobal || "---"}
+        </h2>
+    </div>`;
 
     programaMes.forEach((sem, idx) => {
         htmlTotalPrint += `
