@@ -3,7 +3,7 @@
  */
 
 // Reemplaza estas constantes con tus credenciales reales de Supabase
-const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-";
 
 window.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
