@@ -7,9 +7,9 @@ if (window.supabase && window.supabase.createClient) {
 }
 
 let listaHermanos = [];
-let mesActualClave = "2026-09";
 let programaMes = [];
 
+/* CARGAR HERMANOS DESDE SUPABASE MANTENIENDO TODOS LOS CAMPOS Y BOOLEANOS DIRECTOS */
 async function cargarHermanosDesdeSupabase() {
     if (!db) return [];
     const { data, error } = await db.from('hermanos').select('*').order('id');
@@ -17,105 +17,109 @@ async function cargarHermanosDesdeSupabase() {
         console.error("Error al cargar hermanos:", error);
         return [];
     }
-    if (data && data.length > 0) {
-        listaHermanos = data.map(h => ({
-            id: h.id,
-            sexo: h.sexo || 'V',
-            orac: h.oracion ? 'X' : '',
-            pres: h.pres_vymc ? 'X' : '',
-            disc: h.disc_tesoros ? 'X' : '',
-            perlas: h.perlas ? 'X' : '',
-            lec: h.lec_biblia ? 'X' : '',
-            smm: h.smm ? 'X' : '',
-            nvc: h.nvc ? 'X' : '',
-            eb: h.ebc ? 'X' : '',
-            lectorL: h.lector_ebc ? 'X' : '',
-            presPub: h.pres_pub ? 'X' : '',
-            lectorW: h.lector_atalaya ? 'X' : '',
-            nombre: h.nombre
-        }));
+    if (data) {
+        listaHermanos = data;
     }
     return listaHermanos;
 }
 
+/* CARGAR PLANILLA MENSUAL DESDE SUPABASE */
 async function cargarPlanillaDesdeSupabase() {
     if (!db) return [];
-    const { data, error } = await db.from('planillas').select('datos').eq('mes_ano', mesActualClave).single();
+    
+    // Si hay un mes definido, consulta la clave en Supabase; si no, toma la más reciente
+    const claveMes = (typeof nombreMesGlobal !== 'undefined' && nombreMesGlobal) ? nombreMesGlobal : 'ACTUAL';
+    
+    const { data, error } = await db.from('planillas').select('datos, mes_ano').eq('mes_ano', claveMes).maybeSingle();
+    
     if (data && data.datos && data.datos.length > 0) {
         programaMes = data.datos;
+        if (typeof nombreMesGlobal !== 'undefined') {
+            nombreMesGlobal = data.mes_ano;
+            const inputMes = document.getElementById('inputNombreMes');
+            if (inputMes) inputMes.value = nombreMesGlobal;
+            if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(nombreMesGlobal);
+        }
     }
     return programaMes;
 }
 
+/* GUARDAR PLANILLA CON EL MES DINÁMICO INGRESADO POR EL USUARIO */
 async function guardarPlanillaEnSupabase() {
     if (!db) return;
-    const el = document.getElementById('estadoGuardado');
-    if (el) el.classList.remove('opacity-0');
 
-    if (programaMes && programaMes.length > 0 && programaMes[0].semana) {
-        const textoSemana = programaMes[0].semana;
-        if (textoSemana.includes('SEPTIEMBRE')) mesActualClave = '2026-09';
-        else if (textoSemana.includes('OCTUBRE')) mesActualClave = '2026-10';
-        else if (textoSemana.includes('NOVIEMBRE')) mesActualClave = '2026-11';
-        else if (textoSemana.includes('DICIEMBRE')) mesActualClave = '2026-12';
-        else if (textoSemana.includes('ENERO')) mesActualClave = '2026-01';
-        else if (textoSemana.includes('FEBRERO')) mesActualClave = '2026-02';
-        else if (textoSemana.includes('MARZO')) mesActualClave = '2026-03';
-        else if (textoSemana.includes('ABRIL')) mesActualClave = '2026-04';
-        else if (textoSemana.includes('MAYO')) mesActualClave = '2026-05';
-        else if (textoSemana.includes('JUNIO')) mesActualClave = '2026-06';
-        else if (textoSemana.includes('JULIO')) mesActualClave = '2026-07';
-        else if (textoSemana.includes('AGOSTO')) mesActualClave = '2026-08';
-    }
+    const claveMes = (typeof nombreMesGlobal !== 'undefined' && nombreMesGlobal) ? nombreMesGlobal : 'ACTUAL';
 
-    await db.from('planillas').upsert({
-        mes_ano: mesActualClave,
+    const { error } = await db.from('planillas').upsert({
+        mes_ano: claveMes,
         datos: programaMes,
         updated_at: new Date()
     }, { onConflict: 'mes_ano' });
 
-    setTimeout(() => {
-        if (el) el.classList.add('opacity-0');
-    }, 1800);
-}
-
-async function actualizarHermanoBD(id, campo, valor) {
-    const h = listaHermanos.find(item => item.id === id);
-    if (!h) return;
-    
-    h[campo] = valor;
-
-    if (!db) return;
-
-    const dbMap = {
-        sexo: 'sexo', nombre: 'nombre',
-        orac: 'oracion', pres: 'pres_vymc', disc: 'disc_tesoros',
-        perlas: 'perlas', lec: 'lec_biblia', smm: 'smm',
-        nvc: 'nvc', eb: 'ebc', lectorL: 'lector_ebc',
-        presPub: 'pres_pub', lectorW: 'lector_atalaya'
-    };
-
-    const dbCampo = dbMap[campo];
-    if (dbCampo) {
-        const dbValor = (typeof valor === 'string' && valor === 'X') ? true : (valor === '' ? false : valor);
-        await db.from('hermanos').update({ [dbCampo]: dbValor }).eq('id', id);
+    if (error) {
+        console.error("Error al guardar planilla en Supabase:", error);
     }
 }
 
+/* ACTUALIZAR CUALQUIER CAMPO DEL HERMANO (INCLUYENDO CELULAR, GRUPO, RESPONSABILIDADES) */
+async function actualizarHermanoBD(id, campo, valor) {
+    const h = listaHermanos.find(item => item.id === id);
+    if (h) {
+        h[campo] = valor;
+    }
+
+    if (!db) return;
+
+    const { error } = await db.from('hermanos').update({ [campo]: valor }).eq('id', id);
+    if (error) {
+        console.error(`Error al actualizar el campo ${campo} en Supabase:`, error);
+    }
+}
+
+/* AGREGAR UN NUEVO HERMANO A SUPABASE CON VALORES POR DEFECTO */
 async function agregarNuevoHermanoBD() {
     if (db) {
-        const { data, error } = await db.from('hermanos').insert([{ nombre: 'NUEVO HERMANO', sexo: 'V' }]).select();
+        const nuevoHermano = { 
+            nombre: 'NUEVO HERMANO', 
+            sexo: 'V',
+            condicion: 'Publicador',
+            grupo: 1,
+            responsabilidades: '',
+            celular: '',
+            oracion: false,
+            pres_vymc: false,
+            disc_tesoros: false,
+            perlas: false,
+            lec_biblia: false,
+            smm: false,
+            nvc: false,
+            ebc: false,
+            lector_ebc: false,
+            pres_pub: false,
+            lector_atalaya: false
+        };
+
+        const { data, error } = await db.from('hermanos').insert([nuevoHermano]).select();
         if (!error && data) {
             await cargarHermanosDesdeSupabase();
             return;
         }
     }
+    
+    // Fallback local en caso de no tener conexión a la BD
     const nuevoId = listaHermanos.length ? Math.max(...listaHermanos.map(h => h.id)) + 1 : 1;
     listaHermanos.push({
-        id: nuevoId, sexo: 'V', orac: 'X', pres: '', disc: '', perlas: '', lec: 'X', smm: 'X', nvc: '', eb: '', lectorL: '', presPub: '', lectorW: '', nombre: 'NUEVO HERMANO'
+        id: nuevoId, 
+        nombre: 'NUEVO HERMANO', 
+        sexo: 'V', 
+        condicion: 'Publicador',
+        grupo: 1,
+        responsabilidades: '',
+        celular: ''
     });
 }
 
+/* ELIMINAR HERMANO DE SUPABASE */
 async function eliminarHermanoBD(id) {
     if (db) {
         await db.from('hermanos').delete().eq('id', id);
