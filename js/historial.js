@@ -38,7 +38,7 @@ window.renderizarTablaHistorial = function() {
     let html = `
         <div class="shadow-md rounded-xl border border-slate-300 bg-white overflow-hidden my-2">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-center border-collapse table-fixed min-w-[1250px]">
+                <table class="w-full text-sm text-center border-collapse">
                     <colgroup>
                         <col class="w-60"> <!-- Hermano: Ancho cómodo para nombres largos -->
                         <col class="w-24"> <!-- Pres. Vid y Min -->
