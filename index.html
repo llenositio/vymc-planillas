@@ -102,15 +102,15 @@
             text-align: center;
         }
 
-        /* IMPRESIÓN A4: 2 SEMANAS POR HOJA */
+        /* IMPRESIÓN A4: 2 SEMANAS EXACTAS POR HOJA SIN CORTES */
         @media print {
             @page { 
                 size: A4 portrait; 
-                margin: 0.4cm 0.5cm; 
+                margin: 6mm 8mm; 
             }
 
             .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; }
+            body { background: white !important; padding: 0 !important; font-size: 9px !important; }
             
             .print-area { 
                 box-shadow: none !important; 
@@ -120,20 +120,28 @@
                 padding: 0 !important; 
             }
 
+            /* Contenedor del par de semanas */
+            .bloque-pagina-print {
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 8mm;
+            }
+
             .semana-bloque-print {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
-                margin-bottom: 0.4cm;
-            }
-
-            .semana-bloque-print:nth-child(2n) {
-                page-break-after: always !important;
-                break-after: page !important;
+                margin-bottom: 0;
             }
 
             .tabla-semana-print { 
                 width: 100% !important; 
                 border: 1.5px solid #000 !important; 
+                border-collapse: collapse !important;
             }
 
             .tabla-semana-print td, .tabla-semana-print th { 
