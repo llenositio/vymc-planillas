@@ -1270,16 +1270,22 @@ function generarHTMLSemanaImpresion(idx) {
 
     return `
         <div class="semana-bloque-print">
-            <table class="tabla-semana-print w-full border border-slate-400">
+            <table class="tabla-semana-print">
                 <colgroup>
-                    <col class="c-tiempo" style="width: 8%;">
-                    <col style="width: 27%;">
-                    <col style="width: 35%;">
-                    <col style="width: 30%;">
+                    <col class="c-tiempo">
+                    <col style="width: 25% !important;">
+                    <col style="width: 35% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
                 </colgroup>
                 <thead>
                     <tr>
-                        <th colspan="10" class="py-1 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-xs text-slate-900">
+                        <th colspan="10" class="py-0.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-xs text-slate-900">
                             Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
                         </th>
                     </tr>
