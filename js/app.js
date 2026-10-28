@@ -379,7 +379,11 @@ function cargarSemanaEnPlanilla(idx) {
 
             filasHTML += `
                 <tr>
-                    <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
+                    <th class="bg-vida text-white text-center c-tiempo">
+                        <svg class="w-3.5 h-3.5 fill-current text-white inline-block -mt-0.5" viewBox="0 0 24 24">
+                            <path d="M19 8c-.55 0-1 .45-1 1v1c0 .55-.45 1-1 1s-1-.45-1-1V8c0-2.21-1.79-4-4-4S8 5.79 8 8v2c0 .55-.45 1-1 1s-1-.45-1-1V9c0-.55-.45-1-1-1s-1 .45-1 1v3c0 2.21 1.79 4 4 4h.18C9.6 17.18 10.72 18 12 18s2.4-.82 2.82-2H15c2.21 0 4-1.79 4-4V9c0-.55-.45-1-1-1z"/>
+                        </svg>
+                    </th>
                     <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
@@ -390,7 +394,6 @@ function cargarSemanaEnPlanilla(idx) {
             `;
             renderizoVidaHeader = true;
         }
-
         let cat = 'smm';
         if (item.seccion === 'tesoros') {
             if (pIndex === 0) cat = 'disc';
