@@ -365,7 +365,7 @@ function cargarSemanaEnPlanilla(idx) {
                 </tr>
             `;
             renderizoMaestrosHeader = true;
-        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
+       } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
 
             filasHTML += `
                 <tr class="no-print bg-amber-50/50">
@@ -379,9 +379,11 @@ function cargarSemanaEnPlanilla(idx) {
 
             filasHTML += `
                 <tr>
-                    <th class="bg-vida text-white text-center c-tiempo">
-                        <svg class="w-3.5 h-3.5 fill-current text-white inline-block -mt-0.5" viewBox="0 0 24 24">
-                            <path d="M19 8c-.55 0-1 .45-1 1v1c0 .55-.45 1-1 1s-1-.45-1-1V8c0-2.21-1.79-4-4-4S8 5.79 8 8v2c0 .55-.45 1-1 1s-1-.45-1-1V9c0-.55-.45-1-1-1s-1 .45-1 1v3c0 2.21 1.79 4 4 4h.18C9.6 17.18 10.72 18 12 18s2.4-.82 2.82-2H15c2.21 0 4-1.79 4-4V9c0-.55-.45-1-1-1z"/>
+                    <th class="bg-vida text-white text-center c-tiempo py-1">
+                        <svg class="w-4 h-4 text-white inline-block -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 17l-1 3M10 17l1 3M15 17l-1 3M18 17l1 3"/>
+                            <path d="M19 13a3 3 0 0 0-2.8-2 2.5 2.5 0 0 0-4.4-1.2A3 3 0 0 0 7 11a3 3 0 0 0 0 6h12a3 3 0 0 0 0-4z"/>
+                            <path d="M18.5 11.5l1.5-1.5a1.5 1.5 0 0 1 2.1 2.1L21 13"/>
                         </svg>
                     </th>
                     <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
