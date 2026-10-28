@@ -74,6 +74,9 @@ function crearEstructuraSemanaEjemplo() {
         oracionIni: "",
         repaso: "",
         oracionFin: "",
+        asigViajanteEntreSemana: "",
+        asigViajanteDiscPub: "",
+        asigViajanteDiscFin: "",
         domPresi: "",
         domLector: "",
         cancionDomIni: "",
@@ -137,7 +140,11 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     if (Array.isArray(programaMes)) {
         programaMes.forEach(sem => {
             if (!sem) return;
-            const personas = [sem.presidencia, sem.oracionIni, sem.repaso, sem.oracionFin, sem.domPresi, sem.domLector];
+            const personas = [
+                sem.presidencia, sem.oracionIni, sem.repaso, sem.oracionFin, 
+                sem.domPresi, sem.domLector, sem.asigViajanteEntreSemana, 
+                sem.asigViajanteDiscPub, sem.asigViajanteDiscFin
+            ];
             (sem.partes || []).forEach(p => personas.push(p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante));
             personas.forEach(p => { 
                 if (p) conteoActivo[p] = (conteoActivo[p] || 0) + 1; 
@@ -502,25 +509,50 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS DISCURSO DEL VIAJANTE
-    const idxEB = partes.findIndex(p => p.tit && (p.tit.includes('Estudio bíblico') || p.tit.includes('Discurso del superintendente')));
-
+    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS VIAJANTE (SECUENCIA Y ORDEN CORREGIDO)
     if (esViajante) {
         filasHTML += `
+            <tr>
+                <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                    Repaso de esta reunión y adelanto de la próxima.
+                </td>
+                <td class="px-2 col-asig" colspan="7">
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
+                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
+                    </div>
+                </td>
+            </tr>
             <tr>
                 <td class="c-tiempo font-bold text-blue-900 bg-blue-50/50">30 min</td>
                 <td class="px-2 font-black text-blue-900 bg-blue-50/50" colspan="2">
                     Discurso del superintendente de circuito
                 </td>
                 <td class="px-2 col-asig bg-blue-50/50" colspan="7">
-                    <span class="text-xs font-black text-blue-800 px-2 uppercase flex items-center gap-1 py-1">
-                        <i class="fa-solid fa-user-tie"></i> Superintendente de Circuito
-                    </span>
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_viajante_entre_semana', '', sem.asigViajanteEntreSemana, "SUPERINTENDENTE DE CIRCUITO")}
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', 'Discurso del superintendente de circuito', 'Sala Principal')}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                    Canción y oración: 38
+                </td>
+                <td class="px-2 col-asig" colspan="7">
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
+                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
+                    </div>
                 </td>
             </tr>
         `;
     } else {
+        const idxEB = partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
         const itemEB = idxEB !== -1 ? partes[idxEB] : { t: '30 min', tit: 'Estudio bíblico de la congregación: wcg cap. 11.', asig: '', asigAyudante: '' };
+        
         filasHTML += `
             <tr>
                 <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
@@ -543,33 +575,29 @@ function cargarSemanaEnPlanilla(idx) {
                     </div>
                 </td>
             </tr>
+            <tr>
+                <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
+                <td class="px-2 col-asig" colspan="7">
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
+                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                    Canción y oración: 38
+                </td>
+                <td class="px-2 col-asig" colspan="7">
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
+                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
+                    </div>
+                </td>
+            </tr>
         `;
     }
-
-    // CIERRE REUNIÓN ENTRE SEMANA
-    filasHTML += `
-        <tr>
-            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
-                    ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                Canción y oración: 38
-            </td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
-                    ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-    `;
 
     // REUNIÓN DE FIN DE SEMANA
     if (esViajante) {
@@ -601,9 +629,10 @@ function cargarSemanaEnPlanilla(idx) {
                     Discurso público: ${sem.temaDiscPub || ''}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
-                    <span class="text-xs font-black text-blue-800 px-2 uppercase flex items-center gap-1 py-1">
-                        <i class="fa-solid fa-user-tie"></i> Superintendente de Circuito
-                    </span>
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_viajante_disc_pub', '', sem.asigViajanteDiscPub, "SUPERINTENDENTE DE CIRCUITO")}
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', 'Discurso público', 'Reunión Pública')}
+                    </div>
                 </td>
             </tr>
 
@@ -633,9 +662,10 @@ function cargarSemanaEnPlanilla(idx) {
                     Discurso final: ${sem.temaDiscFin || ''}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
-                    <span class="text-xs font-black text-blue-800 px-2 uppercase flex items-center gap-1 py-1">
-                        <i class="fa-solid fa-user-tie"></i> Superintendente de Circuito
-                    </span>
+                    <div class="flex items-center justify-between w-full gap-1">
+                        ${crearSelectHTML('asig_viajante_disc_fin', '', sem.asigViajanteDiscFin, "SUPERINTENDENTE DE CIRCUITO")}
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', 'Discurso final', 'Reunión Pública')}
+                    </div>
                 </td>
             </tr>
 
@@ -1127,6 +1157,9 @@ window.guardarAsignacionSemana = async function(elemId) {
 
     if (elemId === 'asig_presi') sem.presidencia = val;
     else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
+    else if (elemId === 'asig_viajante_entre_semana') sem.asigViajanteEntreSemana = val;
+    else if (elemId === 'asig_viajante_disc_pub') sem.asigViajanteDiscPub = val;
+    else if (elemId === 'asig_viajante_disc_fin') sem.asigViajanteDiscFin = val;
     else if (elemId.startsWith('asig_p')) {
         const partesId = elemId.split('_');
         const pIndex = parseInt(partesId[1].replace('p', ''));
