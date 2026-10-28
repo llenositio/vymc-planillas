@@ -74,16 +74,17 @@ function crearEstructuraSemanaEjemplo() {
         oracionIni: "",
         repaso: "",
         oracionFin: "",
+        temaViajanteEntreSemana: "Discurso del superintendente de circuito",
         asigViajanteEntreSemana: "",
         asigViajanteDiscPub: "",
         asigViajanteDiscFin: "",
         domPresi: "",
         domLector: "",
         cancionDomIni: "",
-        temaDiscPub: "",
+        temaDiscPub: "Discurso público:",
         cancionDomMid: "",
-        temaAtalaya: "",
-        temaDiscFin: "",
+        temaAtalaya: "La Atalaya:",
+        temaDiscFin: "Discurso final:",
         cancionDomFin: "",
         partes: [
             { seccion: "tesoros", t: "10 min", tit: "1. Tengamos un punto de vista equilibrado de la protección de Jehová", desc: "Discurso", participantes: 1, asig: "" },
@@ -195,6 +196,13 @@ window.guardarTextoEditable = function(pIndex, campo, valor) {
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex][campo] = valor;
         notificarYGuardarAutosave();
+    }
+};
+
+window.guardarEncabezadoSemana = async function(campo, valor) {
+    if (programaMes[semanaActivaIdx]) {
+        programaMes[semanaActivaIdx][campo] = valor.trim();
+        await notificarYGuardarAutosave();
     }
 };
 
@@ -509,7 +517,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS VIAJANTE (SECUENCIA Y ORDEN CORREGIDO)
+    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS VIAJANTE (SECUENCIA Y TÍTULOS EDITABLES)
     if (esViajante) {
         filasHTML += `
             <tr>
@@ -526,8 +534,8 @@ function cargarSemanaEnPlanilla(idx) {
             </tr>
             <tr>
                 <td class="c-tiempo font-bold text-blue-900 bg-blue-50/50">30 min</td>
-                <td class="px-2 font-black text-blue-900 bg-blue-50/50" colspan="2">
-                    Discurso del superintendente de circuito
+                <td class="px-2 font-black text-blue-900 bg-blue-50/50 editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaViajanteEntreSemana', this.innerText)">
+                    ${sem.temaViajanteEntreSemana || 'Discurso del superintendente de circuito'}
                 </td>
                 <td class="px-2 col-asig bg-blue-50/50" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
@@ -599,7 +607,7 @@ function cargarSemanaEnPlanilla(idx) {
         `;
     }
 
-    // REUNIÓN DE FIN DE SEMANA
+    // REUNIÓN DE FIN DE SEMANA (TÍTULOS EDITABLES)
     if (esViajante) {
         filasHTML += `
             <tr>
@@ -625,8 +633,8 @@ function cargarSemanaEnPlanilla(idx) {
 
             <tr>
                 <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                    Discurso público: ${sem.temaDiscPub || ''}
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscPub', this.innerText)">
+                    ${sem.temaDiscPub || 'Discurso público:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
@@ -645,8 +653,8 @@ function cargarSemanaEnPlanilla(idx) {
 
             <tr>
                 <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                    La Atalaya: ${sem.temaAtalaya || ''}
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaAtalaya', this.innerText)">
+                    ${sem.temaAtalaya || 'La Atalaya:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
@@ -658,8 +666,8 @@ function cargarSemanaEnPlanilla(idx) {
 
             <tr>
                 <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                    Discurso final: ${sem.temaDiscFin || ''}
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscFin', this.innerText)">
+                    ${sem.temaDiscFin || 'Discurso final:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
