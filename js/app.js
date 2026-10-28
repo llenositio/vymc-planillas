@@ -133,7 +133,6 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
 
     const asignacionesActual = conteoActivo[valorActual] || 0;
     
-    // Si la persona seleccionada tiene más de 1 asignación en esta planilla, el selector cambia a amarillo/naranja
     let bgClase = "bg-transparent text-amber-900 border-slate-300";
     if (valorActual && asignacionesActual > 1) {
         bgClase = "bg-amber-200 text-amber-950 font-black border-2 border-amber-500 shadow-sm";
@@ -446,29 +445,7 @@ function cargarSemanaEnPlanilla(idx) {
             `;
         } 
         else if (item.seccion === 'vida') {
-            if (item.tit.includes('Estudio bíblico')) {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'eb', item.asig)}
-                                ${crearBotonWhatsAppHTML(item.asig, item.asigAyudante, item.tit, 'Sala Principal')}
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_ayudante`, 'lectorL', item.asigAyudante)}
-                                ${crearBotonWhatsAppHTML(item.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            } else {
+            if (!item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr class="group">
                         <td class="c-tiempo relative editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
@@ -499,6 +476,35 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
+    // ESTUDIO BÍBLICO DE LA CONGREGACIÓN (30 min unificados verticalmente)
+    const idxEB = partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
+    const itemEB = idxEB !== -1 ? partes[idxEB] : { t: '30 min', tit: 'Estudio bíblico de la congregación', asig: '', asigAyudante: '' };
+
+    filasHTML += `
+        <tr>
+            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
+                ${itemEB.tit}
+            </td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_titular` : 'asig_eb_conductor', 'eb', itemEB.asig)}
+                    ${crearBotonWhatsAppHTML(itemEB.asig, itemEB.asigAyudante, itemEB.tit, 'Sala Principal')}
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_ayudante` : 'asig_eb_lector', 'lectorL', itemEB.asigAyudante)}
+                    ${crearBotonWhatsAppHTML(itemEB.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // CIERRE Y FIN DE SEMANA
     filasHTML += `
         <tr>
             <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
@@ -559,7 +565,6 @@ async function notificarYGuardarAutosave() {
         await guardarPlanillaEnSupabase();
     }
     
-    // Si la tabla de historial está disponible, actualiza los conteos al guardar
     if (typeof renderizarTablaHistorial === 'function') {
         renderizarTablaHistorial();
     }
