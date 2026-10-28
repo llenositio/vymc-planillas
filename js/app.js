@@ -1220,7 +1220,7 @@ window.cambiarPestaña = function(tab) {
     }
 };
 
-/* IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
+/* IMPRESIÓN A4 EN BLOQUES PARES (2 SEMANAS POR PÁGINA FIX) */
 window.prepararEImprimir = function() {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) {
@@ -1229,50 +1229,26 @@ window.prepararEImprimir = function() {
     }
 
     const contenidoOriginal = areaPrint.innerHTML;
-    let htmlTotalPrint = `<div class="text-center mb-4 border-b-2 border-slate-900 pb-2">
-        <h2 class="text-xl font-black text-slate-900 uppercase tracking-widest">
+    let htmlTotalPrint = `<div class="text-center mb-2 border-b-2 border-slate-900 pb-1">
+        <h2 class="text-base font-black text-slate-900 uppercase tracking-widest">
             PROGRAMA DE REUNIONES - MES DE ${nombreMesGlobal || "---"}
         </h2>
     </div>`;
 
-    programaMes.forEach((sem, idx) => {
-        htmlTotalPrint += `
-            <div class="semana-bloque-print">
-                <table class="tabla-semana-print">
-                    <colgroup>
-                        <col class="c-tiempo">
-                        <col style="width: 25% !important;">
-                        <col style="width: 35% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th colspan="10" class="py-1 text-center bg-white border-b-2 border-slate-900 font-black text-sm text-slate-900">
-                                Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+    // Agrupar las semanas de a 2 por hoja
+    for (let i = 0; i < programaMes.length; i += 2) {
+        htmlTotalPrint += `<div class="bloque-pagina-print">`;
 
-        cargarSemanaEnPlanilla(idx);
-        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
-        if (cuerpoActual) {
-            htmlTotalPrint += cuerpoActual.innerHTML;
+        // Primera semana del par (Semana 1, 3, 5...)
+        htmlTotalPrint += generarHTMLSemanaImpresion(i);
+
+        // Segunda semana del par si existe (Semana 2, 4, 6...)
+        if (i + 1 < programaMes.length) {
+            htmlTotalPrint += generarHTMLSemanaImpresion(i + 1);
         }
 
-        htmlTotalPrint += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-    });
+        htmlTotalPrint += `</div>`;
+    }
 
     areaPrint.innerHTML = htmlTotalPrint;
 
@@ -1280,9 +1256,41 @@ window.prepararEImprimir = function() {
         window.print();
         areaPrint.innerHTML = contenidoOriginal;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-    }, 200);
+    }, 250);
 };
 
+// Función auxiliar para construir cada tabla
+function generarHTMLSemanaImpresion(idx) {
+    const sem = programaMes[idx];
+    if (!sem) return '';
+
+    cargarSemanaEnPlanilla(idx);
+    const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
+    const htmlCuerpo = cuerpoActual ? cuerpoActual.innerHTML : '';
+
+    return `
+        <div class="semana-bloque-print">
+            <table class="tabla-semana-print w-full border border-slate-400">
+                <colgroup>
+                    <col class="c-tiempo" style="width: 8%;">
+                    <col style="width: 27%;">
+                    <col style="width: 35%;">
+                    <col style="width: 30%;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th colspan="10" class="py-1 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-xs text-slate-900">
+                            Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${htmlCuerpo}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
 /* BUSCADOR DE HISTORIAL POR MES Y AÑO */
 window.buscarYCargarPlanillaHistorial = async function() {
     const mes = document.getElementById('selectFiltroMes').value;
