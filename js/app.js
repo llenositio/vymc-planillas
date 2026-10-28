@@ -607,10 +607,10 @@ function cargarSemanaEnPlanilla(idx) {
     if (esViajante) {
         filasHTML += `
             <tr>
-                <th class="bg-blue-700 text-white text-center c-tiempo py-1">
+                <th class="#7ca2d3 text-white text-center c-tiempo py-1">
                     <img src="Torre.png" class="w-4 h-4 mx-auto object-contain" alt="Torre">
                 </th>
-                <th colspan="9" class="bg-blue-700 text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
+                <th colspan="9" class="#7ca2d3 text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
                     Reunión de fin de semana
                 </th>
             </tr>
