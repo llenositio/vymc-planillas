@@ -1119,3 +1119,48 @@ window.prepararEImprimir = function() {
         cargarSemanaEnPlanilla(semanaActivaIdx);
     }, 200);
 };
+/* BUSCADOR DE HISTORIAL POR MES Y AÑO */
+window.buscarYCargarPlanillaHistorial = async function() {
+    const mes = document.getElementById('selectFiltroMes').value;
+    const anio = document.getElementById('selectFiltroAnio').value;
+    const busquedaNombre = `${mes} ${anio}`;
+
+    try {
+        if (typeof db === 'undefined' || !db) {
+            alert("No hay conexión con la base de datos.");
+            return;
+        }
+
+        const { data, error } = await db.from('planillas')
+            .select('*')
+            .ilike('nombre_mes', `%${busquedaNombre}%`)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error consultando planilla:", error);
+            alert("Ocurrió un error al buscar en el historial.");
+            return;
+        }
+
+        if (!data) {
+            alert(`No se encontró ninguna planilla guardada para: ${busquedaNombre}`);
+            return;
+        }
+
+        if (confirm(`Se encontró la planilla "${data.nombre_mes}". ¿Deseas cargarla en la pantalla principal?`)) {
+            nombreMesGlobal = data.nombre_mes || "";
+            programaMes = data.programa_mes || [];
+
+            const inputMes = document.getElementById('inputNombreMes');
+            if (inputMes) inputMes.value = nombreMesGlobal;
+            actualizarTextoTituloMes(nombreMesGlobal);
+
+            semanaActivaIdx = 0;
+            cambiarPestaña('planilla');
+            renderizarSelectorSemanas();
+            cargarSemanaEnPlanilla(0);
+        }
+    } catch (e) {
+        console.error("Error al reabrir planilla:", e);
+    }
+};
