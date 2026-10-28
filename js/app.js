@@ -57,18 +57,15 @@ function crearEstructuraSemanaEjemplo() {
         domPresi: "",
         domLector: "",
         partes: [
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "", tit: "", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "Tesoros de la Biblia", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "Buscemos perlas escondidas", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "4 min", tit: "Lectura de la Biblia", desc: "", participantes: 1, asig: "" },
             
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "maestros", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "3 min", tit: "Empiece conversaciones", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "4 min", tit: "Haga revisitas", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "maestros", t: "5 min", tit: "Haga discípulos", desc: "", participantes: 2, asig: "", asigAyudante: "" },
             
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 1, asig: "" },
-            { seccion: "vida", t: "", tit: "", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+            { seccion: "vida", t: "15 min", tit: "Nuestra Vida Cristiana - Parte 1", desc: "", participantes: 1, asig: "" }
         ]
     };
 }
@@ -86,7 +83,6 @@ function renderizarSelectorSemanas() {
     });
 }
 
-/* FILTRADO DE DESPLEGABLES SEGÚN LAS COLUMNAS BOOLEANAS DE SUPABASE */
 function obtenerOpcionesHermanos(cat) {
     if (!Array.isArray(listaHermanos)) return [];
     return listaHermanos.filter(h => {
@@ -106,12 +102,10 @@ function obtenerOpcionesHermanos(cat) {
     });
 }
 
-/* FILTRADO, CAMBIO DE COLOR Y AVISO DE SOBRECARGA EN DESPLEGABLES */
 function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     const aptos = obtenerOpcionesHermanos(cat);
     let options = `<option value="">-- ${placeholder} --</option>`;
     
-    // Contabiliza asignaciones totales en la planilla activa actual
     const conteoActivo = {};
     if (Array.isArray(programaMes)) {
         programaMes.forEach(sem => {
@@ -143,7 +137,6 @@ function crearSelectHTML(id, cat, valorActual = "", placeholder = "ELEGIR") {
     return `<select id="${id}" class="select-asig flex-1 text-xs py-1 px-1 rounded outline-none focus:ring-1 focus:ring-amber-500 transition-colors ${bgClase}" onchange="guardarAsignacionSemana('${id}')">${options}</select>`;
 }
 
-/* BOTÓN VERDE PARA ENVIAR NOTIFICACIÓN S-89 POR WHATSAPP */
 function crearBotonWhatsAppHTML(nombreHermano, nombreAyudante = "", intervencion = "", sala = "Sala Principal") {
     if (!nombreHermano) return '';
     const sem = programaMes[semanaActivaIdx];
@@ -170,6 +163,330 @@ window.guardarTextoEditable = function(pIndex, campo, valor) {
         notificarYGuardarAutosave();
     }
 };
+
+function generarHTMLSemanaCuerpo(sem, isPrint = false) {
+    const numSalas = sem.tipoSemana === 'viajante' ? 1 : (sem.numSalas || 1);
+    const partes = sem.partes || [];
+
+    const renderSalasMaestros = (pIndex, cat) => {
+        const item = partes[pIndex] || {};
+        const cantP = item.participantes || 1;
+
+        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala Principal") => {
+            let res = `<div class="flex items-center justify-between w-full gap-1">`;
+            res += `<div class="flex-1">`;
+            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
+            if (cantP === 2) {
+                res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
+                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
+            }
+            res += `</div>`;
+            if (!isPrint) res += crearBotonWhatsAppHTML(valTit, valAyu, item.tit, nombreSala);
+            res += `</div>`;
+            return res;
+        };
+
+        let html = '';
+        if (numSalas === 1) {
+            html += `<td class="p-1 col-asig relative group" colspan="7">
+                ${!isPrint ? `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">${cantP === 1 ? '1 Asig' : '2 Asig'}</button>` : ''}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
+            </td>`;
+        } else if (numSalas === 2) {
+            html += `<td class="p-1 col-asig relative group" colspan="4">
+                ${!isPrint ? `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">${cantP === 1 ? '1 Asig' : '2 Asig'}</button>` : ''}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
+            </td>
+            <td class="p-1 col-asig" colspan="3">
+                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
+            </td>`;
+        } else if (numSalas === 3) {
+            html += `<td class="p-1 col-asig relative group" colspan="3">
+                ${!isPrint ? `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">${cantP === 1 ? '1 Asig' : '2 Asig'}</button>` : ''}
+                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
+            </td>
+            <td class="p-1 col-asig" colspan="2">
+                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
+            </td>
+            <td class="p-1 col-asig" colspan="2">
+                ${renderSelectsGroup(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante, "Sala C")}
+            </td>`;
+        }
+        return html;
+    };
+
+    const renderSalasLectura = (pIndex, cat) => {
+        const item = partes[pIndex] || {};
+        if (numSalas === 1) {
+            return `<td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal') : ''}
+                </div>
+            </td>`;
+        } else if (numSalas === 2) {
+            return `<td class="px-1 py-1 col-asig" colspan="4">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal') : ''}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="3">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B') : ''}
+                </div>
+            </td>`;
+        } else {
+            return `<td class="px-1 py-1 col-asig" colspan="3">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal') : ''}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="2">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B') : ''}
+                </div>
+            </td>
+            <td class="px-1 py-1 col-asig" colspan="2">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
+                    ${!isPrint ? crearBotonWhatsAppHTML(item.asigC, '', item.tit, 'Sala C') : ''}
+                </div>
+            </td>`;
+        }
+    };
+
+    let filasHTML = `
+        <tr class="h-6">
+            <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
+            </td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia: Palabras de introducción', 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+        <tr class="h-6">
+            <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Oración</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración Inicial', 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+    `;
+
+    let renderizoTesorosHeader = false;
+    let renderizoMaestrosHeader = false;
+    let renderizoVidaHeader = false;
+
+    partes.forEach((item, pIndex) => {
+
+        if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
+            filasHTML += `
+                <tr>
+                    <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
+                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+                </tr>
+            `;
+            renderizoTesorosHeader = true;
+        } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
+            filasHTML += `
+                <tr>
+                    <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                    <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                </tr>
+            `;
+            renderizoMaestrosHeader = true;
+        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
+
+            if (!isPrint) {
+                filasHTML += `
+                    <tr class="no-print bg-amber-50/50">
+                        <td colspan="10" class="p-1 text-center">
+                            <button onclick="agregarFilaMaestros()" class="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded border border-amber-300 transition">
+                                <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Seamos Mejores Maestros
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            filasHTML += `
+                <tr>
+                    <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
+                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                </tr>
+                <tr>
+                    <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                        Canción Nº: ${sem.canciones?.[1] || ''}
+                    </td>
+                </tr>
+            `;
+            renderizoVidaHeader = true;
+        }
+
+        let cat = 'smm';
+        if (item.seccion === 'tesoros') {
+            if (pIndex === 0) cat = 'disc';
+            else if (item.tit.includes('perlas')) cat = 'perlas';
+            else if (item.tit.includes('Lectura')) cat = 'lec';
+        } else if (item.seccion === 'vida') {
+            cat = 'nvc';
+        }
+
+        if (item.seccion === 'tesoros') {
+            if (item.tit.includes('Lectura')) {
+                filasHTML += `
+                    <tr>
+                        <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        ${renderSalasLectura(pIndex, cat)}
+                    </tr>
+                `;
+            } else {
+                filasHTML += `
+                    <tr>
+                        <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between w-full gap-1">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
+                                ${!isPrint ? crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal') : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        } 
+        else if (item.seccion === 'maestros') {
+            filasHTML += `
+                <tr class="group">
+                    <td class="c-tiempo relative editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
+                        ${item.t}
+                        ${!isPrint ? `<button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>` : ''}
+                    </td>
+                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                    <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                    ${renderSalasMaestros(pIndex, cat)}
+                </tr>
+            `;
+        } 
+        else if (item.seccion === 'vida') {
+            if (!item.tit.includes('Estudio bíblico')) {
+                filasHTML += `
+                    <tr class="group">
+                        <td class="c-tiempo relative editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
+                            ${item.t}
+                            ${!isPrint ? `<button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>` : ''}
+                        </td>
+                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                        <td class="px-2 col-asig" colspan="7">
+                            <div class="flex items-center justify-between w-full gap-1">
+                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
+                                ${!isPrint ? crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal') : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    });
+
+    if (!isPrint) {
+        filasHTML += `
+            <tr class="no-print bg-slate-50">
+                <td colspan="10" class="p-1 text-center">
+                    <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
+                        <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // ESTUDIO BÍBLICO DE LA CONGREGACIÓN (30 min unificados con rowspan="2")
+    const idxEB = partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
+    const itemEB = idxEB !== -1 ? partes[idxEB] : { t: '30 min', tit: 'Estudio bíblico de la congregación', asig: '', asigAyudante: '' };
+
+    filasHTML += `
+        <tr>
+            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
+                ${itemEB.tit}
+            </td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_titular` : 'asig_eb_conductor', 'eb', itemEB.asig)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(itemEB.asig, itemEB.asigAyudante, itemEB.tit, 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_ayudante` : 'asig_eb_lector', 'lectorL', itemEB.asigAyudante)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(itemEB.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+    `;
+
+    // CIERRE Y FIN DE SEMANA
+    filasHTML += `
+        <tr>
+            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                Canción ${sem.canciones?.[2] || ''} y oración
+            </td>
+            <td class="px-2 col-asig" colspan="7">
+                <div class="flex items-center justify-between w-full gap-1">
+                    ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal') : ''}
+                </div>
+            </td>
+        </tr>
+
+        <tr class="border-t-2 border-slate-900 bg-slate-50/50">
+            <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                Domingo, presidencia: 
+                <div class="inline-flex items-center ml-2 w-48 gap-1">
+                    ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública') : ''}
+                </div>
+            </td>
+            <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                Lector: 
+                <div class="inline-flex items-center ml-2 text-left w-48 gap-1">
+                    ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
+                    ${!isPrint ? crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública') : ''}
+                </div>
+            </td>
+        </tr>
+    `;
+
+    return filasHTML;
+}
 
 function cargarSemanaEnPlanilla(idx) {
     if (!programaMes || programaMes.length === 0) return;
@@ -222,331 +539,10 @@ function cargarSemanaEnPlanilla(idx) {
         }
     }
 
-    const partes = sem.partes || [];
     const cuerpo = document.getElementById('cuerpoTablaPlanilla');
-    if (!cuerpo) return;
-    
-    const renderSalasMaestros = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        const cantP = item.participantes || 1;
-
-        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala Principal") => {
-            let res = `<div class="flex items-center justify-between w-full gap-1">`;
-            res += `<div class="flex-1">`;
-            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
-            if (cantP === 2) {
-                res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
-                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
-            }
-            res += `</div>`;
-            res += crearBotonWhatsAppHTML(valTit, valAyu, item.tit, nombreSala);
-            res += `</div>`;
-            return res;
-        };
-
-        let html = '';
-
-        if (numSalas === 1) {
-            html += `<td class="p-1 col-asig relative group" colspan="7">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>`;
-        } else if (numSalas === 2) {
-            html += `<td class="p-1 col-asig relative group" colspan="4">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>
-            <td class="p-1 col-asig" colspan="3">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>`;
-        } else if (numSalas === 3) {
-            html += `<td class="p-1 col-asig relative group" colspan="3">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante, "Sala C")}
-            </td>`;
-        }
-        return html;
-    };
-
-    const renderSalasLectura = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        if (numSalas === 1) {
-            return `<td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>`;
-        } else if (numSalas === 2) {
-            return `<td class="px-1 py-1 col-asig" colspan="4">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="3">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
-                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
-                </div>
-            </td>`;
-        } else {
-            return `<td class="px-1 py-1 col-asig" colspan="3">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="2">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
-                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="2">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
-                    ${crearBotonWhatsAppHTML(item.asigC, '', item.tit, 'Sala C')}
-                </div>
-            </td>`;
-        }
-    };
-
-    let filasHTML = `
-        <tr class="h-6">
-            <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
-            </td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}
-                    ${crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia: Palabras de introducción', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-        <tr class="h-6">
-            <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Oración</td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}
-                    ${crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración Inicial', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-    `;
-
-    let renderizoTesorosHeader = false;
-    let renderizoMaestrosHeader = false;
-    let renderizoVidaHeader = false;
-
-    partes.forEach((item, pIndex) => {
-
-        if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
-                </tr>
-            `;
-            renderizoTesorosHeader = true;
-        } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
-                </tr>
-            `;
-            renderizoMaestrosHeader = true;
-        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
-
-            filasHTML += `
-                <tr class="no-print bg-amber-50/50">
-                    <td colspan="10" class="p-1 text-center">
-                        <button onclick="agregarFilaMaestros()" class="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded border border-amber-300 transition">
-                            <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Seamos Mejores Maestros
-                        </button>
-                    </td>
-                </tr>
-            `;
-
-            filasHTML += `
-                <tr>
-                    <th class="bg-vida text-white text-center c-tiempo"><i class="fa-solid fa-sheep text-xs"></i></th>
-                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
-                </tr>
-                <tr>
-                    <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                        Canción Nº: ${sem.canciones?.[1] || ''}
-                    </td>
-                </tr>
-            `;
-            renderizoVidaHeader = true;
-        }
-
-        let cat = 'smm';
-        if (item.seccion === 'tesoros') {
-            if (pIndex === 0) cat = 'disc';
-            else if (item.tit.includes('perlas')) cat = 'perlas';
-            else if (item.tit.includes('Lectura')) cat = 'lec';
-        } else if (item.seccion === 'vida') {
-            cat = 'nvc';
-        }
-
-        if (item.seccion === 'tesoros') {
-            if (item.tit.includes('Lectura')) {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        ${renderSalasLectura(pIndex, cat)}
-                    </tr>
-                `;
-            } else {
-                filasHTML += `
-                    <tr>
-                        <td class="c-tiempo editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
-                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-        } 
-        else if (item.seccion === 'maestros') {
-            filasHTML += `
-                <tr class="group">
-                    <td class="c-tiempo relative editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
-                        ${item.t}
-                        <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
-                    </td>
-                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                    <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                    ${renderSalasMaestros(pIndex, cat)}
-                </tr>
-            `;
-        } 
-        else if (item.seccion === 'vida') {
-            if (!item.tit.includes('Estudio bíblico')) {
-                filasHTML += `
-                    <tr class="group">
-                        <td class="c-tiempo relative editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">
-                            ${item.t}
-                            <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-0.5 left-0.5 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[10px]" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
-                        </td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
-                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-    });
-
-    filasHTML += `
-        <tr class="no-print bg-slate-50">
-            <td colspan="10" class="p-1 text-center">
-                <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
-                    <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
-                </button>
-            </td>
-        </tr>
-    `;
-
-    // ESTUDIO BÍBLICO DE LA CONGREGACIÓN (30 min unificados verticalmente)
-    const idxEB = partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
-    const itemEB = idxEB !== -1 ? partes[idxEB] : { t: '30 min', tit: 'Estudio bíblico de la congregación', asig: '', asigAyudante: '' };
-
-    filasHTML += `
-        <tr>
-            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
-                ${itemEB.tit}
-            </td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_titular` : 'asig_eb_conductor', 'eb', itemEB.asig)}
-                    ${crearBotonWhatsAppHTML(itemEB.asig, itemEB.asigAyudante, itemEB.tit, 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_ayudante` : 'asig_eb_lector', 'lectorL', itemEB.asigAyudante)}
-                    ${crearBotonWhatsAppHTML(itemEB.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-    `;
-
-    // CIERRE Y FIN DE SEMANA
-    filasHTML += `
-        <tr>
-            <td class="c-tiempo editable-field" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
-                    ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-        <tr>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                Canción ${sem.canciones?.[2] || ''} y oración
-            </td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
-                    ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
-                </div>
-            </td>
-        </tr>
-
-        <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                Domingo, presidencia: 
-                <div class="inline-flex items-center ml-2 w-48 gap-1">
-                    ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
-                    ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
-                </div>
-            </td>
-            <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true" onpaste="limpiarTextoPegado(event)">
-                Lector: 
-                <div class="inline-flex items-center ml-2 text-left w-48 gap-1">
-                    ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
-                    ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública')}
-                </div>
-            </td>
-        </tr>
-    `;
-
-    cuerpo.innerHTML = filasHTML;
+    if (cuerpo) {
+        cuerpo.innerHTML = generarHTMLSemanaCuerpo(sem, false);
+    }
 }
 
 window.actualizarNombreMes = function(val) {
@@ -597,7 +593,6 @@ window.resetearPlanillaMes = async function() {
     }
 };
 
-/* RENDERIZADO DE LA MATRIZ COMPLETA DE HERMANOS CON LA ESTRUCTURA REAL DE SUPABASE */
 function renderizarMatrizHermanos() {
     const cuerpo = document.getElementById('cuerpoTablaHermanos');
     if (!cuerpo) return;
@@ -683,8 +678,8 @@ window.agregarFilaMaestros = async function() {
 
     const nuevaParte = {
         seccion: 'maestros',
-        t: '',
-        tit: '',
+        t: '3 min',
+        tit: 'Nueva Asignación SMM',
         desc: '',
         participantes: 2,
         asig: '',
@@ -699,6 +694,39 @@ window.agregarFilaMaestros = async function() {
 
     cargarSemanaEnPlanilla(semanaActivaIdx);
     await notificarYGuardarAutosave();
+};
+
+window.agregarFilaVida = async function() {
+    const sem = programaMes[semanaActivaIdx];
+    if (!sem) return;
+    
+    const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
+    const nuevaParte = {
+        seccion: 'vida',
+        t: '15 min',
+        tit: 'Nueva Parte NVC',
+        desc: '',
+        participantes: 1,
+        asig: ''
+    };
+
+    if (idxEBC !== -1) {
+        sem.partes.splice(idxEBC, 0, nuevaParte);
+    } else {
+        sem.partes.push(nuevaParte);
+    }
+
+    cargarSemanaEnPlanilla(semanaActivaIdx);
+    await notificarYGuardarAutosave();
+};
+
+window.eliminarFilaParte = async function(pIndex) {
+    const sem = programaMes[semanaActivaIdx];
+    if (sem && sem.partes && sem.partes[pIndex]) {
+        sem.partes.splice(pIndex, 1);
+        cargarSemanaEnPlanilla(semanaActivaIdx);
+        await notificarYGuardarAutosave();
+    }
 };
 
 window.abrirModalImportador = function() {
@@ -958,39 +986,6 @@ window.eliminarSemanaActiva = async function() {
     }
 };
 
-window.agregarFilaVida = async function() {
-    const sem = programaMes[semanaActivaIdx];
-    if (!sem) return;
-    
-    const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
-    const nuevaParte = {
-        seccion: 'vida',
-        t: '',
-        tit: '',
-        desc: '',
-        participantes: 1,
-        asig: ''
-    };
-
-    if (idxEBC !== -1) {
-        sem.partes.splice(idxEBC, 0, nuevaParte);
-    } else {
-        sem.partes.push(nuevaParte);
-    }
-
-    cargarSemanaEnPlanilla(semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.eliminarFilaParte = async function(pIndex) {
-    const sem = programaMes[semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes.splice(pIndex, 1);
-        cargarSemanaEnPlanilla(semanaActivaIdx);
-        await notificarYGuardarAutosave();
-    }
-};
-
 window.cambiarNumSalasSemana = async function(cantidad) {
     if (!programaMes[semanaActivaIdx]) return;
     programaMes[semanaActivaIdx].numSalas = parseInt(cantidad);
@@ -1059,7 +1054,7 @@ window.cambiarPestaña = function(tab) {
     }
 };
 
-/* IMPRESIÓN A4 EN BLOQUES DE 2 SEMANAS POR PÁGINA */
+/* IMPRESIÓN A4: 2 SEMANAS POR PÁGINA SIN LIMPIAR O DESTRUIR LA VISTA ACTIVA */
 window.prepararEImprimir = function() {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) {
@@ -1098,15 +1093,7 @@ window.prepararEImprimir = function() {
                         </tr>
                     </thead>
                     <tbody>
-        `;
-
-        cargarSemanaEnPlanilla(idx);
-        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
-        if (cuerpoActual) {
-            htmlTotalPrint += cuerpoActual.innerHTML;
-        }
-
-        htmlTotalPrint += `
+                        ${generarHTMLSemanaCuerpo(sem, true)}
                     </tbody>
                 </table>
             </div>
@@ -1119,5 +1106,5 @@ window.prepararEImprimir = function() {
         window.print();
         areaPrint.innerHTML = contenidoOriginal;
         cargarSemanaEnPlanilla(semanaActivaIdx);
-    }, 200);
+    }, 250);
 };
