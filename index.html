@@ -102,15 +102,15 @@
             text-align: center;
         }
 
-        /* IMPRESIÓN A4: 2 SEMANAS EXACTAS POR HOJA SIN CORTES */
+       /* IMPRESIÓN A4: EXACTAMENTE 2 SEMANAS POR HOJA */
         @media print {
             @page { 
                 size: A4 portrait; 
-                margin: 6mm 8mm; 
+                margin: 4mm 6mm; 
             }
 
             .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; font-size: 9px !important; }
+            body { background: white !important; padding: 0 !important; font-size: 8px !important; }
             
             .print-area { 
                 box-shadow: none !important; 
@@ -120,22 +120,22 @@
                 padding: 0 !important; 
             }
 
-            /* Contenedor del par de semanas */
+            /* Forzar alto completo y separación limpia por hoja */
             .bloque-pagina-print {
                 page-break-after: always !important;
                 break-after: page !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                height: 98vh;
                 display: flex;
                 flex-direction: column;
-                justify-content: flex-start;
-                gap: 8mm;
+                justify-content: space-between;
             }
 
             .semana-bloque-print {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
-                margin-bottom: 0;
+                margin-bottom: 2mm;
             }
 
             .tabla-semana-print { 
@@ -146,16 +146,16 @@
 
             .tabla-semana-print td, .tabla-semana-print th { 
                 border: 1px solid #000 !important; 
-                padding: 1px 2px !important; 
-                font-size: 8.5px !important; 
-                line-height: 1.1 !important;
+                padding: 0px 2px !important; 
+                font-size: 8px !important; 
+                line-height: 1.05 !important;
             }
 
             .select-asig { 
                 color: #78350f !important; 
                 appearance: none; 
                 -webkit-appearance: none; 
-                font-size: 8.5px !important; 
+                font-size: 8px !important; 
                 font-weight: 800 !important; 
             }
 
