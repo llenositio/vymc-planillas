@@ -10,7 +10,27 @@ window.limpiarTextoPegado = function(e) {
     document.execCommand('insertText', false, text);
 };
 
+function cargarOpcionesAniosHistorial() {
+    const selectAnio = document.getElementById('selectFiltroAnio');
+    if (!selectAnio) return;
+
+    selectAnio.innerHTML = '';
+    const anioInicio = 2026;
+    const anioActual = new Date().getFullYear();
+    const anioFin = Math.max(anioActual, 2026) + 3;
+
+    for (let anio = anioInicio; anio <= anioFin; anio++) {
+        const option = document.createElement('option');
+        option.value = anio;
+        option.innerText = anio;
+        if (anio === anioActual) option.selected = true;
+        selectAnio.appendChild(option);
+    }
+}
+
 window.onload = async function() {
+    cargarOpcionesAniosHistorial();
+
     try {
         if (typeof db !== 'undefined' && db) {
             if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
@@ -365,7 +385,7 @@ function cargarSemanaEnPlanilla(idx) {
                 </tr>
             `;
             renderizoMaestrosHeader = true;
-       } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
+        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
 
             filasHTML += `
                 <tr class="no-print bg-amber-50/50">
@@ -1052,7 +1072,7 @@ window.cambiarPestaña = function(tab) {
     const activeTab = document.getElementById(`tab-${tab}`);
     if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
 
-    if (tab === 'historial' && typeof renderizarTablaHistorial === 'function') {
+    if (tab === 'estadisticas' && typeof renderizarTablaHistorial === 'function') {
         renderizarTablaHistorial();
     }
 };
@@ -1119,6 +1139,7 @@ window.prepararEImprimir = function() {
         cargarSemanaEnPlanilla(semanaActivaIdx);
     }, 200);
 };
+
 /* BUSCADOR DE HISTORIAL POR MES Y AÑO */
 window.buscarYCargarPlanillaHistorial = async function() {
     const mes = document.getElementById('selectFiltroMes').value;
