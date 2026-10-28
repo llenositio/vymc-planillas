@@ -53,7 +53,7 @@
             vertical-align: middle;
         }
 
-        /* REGLAS EXCLUSIVAS DE ALTA LEGIBILIDAD PARA EL HISTORIAL */
+        /* REGLAS EXCLUSIVAS DE ALTA LEGIBILIDAD PARA ESTADÍSTICAS */
         #contenedorTablaHistorial td, #contenedorTablaHistorial th {
             padding: 10px 6px !important;
             font-size: 13px !important;
@@ -175,7 +175,10 @@
                         <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
                     </button>
                     <button onclick="cambiarPestaña('historial')" id="tab-historial" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
-                        <i class="fa-solid fa-chart-column mr-1"></i> Historial y Estadísticas
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> Historial
+                    </button>
+                    <button onclick="cambiarPestaña('estadisticas')" id="tab-estadisticas" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-chart-column mr-1"></i> Estadísticas
                     </button>
                     <button onclick="cambiarPestaña('hermanos')" id="tab-hermanos" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
                         <i class="fa-solid fa-users mr-1"></i> Lista de Hermanos (Matriz)
@@ -300,13 +303,54 @@
             </div>
         </section>
 
-        <!-- HISTORIAL Y ESTADÍSTICAS -->
-        <section id="sec-historial" class="tab-content hidden">
+        <!-- HISTORIAL (BUSCADOR POR DESPLEGABLE) -->
+        <section id="sec-historial" class="tab-content hidden max-w-2xl mx-auto my-6 p-6 bg-white rounded-xl shadow-md border border-slate-200">
+            <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-folder-open text-amber-600"></i> Buscar Planillas de Meses Anteriores
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Mes:</label>
+                    <select id="selectFiltroMes" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50">
+                        <option value="ENERO">Enero (01)</option>
+                        <option value="FEBRERO">Febrero (02)</option>
+                        <option value="MARZO">Marzo (03)</option>
+                        <option value="ABRIL">Abril (04)</option>
+                        <option value="MAYO">Mayo (05)</option>
+                        <option value="JUNIO">Junio (06)</option>
+                        <option value="JULIO">Julio (07)</option>
+                        <option value="AGOSTO">Agosto (08)</option>
+                        <option value="SEPTIEMBRE">Septiembre (09)</option>
+                        <option value="OCTUBRE">Octubre (10)</option>
+                        <option value="NOVIEMBRE" selected>Noviembre (11)</option>
+                        <option value="DICIEMBRE">Diciembre (12)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Año:</label>
+                    <select id="selectFiltroAnio" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="buscarYCargarPlanillaHistorial()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-magnifying-glass"></i> Buscar y Cargar Planilla
+            </button>
+        </section>
+
+        <!-- ESTADÍSTICAS -->
+        <section id="sec-estadisticas" class="tab-content hidden">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                     <div>
                         <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-column text-amber-600"></i> Historial y Estadísticas Acumuladas
+                            <i class="fa-solid fa-chart-column text-amber-600"></i> Estadísticas Acumuladas
                         </h2>
                         <p class="text-xs text-slate-500">Conteo automático dinámico por hermano y categoría</p>
                     </div>
