@@ -422,11 +422,7 @@ function cargarSemanaEnPlanilla(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-vida text-white text-center c-tiempo py-1">
-                        <svg class="w-4 h-4 text-white inline-block -mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 17l-1 3M10 17l1 3M15 17l-1 3M18 17l1 3"/>
-                            <path d="M19 13a3 3 0 0 0-2.8-2 2.5 2.5 0 0 0-4.4-1.2A3 3 0 0 0 7 11a3 3 0 0 0 0 6h12a3 3 0 0 0 0-4z"/>
-                            <path d="M18.5 11.5l1.5-1.5a1.5 1.5 0 0 1 2.1 2.1L21 13"/>
-                        </svg>
+                        <img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja">
                     </th>
                     <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
@@ -612,7 +608,7 @@ function cargarSemanaEnPlanilla(idx) {
         filasHTML += `
             <tr>
                 <th class="bg-blue-700 text-white text-center c-tiempo py-1">
-                    <i class="fa-solid fa-tower-observation text-xs"></i>
+                    <img src="Torre.png" class="w-4 h-4 mx-auto object-contain" alt="Torre">
                 </th>
                 <th colspan="9" class="bg-blue-700 text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
                     Reunión de fin de semana
