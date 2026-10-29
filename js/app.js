@@ -1306,21 +1306,23 @@ function generarHTMLSemanaImpresion(idx) {
     `;
 }
 
-/* BUSCADOR DE HISTORIAL POR MES Y AÑO */
+/* BUSCADOR DE HISTORIAL POR MES Y AÑO (CORREGIDO PARA USAR MES_ANO Y DATOS) */
 window.buscarYCargarPlanillaHistorial = async function() {
     const mes = document.getElementById('selectFiltroMes').value;
     const anio = document.getElementById('selectFiltroAnio').value;
-    const busquedaNombre = `${mes} ${anio}`;
+    const busquedaNombre = `${mes} ${anio}`.toUpperCase();
 
     try {
-        if (typeof db === 'undefined' || !db) {
+        const clienteSupabase = typeof db !== 'undefined' ? db : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+
+        if (!clienteSupabase) {
             alert("No hay conexión con la base de datos.");
             return;
         }
 
-        const { data, error } = await db.from('planillas')
+        const { data, error } = await clienteSupabase.from('planillas')
             .select('*')
-            .ilike('nombre_mes', `%${busquedaNombre}%`)
+            .ilike('mes_ano', `%${busquedaNombre}%`)
             .maybeSingle();
 
         if (error) {
@@ -1334,9 +1336,9 @@ window.buscarYCargarPlanillaHistorial = async function() {
             return;
         }
 
-        if (confirm(`Se encontró la planilla "${data.nombre_mes}". ¿Deseas cargarla en la pantalla principal?`)) {
-            nombreMesGlobal = data.nombre_mes || "";
-            programaMes = data.programa_mes || [];
+        if (confirm(`Se encontró la planilla "${data.mes_ano}". ¿Deseas cargarla en la pantalla principal?`)) {
+            nombreMesGlobal = data.mes_ano || "";
+            programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
 
             const inputMes = document.getElementById('inputNombreMes');
             if (inputMes) inputMes.value = nombreMesGlobal;
@@ -1381,7 +1383,6 @@ async function cargarYRenderizarMesPublico(mes) {
 
     const mesBuscado = mes.trim().toUpperCase();
 
-    // Usar la variable 'db' en lugar de 'supabaseClient'
     const clienteSupabase = typeof db !== 'undefined' ? db : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
 
     if (!clienteSupabase) {
@@ -1389,7 +1390,6 @@ async function cargarYRenderizarMesPublico(mes) {
         return;
     }
 
-    // 1. Consultar Supabase
     const { data, error } = await clienteSupabase
         .from('planillas')
         .select('*')
@@ -1421,7 +1421,6 @@ async function cargarYRenderizarMesPublico(mes) {
         return str.split('(')[0].trim();
     };
 
-    // 2. Renderizar texto plano respetando la estructura completa
     programa.forEach((sem) => {
         let filasHTML = '';
 
