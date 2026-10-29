@@ -1380,7 +1380,7 @@ async function cargarYRenderizarMesPublico(mes) {
 
     const mesBuscado = mes.trim().toUpperCase();
 
-    // 1. Obtener la planilla buscando por la columna 'mes_ano'
+    // 1. Consultar Supabase
     const { data, error } = await supabaseClient
         .from('planillas')
         .select('*')
@@ -1392,14 +1392,15 @@ async function cargarYRenderizarMesPublico(mes) {
         return;
     }
 
-    // 2. Extraer el array JSON almacenado en la columna 'datos'
-    const semanas = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+    // Cargar programa en la variable global para usar la misma lógica de renderizado
+    const programa = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
 
-    if (!Array.isArray(semanas) || semanas.length === 0) {
+    if (!Array.isArray(programa) || programa.length === 0) {
         areaPrint.innerHTML = `<div class="p-8 text-center text-amber-600 font-bold text-lg">El mes ${mes} no tiene información guardada.</div>`;
         return;
     }
 
+    programaMes = programa;
     let htmlPublico = `
         <div class="text-center mb-6 border-b-2 border-slate-900 pb-2">
             <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">
@@ -1408,44 +1409,41 @@ async function cargarYRenderizarMesPublico(mes) {
         </div>
     `;
 
-    // 3. Renderizar cada semana en modo SOLO LECTURA a color
-    semanas.forEach((sem) => {
-        let filasHTML = '';
-        const partes = sem.partes || sem.filas || [];
+    // 2. Renderizar cada semana usando la tabla nativa de la app
+    programa.forEach((sem, idx) => {
+        cargarSemanaEnPlanilla(idx);
+        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
+        if (!cuerpoActual) return;
 
-        partes.forEach(parte => {
-            const asignado = parte.asig || parte.asignado || '';
-            const esVacio = !asignado || asignado.includes('--') || asignado.includes('ELEGIR') || asignado.includes('ASIGNAR');
-            // Limpia alertas como "(2 ASIG. ACTIVA)" para la vista pública
-            const textoAsignado = esVacio ? '' : asignado.split('(')[0].trim();
+        // Clonar el HTML generado por el sistema
+        const divTemp = document.createElement('div');
+        divTemp.innerHTML = cuerpoActual.innerHTML;
 
-            filasHTML += `
-                <tr>
-                    <td class="c-tiempo">${parte.t || parte.tiempo || ''}</td>
-                    <td class="font-bold text-slate-800">${parte.tit || parte.titulo || ''}</td>
-                    <td class="text-slate-600">${parte.desc || parte.descripcion || ''}</td>
-                    <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
-                        ${textoAsignado}
-                    </td>
-                </tr>
-            `;
+        // Transformar todos los <select> en texto estático
+        divTemp.querySelectorAll('select').forEach(sel => {
+            const opcion = sel.options[sel.selectedIndex];
+            let val = opcion ? (opcion.text || opcion.value) : '';
+            
+            // Limpiar valores vacíos o alertas del sistema como "(1 ASIG. ACTIVA)"
+            if (val.includes('--') || val.includes('ELEGIR') || val.includes('ASIGNAR')) {
+                val = '';
+            } else {
+                val = val.split('(')[0].trim();
+            }
+
+            const span = document.createElement('span');
+            span.className = 'font-black uppercase text-amber-950 text-xs text-center block w-full';
+            span.textContent = val;
+            sel.parentNode.replaceChild(span, sel);
         });
+
+        // Quitar edición y botones sobrantes
+        divTemp.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        divTemp.querySelectorAll('.btn-accion-tabla, button, .whatsapp-link').forEach(el => el.remove());
 
         htmlPublico += `
             <div class="mb-8">
                 <table class="tabla-semana-publica">
-                    <colgroup>
-                        <col class="c-tiempo">
-                        <col style="width: 25% !important;">
-                        <col style="width: 35% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                        <col style="width: 5% !important;">
-                    </colgroup>
                     <thead>
                         <tr>
                             <th colspan="10" class="py-1.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-sm text-slate-900">
@@ -1454,7 +1452,7 @@ async function cargarYRenderizarMesPublico(mes) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${filasHTML}
+                        ${divTemp.innerHTML}
                     </tbody>
                 </table>
             </div>
