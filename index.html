@@ -102,11 +102,11 @@
             text-align: center;
         }
 
-       /* IMPRESIÓN A4: EXACTAMENTE 2 SEMANAS POR HOJA */
+      /* IMPRESIÓN A4 REGULADA */
         @media print {
             @page { 
                 size: A4 portrait; 
-                margin: 4mm 6mm; 
+                margin: 5mm 7mm; 
             }
 
             .no-print { display: none !important; }
@@ -120,22 +120,18 @@
                 padding: 0 !important; 
             }
 
-            /* Forzar alto completo y separación limpia por hoja */
-            .bloque-pagina-print {
+            /* Contenedor de cada hoja física de 2 semanas */
+            .hoja-print {
                 page-break-after: always !important;
                 break-after: page !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-                height: 98vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
+                display: block !important;
+                clear: both !important;
             }
 
             .semana-bloque-print {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
-                margin-bottom: 2mm;
+                margin-bottom: 3mm;
             }
 
             .tabla-semana-print { 
