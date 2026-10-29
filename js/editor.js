@@ -67,7 +67,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
     const selSalas = document.getElementById('selectNumSalas');
     if (selSalas) {
         selSalas.value = numSalas;
-        selSalas.disabled = esViajante;
+        selSalas.disabled = esViajante || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion';
     }
 
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
@@ -99,8 +99,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
             tabla.classList.add('opacity-30', 'pointer-events-none');
         } else if (sem.tipoSemana === 'conmemoracion') {
             banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
-            banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO`;
-            tabla.classList.remove('opacity-30', 'pointer-events-none');
+            banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO (NO HAY REUNIÓN VyMC ENTRE SEMANA)`;
+            tabla.classList.add('opacity-30', 'pointer-events-none');
         } else {
             banner.classList.add('hidden');
             tabla.classList.remove('opacity-30', 'pointer-events-none');
@@ -663,7 +663,7 @@ window.cambiarNumSalasSemana = async function(cantidad) {
 window.actualizarTipoSemana = async function(tipo) {
     if (!window.programaMes[window.semanaActivaIdx]) return;
     window.programaMes[window.semanaActivaIdx].tipoSemana = tipo;
-    if (tipo === 'viajante') window.programaMes[window.semanaActivaIdx].numSalas = 1;
+    if (tipo === 'viajante' || tipo === 'asamblea' || tipo === 'conmemoracion') window.programaMes[window.semanaActivaIdx].numSalas = 1;
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
     await notificarYGuardarAutosave();
 };
