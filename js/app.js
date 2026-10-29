@@ -29,6 +29,12 @@ function cargarOpcionesAniosHistorial() {
 }
 
 window.onload = async function() {
+    // Si la URL contiene vista=publica, CANCELAR el montaje del editor editable
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('vista') === 'publica') {
+        return; 
+    }
+
     cargarOpcionesAniosHistorial();
 
     try {
@@ -513,7 +519,7 @@ function cargarSemanaEnPlanilla(idx) {
         </tr>
     `;
 
-    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS VIAJANTE (SECUENCIA Y TÍTULOS EDITABLES)
+    // REUNIÓN ENTRE SEMANA: ESTUDIO BÍBLICO VS VIAJANTE
     if (esViajante) {
         filasHTML += `
             <tr>
@@ -603,7 +609,7 @@ function cargarSemanaEnPlanilla(idx) {
         `;
     }
 
-   // REUNIÓN DE FIN DE SEMANA (TÍTULOS EDITABLES)
+   // REUNIÓN DE FIN DE SEMANA
     if (esViajante) {
         filasHTML += `
             <tr>
@@ -1220,7 +1226,7 @@ window.cambiarPestaña = function(tab) {
     }
 };
 
-/* IMPRESIÓN A4: 2 SEMANAS POR PÁGINA (ESTRUCTURA CORREGIDA) */
+/* IMPRESIÓN A4: 2 SEMANAS POR PÁGINA */
 window.prepararEImprimir = function() {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) {
@@ -1231,11 +1237,9 @@ window.prepararEImprimir = function() {
     const contenidoOriginal = areaPrint.innerHTML;
     let htmlTotalPrint = '';
 
-    // Agrupar semanas de a 2 por hoja
     for (let i = 0; i < programaMes.length; i += 2) {
         htmlTotalPrint += `<div class="hoja-print">`;
 
-        // Solo incluir el título del mes dentro de la PRIMERA hoja
         if (i === 0) {
             htmlTotalPrint += `
                 <div class="text-center mb-2 border-b-2 border-slate-900 pb-1">
@@ -1246,10 +1250,8 @@ window.prepararEImprimir = function() {
             `;
         }
 
-        // Primera semana del par
         htmlTotalPrint += generarHTMLSemanaImpresion(i);
 
-        // Segunda semana del par (si existe)
         if (i + 1 < programaMes.length) {
             htmlTotalPrint += generarHTMLSemanaImpresion(i + 1);
         }
@@ -1266,7 +1268,6 @@ window.prepararEImprimir = function() {
     }, 250);
 };
 
-// Función auxiliar para construir cada tabla
 function generarHTMLSemanaImpresion(idx) {
     const sem = programaMes[idx];
     if (!sem) return '';
@@ -1304,6 +1305,7 @@ function generarHTMLSemanaImpresion(idx) {
         </div>
     `;
 }
+
 /* BUSCADOR DE HISTORIAL POR MES Y AÑO */
 window.buscarYCargarPlanillaHistorial = async function() {
     const mes = document.getElementById('selectFiltroMes').value;
@@ -1354,7 +1356,6 @@ window.buscarYCargarPlanillaHistorial = async function() {
    LÓGICA DE VISTA PÚBLICA VÍA LINK Y REALTIME
 =================================================== */
 
-// Detectar parámetro ?vista=publica&mes=NOVIEMBRE%202026 al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const esVistaPublica = params.get('vista') === 'publica';
@@ -1392,7 +1393,6 @@ async function cargarYRenderizarMesPublico(mes) {
         return;
     }
 
-    // Cargar programa en la variable global para usar la misma lógica de renderizado
     const programa = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
 
     if (!Array.isArray(programa) || programa.length === 0) {
@@ -1400,7 +1400,6 @@ async function cargarYRenderizarMesPublico(mes) {
         return;
     }
 
-    programaMes = programa;
     let htmlPublico = `
         <div class="text-center mb-6 border-b-2 border-slate-900 pb-2">
             <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">
@@ -1409,50 +1408,110 @@ async function cargarYRenderizarMesPublico(mes) {
         </div>
     `;
 
-    // 2. Renderizar cada semana usando la tabla nativa de la app
-    programa.forEach((sem, idx) => {
-        cargarSemanaEnPlanilla(idx);
-        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
-        if (!cuerpoActual) return;
+    const fNom = (str) => {
+        if (!str || str.includes('--') || str.includes('ELEGIR') || str.includes('ASIGNAR')) return '';
+        return str.split('(')[0].trim();
+    };
 
-        // Clonar el HTML generado por el sistema
-        const divTemp = document.createElement('div');
-        divTemp.innerHTML = cuerpoActual.innerHTML;
+    // 2. Renderizar texto plano respetando la estructura completa
+    programa.forEach((sem) => {
+        let filasHTML = '';
 
-        // Transformar todos los <select> en texto estático
-        divTemp.querySelectorAll('select').forEach(sel => {
-            const opcion = sel.options[sel.selectedIndex];
-            let val = opcion ? (opcion.text || opcion.value) : '';
-            
-            // Limpiar valores vacíos o alertas del sistema como "(1 ASIG. ACTIVA)"
-            if (val.includes('--') || val.includes('ELEGIR') || val.includes('ASIGNAR')) {
-                val = '';
-            } else {
-                val = val.split('(')[0].trim();
+        filasHTML += `
+            <tr>
+                <td class="c-tiempo">1 min</td>
+                <td class="font-medium" colspan="2">Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">${fNom(sem.presidencia)}</td>
+            </tr>
+            <tr>
+                <td class="c-tiempo"></td>
+                <td class="font-medium" colspan="2">Oración</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">${fNom(sem.oracionIni)}</td>
+            </tr>
+        `;
+
+        let tHeader = false, mHeader = false, vHeader = false;
+
+        (sem.partes || []).forEach(p => {
+            if (p.seccion === 'tesoros' && !tHeader) {
+                filasHTML += `<tr><th class="bg-tesoros text-white c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th><th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase">Tesoros de la Biblia</th></tr>`;
+                tHeader = true;
+            } else if (p.seccion === 'maestros' && !mHeader) {
+                filasHTML += `<tr><th class="bg-maestros text-white c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th><th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase">Seamos mejores maestros</th></tr>`;
+                mHeader = true;
+            } else if (p.seccion === 'vida' && !vHeader) {
+                filasHTML += `
+                    <tr><th class="bg-vida text-white c-tiempo py-1"><img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja"></th><th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase">Nuestra vida cristiana</th></tr>
+                    <tr><td class="px-2 font-bold" colspan="10">Canción Nº: ${sem.canciones?.[1] || ''}</td></tr>
+                `;
+                vHeader = true;
             }
 
-            const span = document.createElement('span');
-            span.className = 'font-black uppercase text-amber-950 text-xs text-center block w-full';
-            span.textContent = val;
-            sel.parentNode.replaceChild(span, sel);
+            let celdasNombres = '';
+            const numSalas = sem.numSalas || 1;
+
+            if (numSalas === 2 && p.seccion === 'maestros') {
+                celdasNombres = `
+                    <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
+                        ${fNom(p.asig)} ${fNom(p.asigAyudante) ? '/ ' + fNom(p.asigAyudante) : ''}
+                    </td>
+                    <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs">
+                        ${fNom(p.asigB)} ${fNom(p.asigBAyudante) ? '/ ' + fNom(p.asigBAyudante) : ''}
+                    </td>
+                `;
+            } else if (numSalas === 3 && p.seccion === 'maestros') {
+                celdasNombres = `
+                    <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">${fNom(p.asig)}</td>
+                    <td colspan="2" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs border-r border-slate-300">${fNom(p.asigB)}</td>
+                    <td colspan="2" class="font-black uppercase text-amber-950 bg-amber-200/50 text-center text-xs">${fNom(p.asigC)}</td>
+                `;
+            } else {
+                celdasNombres = `
+                    <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                        ${fNom(p.asig)} ${fNom(p.asigAyudante) ? '/ ' + fNom(p.asigAyudante) : ''}
+                    </td>
+                `;
+            }
+
+            filasHTML += `
+                <tr>
+                    <td class="c-tiempo">${p.t || ''}</td>
+                    <td class="font-medium px-2">${p.tit || ''}</td>
+                    <td class="text-slate-600 px-2">${p.desc || ''}</td>
+                    ${celdasNombres}
+                </tr>
+            `;
         });
 
-        // Quitar edición y botones sobrantes
-        divTemp.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
-        divTemp.querySelectorAll('.btn-accion-tabla, button, .whatsapp-link').forEach(el => el.remove());
+        filasHTML += `
+            <tr>
+                <td class="c-tiempo">3 min</td>
+                <td class="font-medium px-2" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">${fNom(sem.repaso)}</td>
+            </tr>
+            <tr>
+                <td class="c-tiempo"></td>
+                <td class="font-medium px-2" colspan="2">Canción y oración: 38</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">${fNom(sem.oracionFin)}</td>
+            </tr>
+            <tr class="border-t-2 border-slate-900 bg-slate-50/50">
+                <td class="px-2 font-bold py-1.5" colspan="3">Domingo, presidencia: ${fNom(sem.domPresi)}</td>
+                <td class="px-2 font-bold py-1.5 text-right" colspan="7">Lector: ${fNom(sem.domLector)}</td>
+            </tr>
+        `;
 
         htmlPublico += `
             <div class="mb-8">
-                <table class="tabla-semana-publica">
+                <table class="tabla-semana-publica border border-slate-900 w-full">
                     <thead>
                         <tr>
                             <th colspan="10" class="py-1.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-sm text-slate-900">
-                                Semana del ${sem.semana || sem.fecha || '---'} ${sem.lectura ? ', ' + sem.lectura : ''}
+                                Semana del ${sem.semana || '---'} ${sem.lectura ? ', ' + sem.lectura : ''}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${divTemp.innerHTML}
+                        ${filasHTML}
                     </tbody>
                 </table>
             </div>
@@ -1461,7 +1520,7 @@ async function cargarYRenderizarMesPublico(mes) {
 
     areaPrint.innerHTML = htmlPublico;
 }
-// Suscripción Realtime para actualizar la pantalla sin refrescar cuando edites
+
 function suscribirRealtimeMesPublico(mes) {
     supabaseClient
         .channel('publico-planillas')
