@@ -74,7 +74,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
     if (cabecera) {
         cabecera.innerHTML = `
             <tr>
-                <th colspan="10" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
+                <th colspan="11" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                     <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                         <span>Semana del</span>
                         <input type="text" value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[200px]" placeholder="FECHA">
@@ -220,6 +220,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     ${crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia: Palabras de introducción', 'Sala Principal')}
                 </div>
             </td>
+            <td class="no-print text-center w-8"></td>
         </tr>
         <tr class="h-6">
             <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
@@ -230,6 +231,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     ${crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración Inicial', 'Sala Principal')}
                 </div>
             </td>
+            <td class="no-print text-center w-8"></td>
         </tr>
     `;
 
@@ -240,7 +242,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
+                    <th colspan="10" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
                 </tr>
             `;
             renderizoTesorosHeader = true;
@@ -248,14 +250,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
             filasHTML += `
                 <tr>
                     <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
+                    <th colspan="10" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
                 </tr>
             `;
             renderizoMaestrosHeader = true;
         } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
             filasHTML += `
                 <tr class="no-print bg-amber-50/50">
-                    <td colspan="10" class="p-1 text-center">
+                    <td colspan="11" class="p-1 text-center">
                         <button onclick="agregarFilaMaestros()" class="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded border border-amber-300 transition">
                             <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Seamos Mejores Maestros
                         </button>
@@ -265,10 +267,10 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     <th class="bg-vida text-white text-center c-tiempo py-1">
                         <img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja">
                     </th>
-                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
+                    <th colspan="10" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                    <td class="px-2 font-bold editable-field" colspan="11" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                         Canción Nº: ${sem.canciones?.[1] || ''}
                     </td>
                 </tr>
@@ -292,6 +294,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
+                        <td class="no-print text-center w-8"></td>
                     </tr>
                 `;
             } else {
@@ -306,6 +309,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                                 ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
                             </div>
                         </td>
+                        <td class="no-print text-center w-8"></td>
                     </tr>
                 `;
             }
@@ -314,12 +318,12 @@ window.cargarSemanaEnPlanilla = function(idx) {
             filasHTML += `
                 <tr class="group">
                     <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium editable-field relative" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">
-                        <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-1 -left-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[12px] z-20 cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
-                        ${item.tit}
-                    </td>
+                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                     <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
+                    <td class="no-print text-center w-8 align-middle">
+                        <button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                    </td>
                 </tr>
             `;
         } 
@@ -328,16 +332,16 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 filasHTML += `
                     <tr class="group">
                         <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field relative" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">
-                            <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-1 -left-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[12px] z-20 cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
-                            ${item.tit}
-                        </td>
+                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="7">
                             <div class="flex items-center justify-between w-full gap-1">
                                 ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
                                 ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
                             </div>
+                        </td>
+                        <td class="no-print text-center w-8 align-middle">
+                            <button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
                         </td>
                     </tr>
                 `;
@@ -347,7 +351,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
 
     filasHTML += `
         <tr class="no-print bg-slate-50">
-            <td colspan="10" class="p-1 text-center">
+            <td colspan="11" class="p-1 text-center">
                 <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
                     <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
                 </button>
@@ -368,6 +372,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo font-bold text-blue-900 bg-blue-50/50">30 min</td>
@@ -380,6 +385,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', 'Discurso del superintendente de circuito', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
@@ -392,6 +398,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
         `;
     } else {
@@ -410,6 +417,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(itemEB.asig, itemEB.asigAyudante, itemEB.tit, 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
@@ -419,6 +427,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(itemEB.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
@@ -429,6 +438,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
@@ -440,6 +450,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
         `;
     }
@@ -450,7 +461,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <th class="bg-[#7ca2d3] text-white text-center c-tiempo py-1">
                     <img src="Torre.png" class="w-4 h-4 mx-auto object-contain" alt="Torre">
                 </th>
-                <th colspan="9" class="bg-[#7ca2d3] text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
+                <th colspan="10" class="bg-[#7ca2d3] text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
                     Reunión de fin de semana
                 </th>
             </tr>
@@ -464,6 +475,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
@@ -476,10 +488,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', 'Discurso público', 'Reunión Pública')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="9" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Canción Nº ${sem.cancionDomMid || ''}
                 </td>
             </tr>
@@ -494,6 +507,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
@@ -506,10 +520,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', 'Discurso final', 'Reunión Pública')}
                     </div>
                 </td>
+                <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="9" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Canción Nº ${sem.cancionDomFin || ''} y oración
                 </td>
             </tr>
@@ -524,7 +539,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
                     </div>
                 </td>
-                <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="7" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="8" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Lector: 
                     <div class="inline-flex items-center ml-2 text-left w-48 gap-1">
                         ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
