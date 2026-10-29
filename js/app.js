@@ -1220,7 +1220,7 @@ window.cambiarPestaña = function(tab) {
     }
 };
 
-/* IMPRESIÓN A4 EN BLOQUES PARES (2 SEMANAS POR PÁGINA FIX) */
+/* IMPRESIÓN A4: 2 SEMANAS POR PÁGINA (ESTRUCTURA CORREGIDA) */
 window.prepararEImprimir = function() {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) {
@@ -1229,20 +1229,27 @@ window.prepararEImprimir = function() {
     }
 
     const contenidoOriginal = areaPrint.innerHTML;
-    let htmlTotalPrint = `<div class="text-center mb-2 border-b-2 border-slate-900 pb-1">
-        <h2 class="text-base font-black text-slate-900 uppercase tracking-widest">
-            PROGRAMA DE REUNIONES - MES DE ${nombreMesGlobal || "---"}
-        </h2>
-    </div>`;
+    let htmlTotalPrint = '';
 
-    // Agrupar las semanas de a 2 por hoja
+    // Agrupar semanas de a 2 por hoja
     for (let i = 0; i < programaMes.length; i += 2) {
-        htmlTotalPrint += `<div class="bloque-pagina-print">`;
+        htmlTotalPrint += `<div class="hoja-print">`;
 
-        // Primera semana del par (Semana 1, 3, 5...)
+        // Solo incluir el título del mes dentro de la PRIMERA hoja
+        if (i === 0) {
+            htmlTotalPrint += `
+                <div class="text-center mb-2 border-b-2 border-slate-900 pb-1">
+                    <h2 class="text-sm font-black text-slate-900 uppercase tracking-widest">
+                        PROGRAMA DE REUNIONES - MES DE ${nombreMesGlobal || "---"}
+                    </h2>
+                </div>
+            `;
+        }
+
+        // Primera semana del par
         htmlTotalPrint += generarHTMLSemanaImpresion(i);
 
-        // Segunda semana del par si existe (Semana 2, 4, 6...)
+        // Segunda semana del par (si existe)
         if (i + 1 < programaMes.length) {
             htmlTotalPrint += generarHTMLSemanaImpresion(i + 1);
         }
