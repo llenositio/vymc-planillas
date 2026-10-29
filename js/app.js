@@ -1378,47 +1378,57 @@ async function cargarYRenderizarMesPublico(mes) {
     const areaPrint = document.querySelector('.print-area');
     if (!areaPrint) return;
 
-    // Buscar el mes en Supabase
+    const mesBuscado = mes.trim().toUpperCase();
+
+    // 1. Obtener la planilla buscando por la columna 'mes_ano'
     const { data, error } = await supabaseClient
         .from('planillas')
         .select('*')
-        .eq('mes', mes.toUpperCase())
-        .single();
+        .ilike('mes_ano', mesBuscado)
+        .maybeSingle();
 
-    if (error || !data || !data.programa_json) {
-        areaPrint.innerHTML = `<div class="p-8 text-center text-rose-600 font-bold">No se encontró información publicada para el mes: ${mes}</div>`;
+    if (error || !data) {
+        areaPrint.innerHTML = `<div class="p-8 text-center text-rose-600 font-bold text-lg">No se encontró información publicada para el mes: ${mes}</div>`;
         return;
     }
 
-    const programa = data.programa_json;
+    // 2. Extraer el array JSON almacenado en la columna 'datos'
+    const semanas = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+
+    if (!Array.isArray(semanas) || semanas.length === 0) {
+        areaPrint.innerHTML = `<div class="p-8 text-center text-amber-600 font-bold text-lg">El mes ${mes} no tiene información guardada.</div>`;
+        return;
+    }
+
     let htmlPublico = `
         <div class="text-center mb-6 border-b-2 border-slate-900 pb-2">
             <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">
-                PROGRAMA DE REUNIONES - MES DE ${mes.toUpperCase()}
+                PROGRAMA DE REUNIONES - MES DE ${data.mes_ano || mesBuscado}
             </h2>
         </div>
     `;
 
-    // Renderizar TODAS las semanas completas a color en secuencia
-    programa.forEach((sem, idx) => {
-        programaMes = programa; // Asignar temporalmente para que cargarSemanaEnPlanilla obtenga datos
-        cargarSemanaEnPlanilla(idx);
-        
-        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
-        const htmlCuerpo = cuerpoActual ? cuerpoActual.innerHTML : '';
+    // 3. Renderizar cada semana en modo SOLO LECTURA a color
+    semanas.forEach((sem) => {
+        let filasHTML = '';
+        const partes = sem.partes || sem.filas || [];
 
-        // Reemplazar selects editables por texto estático limpio para vista pública
-        const divLimpio = document.createElement('div');
-        divLimpio.innerHTML = htmlCuerpo;
-        divLimpio.querySelectorAll('select').forEach(sel => {
-            const val = sel.options[sel.selectedIndex]?.text || '';
-            const span = document.createElement('span');
-            span.className = 'font-bold uppercase text-amber-900 text-xs';
-            span.textContent = val.includes('--') ? '' : val;
-            sel.parentNode.replaceChild(span, sel);
-        });
-        divLimpio.querySelectorAll('[contenteditable]').forEach(el => {
-            el.removeAttribute('contenteditable');
+        partes.forEach(parte => {
+            const asignado = parte.asig || parte.asignado || '';
+            const esVacio = !asignado || asignado.includes('--') || asignado.includes('ELEGIR') || asignado.includes('ASIGNAR');
+            // Limpia alertas como "(2 ASIG. ACTIVA)" para la vista pública
+            const textoAsignado = esVacio ? '' : asignado.split('(')[0].trim();
+
+            filasHTML += `
+                <tr>
+                    <td class="c-tiempo">${parte.t || parte.tiempo || ''}</td>
+                    <td class="font-bold text-slate-800">${parte.tit || parte.titulo || ''}</td>
+                    <td class="text-slate-600">${parte.desc || parte.descripcion || ''}</td>
+                    <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                        ${textoAsignado}
+                    </td>
+                </tr>
+            `;
         });
 
         htmlPublico += `
@@ -1438,13 +1448,13 @@ async function cargarYRenderizarMesPublico(mes) {
                     </colgroup>
                     <thead>
                         <tr>
-                            <th colspan="10" class="py-1 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-sm text-slate-900">
-                                Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
+                            <th colspan="10" class="py-1.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-sm text-slate-900">
+                                Semana del ${sem.semana || sem.fecha || '---'} ${sem.lectura ? ', ' + sem.lectura : ''}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${divLimpio.innerHTML}
+                        ${filasHTML}
                     </tbody>
                 </table>
             </div>
@@ -1453,12 +1463,11 @@ async function cargarYRenderizarMesPublico(mes) {
 
     areaPrint.innerHTML = htmlPublico;
 }
-
 // Suscripción Realtime para actualizar la pantalla sin refrescar cuando edites
 function suscribirRealtimeMesPublico(mes) {
     supabaseClient
         .channel('publico-planillas')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'planillas', filter: `mes=eq.${mes.toUpperCase()}` }, () => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'planillas', filter: `mes_ano=eq.${mes.toUpperCase()}` }, () => {
             cargarYRenderizarMesPublico(mes);
         })
         .subscribe();
