@@ -12,48 +12,47 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Fuente Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
+   <style>
         *, ::before, ::after { box-sizing: border-box !important; }
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
         .bg-tesoros { background-color: #164e63; }
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        #tablaPlanillaCompleta, .tabla-semana-print { 
+        /* PLANILLA EN PANTALLA (TAMAÑO MÁS GRANDE Y CÓMODO) */
+        #tablaPlanillaCompleta, .tabla-semana-publica { 
             border-collapse: collapse !important; 
             width: 100% !important; 
             table-layout: fixed !important; 
             background-color: white; 
-            border: 1.5px solid #000 !important;
-            margin-bottom: 0.8rem;
+            border: 2px solid #0f172a !important;
+            margin-bottom: 1.5rem;
         }
 
         .c-tiempo { 
-            width: 38px !important; 
-            min-width: 38px !important;
-            max-width: 38px !important;
+            width: 45px !important; 
+            min-width: 45px !important;
+            max-width: 45px !important;
             text-align: center !important;
             white-space: nowrap !important;
             font-weight: bold !important;
-            font-size: 9.5px !important;
-            padding: 1px !important;
+            font-size: 11px !important;
+            padding: 3px !important;
             overflow: hidden !important;
         }
 
-        /* REGLAS ESPECÍFICAS DE PLANILLA Y MATRIZ DE HERMANOS */
         #tablaPlanillaCompleta td, #tablaPlanillaCompleta th,
-        .tabla-semana-print td, .tabla-semana-print th,
+        .tabla-semana-publica td, .tabla-semana-publica th,
         .excel-table td, .excel-table th { 
-            border: 1px solid #475569 !important; 
-            padding: 1px 2px !important; 
-            font-size: 9.5px !important; 
-            line-height: 1.15 !important;
+            border: 1px solid #64748b !important; 
+            padding: 4px 6px !important; 
+            font-size: 11px !important; 
+            line-height: 1.25 !important;
             word-wrap: break-word; 
             overflow: hidden; 
             vertical-align: middle;
         }
 
-        /* REGLAS EXCLUSIVAS DE ALTA LEGIBILIDAD PARA ESTADÍSTICAS */
         #contenedorTablaHistorial td, #contenedorTablaHistorial th {
             padding: 10px 6px !important;
             font-size: 13px !important;
@@ -64,10 +63,10 @@
 
         .editable-field {
             outline: none;
-            color: #64748b !important;
+            color: #475569 !important;
             transition: color 0.2s, background-color 0.2s;
             border-radius: 2px;
-            padding: 1px 2px;
+            padding: 2px 4px;
             cursor: text;
         }
         .editable-field:focus {
@@ -83,8 +82,8 @@
             border: none; 
             outline: none; 
             cursor: pointer; 
-            padding: 0 !important; 
-            font-size: 9px !important; 
+            padding: 1px !important; 
+            font-size: 10px !important; 
             text-transform: uppercase;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -102,7 +101,25 @@
             text-align: center;
         }
 
-      /* IMPRESIÓN A4 REGULADA */
+        /* VISTA PÚBLICA (TABLERO) */
+        body.modo-publico {
+            background-color: #ffffff !important;
+        }
+        body.modo-publico header,
+        body.modo-publico .no-print,
+        body.modo-publico #modalLogin,
+        body.modo-publico .btn-accion-tabla {
+            display: none !important;
+        }
+        body.modo-publico .print-area {
+            max-width: 1000px !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 10px !important;
+        }
+
+        /* IMPRESIÓN A4 REGULADA */
         @media print {
             @page { 
                 size: A4 portrait; 
@@ -120,7 +137,6 @@
                 padding: 0 !important; 
             }
 
-            /* Contenedor de cada hoja física de 2 semanas */
             .hoja-print {
                 page-break-after: always !important;
                 break-after: page !important;
