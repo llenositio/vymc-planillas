@@ -1,5 +1,5 @@
 /**
- * Módulo de Integración con Supabase + Autenticación Multi-Inquilino
+ * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Super Admin Selector
  */
 
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
@@ -22,9 +22,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function cargarPerfilUsuario(user) {
     window.usuarioActual = user;
     
+    // Consultamos congregacion_id Y rol
     const { data, error } = await db
         .from('perfiles')
-        .select('congregacion_id')
+        .select('congregacion_id, rol')
         .eq('id', user.id)
         .single();
 
@@ -38,9 +39,63 @@ async function cargarPerfilUsuario(user) {
     window.congregacionIdActual = data.congregacion_id;
     mostrarPantallaLogin(false);
 
+    // Si es Super Admin, renderizar el menú selector de congregaciones
+    if (data.rol === 'super_admin') {
+        await renderizarSelectorSuperAdmin();
+    }
+
+    // Cargar datos iniciales
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
 }
+
+/**
+ * Renderiza el menú desplegable para el Super Admin
+ */
+async function renderizarSelectorSuperAdmin() {
+    const contenedor = document.getElementById('selector-congregacion-container');
+    if (!contenedor) return;
+
+    // Obtener todas las congregaciones
+    const { data: congregaciones, error } = await db
+        .from('congregaciones')
+        .select('id, nombre')
+        .order('nombre', { ascending: true });
+
+    if (error || !congregaciones || congregaciones.length === 0) return;
+
+    // Si por alguna razón el super admin no tiene congregacionIdActual fijado, tomamos la primera
+    if (!window.congregacionIdActual && congregaciones.length > 0) {
+        window.congregacionIdActual = congregaciones[0].id;
+    }
+
+    let opciones = congregaciones.map(c => 
+        `<option value="${c.id}" ${c.id === window.congregacionIdActual ? 'selected' : ''}>${c.nombre}</option>`
+    ).join('');
+
+    contenedor.innerHTML = `
+        <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-xl text-xs border border-slate-700 shadow-inner">
+            <span class="font-extrabold text-amber-400 flex items-center gap-1">
+                <i class="fa-solid fa-building-columns"></i> Congre:
+            </span>
+            <select id="selectCongreSuperAdmin" onchange="cambiarCongregacionSuperAdmin(this.value)" class="bg-slate-900 text-white font-bold rounded-lg px-2 py-1 outline-none border border-slate-600 cursor-pointer hover:border-amber-500 transition">
+                ${opciones}
+            </select>
+        </div>
+    `;
+}
+
+/**
+ * Cambia la congregación activa para el Super Admin y recarga la pantalla
+ */
+window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
+    window.congregacionIdActual = nuevaCongreId;
+    console.log("Cambiando vista a congregación ID:", nuevaCongreId);
+
+    // Recargar hermanos y planilla para la nueva congregación seleccionada
+    if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
+    if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+};
 
 window.iniciarSesion = async function(email, password) {
     const btn = document.getElementById('btnLogin');
@@ -64,6 +119,11 @@ window.cerrarSesion = async function() {
     window.congregacionIdActual = null;
     window.listaHermanos = [];
     window.programaMes = [];
+    
+    // Limpiar selector si existía
+    const contenedor = document.getElementById('selector-congregacion-container');
+    if (contenedor) contenedor.innerHTML = '';
+
     mostrarPantallaLogin(true);
 };
 
@@ -85,6 +145,7 @@ window.cargarHermanosDesdeSupabase = async function() {
     const { data, error } = await db
         .from('hermanos')
         .select('*')
+        .eq('congregacion_id', window.congregacionIdActual)
         .order('nombre', { ascending: true });
 
     if (error) {
@@ -156,6 +217,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
     const { data, error } = await db
         .from('planillas')
         .select('*')
+        .eq('congregacion_id', window.congregacionIdActual)
         .eq('mes_ano', mesBuscado)
         .maybeSingle();
 
@@ -173,6 +235,10 @@ window.cargarPlanillaDesdeSupabase = async function() {
 
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
         if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
+    } else {
+        // Si no hay planilla creada para esta congregación en este mes, reiniciamos vista local
+        window.programaMes = [];
+        if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
     }
 };
 
@@ -198,7 +264,7 @@ window.guardarPlanillaEnSupabase = async function() {
 
     const { data, error } = await db
         .from('planillas')
-        .upsert(payload, { onConflict: 'mes_ano' })
+        .upsert(payload, { onConflict: 'mes_ano,congregacion_id' })
         .select();
 
     if (error) {
