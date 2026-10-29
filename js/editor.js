@@ -210,7 +210,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
 
     let filasHTML = `
         <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
+            <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                 Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
             </td>
@@ -222,7 +222,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </td>
         </tr>
         <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
+            <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Oración</td>
             <td class="px-2 col-asig" colspan="7">
                 <div class="flex items-center justify-between w-full gap-1">
@@ -289,7 +289,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             if (item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
                     </tr>
@@ -297,7 +297,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
                         <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="7">
@@ -313,8 +313,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
         else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr class="group">
-                    <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                    <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium editable-field relative" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">
+                        <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-1 -left-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[12px] z-20 cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                        ${item.tit}
+                    </td>
                     <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
                 </tr>
@@ -324,8 +327,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
             if (!item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr class="group">
-                        <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium editable-field relative" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">
+                            <button onclick="eliminarFilaParte(${pIndex})" class="no-print absolute top-1 -left-2 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 text-[12px] z-20 cursor-pointer" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                            ${item.tit}
+                        </td>
                         <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="7">
                             <div class="flex items-center justify-between w-full gap-1">
@@ -352,7 +358,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
     if (esViajante) {
         filasHTML += `
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Repaso de esta reunión y adelanto de la próxima.
                 </td>
@@ -376,7 +382,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Canción y oración: 38
                 </td>
@@ -394,7 +400,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
         
         filasHTML += `
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
                     ${itemEB.tit}
                 </td>
@@ -415,7 +421,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
@@ -460,7 +466,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscPub', this.innerText)">
                     ${sem.temaDiscPub || 'Discurso público:'}
                 </td>
@@ -472,13 +478,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
                 <td class="px-2 font-medium editable-field" colspan="9" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Canción Nº ${sem.cancionDomMid || ''}
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaAtalaya', this.innerText)">
                     ${sem.temaAtalaya || 'La Atalaya:'}
                 </td>
@@ -490,7 +496,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscFin', this.innerText)">
                     ${sem.temaDiscFin || 'Discurso final:'}
                 </td>
@@ -502,7 +508,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-800 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
                 <td class="px-2 font-medium editable-field" colspan="9" contenteditable="true" onpaste="limpiarTextoPegado(event)">
                     Canción Nº ${sem.cancionDomFin || ''} y oración
                 </td>
