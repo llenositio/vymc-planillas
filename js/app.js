@@ -1349,3 +1349,117 @@ window.buscarYCargarPlanillaHistorial = async function() {
         console.error("Error al reabrir planilla:", e);
     }
 };
+
+/* ===================================================
+   LÓGICA DE VISTA PÚBLICA VÍA LINK Y REALTIME
+=================================================== */
+
+// Detectar parámetro ?vista=publica&mes=NOVIEMBRE%202026 al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const esVistaPublica = params.get('vista') === 'publica';
+    const mesSolicitado = params.get('mes');
+
+    if (esVistaPublica && mesSolicitado) {
+        activarModoPublico(mesSolicitado);
+    }
+});
+
+async function activarModoPublico(mes) {
+    document.body.classList.add('modo-publico');
+    const modalLogin = document.getElementById('modalLogin');
+    if (modalLogin) modalLogin.remove();
+
+    await cargarYRenderizarMesPublico(mes);
+    suscribirRealtimeMesPublico(mes);
+}
+
+async function cargarYRenderizarMesPublico(mes) {
+    const areaPrint = document.querySelector('.print-area');
+    if (!areaPrint) return;
+
+    // Buscar el mes en Supabase
+    const { data, error } = await supabaseClient
+        .from('planillas')
+        .select('*')
+        .eq('mes', mes.toUpperCase())
+        .single();
+
+    if (error || !data || !data.programa_json) {
+        areaPrint.innerHTML = `<div class="p-8 text-center text-rose-600 font-bold">No se encontró información publicada para el mes: ${mes}</div>`;
+        return;
+    }
+
+    const programa = data.programa_json;
+    let htmlPublico = `
+        <div class="text-center mb-6 border-b-2 border-slate-900 pb-2">
+            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-widest">
+                PROGRAMA DE REUNIONES - MES DE ${mes.toUpperCase()}
+            </h2>
+        </div>
+    `;
+
+    // Renderizar TODAS las semanas completas a color en secuencia
+    programa.forEach((sem, idx) => {
+        programaMes = programa; // Asignar temporalmente para que cargarSemanaEnPlanilla obtenga datos
+        cargarSemanaEnPlanilla(idx);
+        
+        const cuerpoActual = document.getElementById('cuerpoTablaPlanilla');
+        const htmlCuerpo = cuerpoActual ? cuerpoActual.innerHTML : '';
+
+        // Reemplazar selects editables por texto estático limpio para vista pública
+        const divLimpio = document.createElement('div');
+        divLimpio.innerHTML = htmlCuerpo;
+        divLimpio.querySelectorAll('select').forEach(sel => {
+            const val = sel.options[sel.selectedIndex]?.text || '';
+            const span = document.createElement('span');
+            span.className = 'font-bold uppercase text-amber-900 text-xs';
+            span.textContent = val.includes('--') ? '' : val;
+            sel.parentNode.replaceChild(span, sel);
+        });
+        divLimpio.querySelectorAll('[contenteditable]').forEach(el => {
+            el.removeAttribute('contenteditable');
+        });
+
+        htmlPublico += `
+            <div class="mb-8">
+                <table class="tabla-semana-publica">
+                    <colgroup>
+                        <col class="c-tiempo">
+                        <col style="width: 25% !important;">
+                        <col style="width: 35% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                        <col style="width: 5% !important;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th colspan="10" class="py-1 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-sm text-slate-900">
+                                Semana del ${sem.semana || '---'} , ${sem.lectura || '---'}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${divLimpio.innerHTML}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    });
+
+    areaPrint.innerHTML = htmlPublico;
+}
+
+// Suscripción Realtime para actualizar la pantalla sin refrescar cuando edites
+function suscribirRealtimeMesPublico(mes) {
+    supabaseClient
+        .channel('publico-planillas')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'planillas', filter: `mes=eq.${mes.toUpperCase()}` }, () => {
+            cargarYRenderizarMesPublico(mes);
+        })
+        .subscribe();
+}
