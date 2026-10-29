@@ -2,7 +2,7 @@
  * Módulo de Integración con Supabase + Autenticación Multi-Inquilino
  */
 
-// Reemplaza estas constantes con tus credenciales reales de Supabase
+// Credenciales de Supabase
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-";
 
@@ -153,10 +153,14 @@ window.eliminarHermanoBD = async function(id) {
 window.cargarPlanillaDesdeSupabase = async function() {
     if (!window.congregacionIdActual) return;
 
+    // Detectar el mes ingresado o consultar "ACTUAL" por defecto
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesBuscado = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
+
     const { data, error } = await db
         .from('planillas')
         .select('*')
-        .limit(1)
+        .eq('mes_ano', mesBuscado)
         .maybeSingle();
 
     if (error) {
@@ -165,10 +169,9 @@ window.cargarPlanillaDesdeSupabase = async function() {
     }
 
     if (data) {
-        window.programaMes = data.datos_mes || [];
-        window.nombreMesGlobal = data.nombre_mes || "";
+        window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+        window.nombreMesGlobal = data.mes_ano || "";
         
-        const inputMes = document.getElementById('inputNombreMes');
         if (inputMes) inputMes.value = window.nombreMesGlobal;
         if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
 
@@ -180,22 +183,27 @@ window.cargarPlanillaDesdeSupabase = async function() {
 window.guardarPlanillaEnSupabase = async function() {
     if (!window.congregacionIdActual) return;
 
-    const { data } = await db
+    // Obtener la clave de mes (Ej: "NOVIEMBRE 2026")
+    const inputMes = document.getElementById('inputNombreMes');
+    if (inputMes && inputMes.value.trim()) {
+        window.nombreMesGlobal = inputMes.value.trim().toUpperCase();
+    }
+
+    const mesClave = window.nombreMesGlobal || "ACTUAL";
+
+    // Guardar o actualizar (upsert) en la tabla 'planillas'
+    const { error } = await db
         .from('planillas')
-        .select('id')
-        .limit(1)
-        .maybeSingle();
+        .upsert({
+            mes_ano: mesClave,
+            datos: window.programaMes,
+            congregacion_id: window.congregacionIdActual,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'mes_ano' });
 
-    const payload = {
-        nombre_mes: window.nombreMesGlobal,
-        datos_mes: window.programaMes,
-        congregacion_id: window.congregacionIdActual,
-        actualizado_en: new Date().toISOString()
-    };
-
-    if (data && data.id) {
-        await db.from('planillas').update(payload).eq('id', data.id);
+    if (error) {
+        console.error("Error guardando planilla en Supabase:", error);
     } else {
-        await db.from('planillas').insert([payload]);
+        console.log(`Planilla guardada exitosamente en Supabase bajo mes_ano: ${mesClave}`);
     }
 };
