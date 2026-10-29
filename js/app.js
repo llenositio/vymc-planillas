@@ -1381,8 +1381,16 @@ async function cargarYRenderizarMesPublico(mes) {
 
     const mesBuscado = mes.trim().toUpperCase();
 
+    // Usar la variable 'db' en lugar de 'supabaseClient'
+    const clienteSupabase = typeof db !== 'undefined' ? db : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+
+    if (!clienteSupabase) {
+        console.error("No se encontró la conexión con Supabase.");
+        return;
+    }
+
     // 1. Consultar Supabase
-    const { data, error } = await supabaseClient
+    const { data, error } = await clienteSupabase
         .from('planillas')
         .select('*')
         .ilike('mes_ano', mesBuscado)
@@ -1522,7 +1530,10 @@ async function cargarYRenderizarMesPublico(mes) {
 }
 
 function suscribirRealtimeMesPublico(mes) {
-    supabaseClient
+    const clienteSupabase = typeof db !== 'undefined' ? db : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+    if (!clienteSupabase) return;
+
+    clienteSupabase
         .channel('publico-planillas')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'planillas', filter: `mes_ano=eq.${mes.toUpperCase()}` }, () => {
             cargarYRenderizarMesPublico(mes);
