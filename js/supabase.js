@@ -18,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // SI CONTIENE PARÁMETRO DE CONGREGACIÓN, ES VISTA PÚBLICA
     if (congreSlugParam) {
-        document.body.classList.add('modo-publico');
+        document.body.classList.add('modo-publico'); // Oculta interfaz de edición[cite: 1]
         mostrarPantallaLogin(false);
         await cargarPlanillaVistaPublica(congreSlugParam, mesParam);
         return;
@@ -51,7 +51,6 @@ async function cargarPlanillaVistaPublica(slug, mes) {
         return;
     }
 
-    // Buscar coincidencia limpia omitiendo espacios y mayúsculas
     const slugLimpio = slug.toLowerCase().replace(/\s+/g, '');
     let congreEncontrada = congregaciones.find(c => 
         c.nombre.toLowerCase().replace(/\s+/g, '') === slugLimpio || c.id === slug
@@ -240,10 +239,15 @@ window.actualizarLinkPublico = function() {
     const inputLink = document.getElementById('inputLinkPublico');
     if (!inputLink) return;
 
-    const mesTexto = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase().replace(/\s+/g, '-') : 'ACTUAL';
-    const congreSlug = window.slugCongregacionActual || 'default';
+    // Lee preferentemente el valor escrito en la casilla MES
+    let mesTexto = (inputMes && inputMes.value.trim()) ? inputMes.value.trim() : (window.nombreMesGlobal || 'ACTUAL');
+    
+    // Formatea con guiones y mayúsculas
+    mesTexto = mesTexto.toUpperCase().replace(/\s+/g, '-');
 
+    const congreSlug = window.slugCongregacionActual || 'default';
     const urlBase = window.location.origin + window.location.pathname;
+
     inputLink.value = `${urlBase}?c=${encodeURIComponent(congreSlug)}&m=${encodeURIComponent(mesTexto)}`;
 };
 
