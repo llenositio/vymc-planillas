@@ -270,3 +270,44 @@ function calcularConteosCombinados() {
 
     return res;
 }
+
+/**
+ * FASE 1: Motor de Cálculo de Sugeridos para Roles Individuales
+ * @param {string} tipoAsignacion - Tipo de parte (ej: 'presi', 'oraciones', 'discurso', 'perlas')
+ * @param {Array} candidatos - Lista de hermanos filtrados por condición o matriz
+ * @returns {Array} Candidatos ordenados de MAYOR prioridad a MENOR
+ */
+window.obtenerSugeridosPorRol = function(tipoAsignacion, candidatos) {
+    if (!candidatos || candidatos.length === 0) return [];
+    
+    // Si no se puede calcular conteos, devuelve el orden por defecto
+    const conteos = calcularConteosCombinados();
+    const claveCat = (tipoAsignacion || '').toLowerCase().trim();
+
+    // Mapeamos candidatos con sus métricas
+    const candidatosConMetricas = candidatos.map(hermano => {
+        const stats = conteos[hermano.nombre] || crearEstructuraVacia();
+        
+        // Cantidad de veces que hizo esta categoría en el historial + activo
+        const totalCategoria = stats.hist[claveCat] || 0;
+        // Total general de asignaciones que tiene el hermano
+        const totalGeneral = stats.hist.total || 0;
+
+        return {
+            hermano: hermano,
+            totalCategoria: totalCategoria,
+            totalGeneral: totalGeneral
+        };
+    });
+
+    // Ordenamos: Primero los que menos veces hicieron esta categoría específica;
+    // a igualdad, los que menos asignaciones totales tengan acumuladas.
+    candidatosConMetricas.sort((a, b) => {
+        if (a.totalCategoria !== b.totalCategoria) {
+            return a.totalCategoria - b.totalCategoria;
+        }
+        return a.totalGeneral - b.totalGeneral;
+    });
+
+    return candidatosConMetricas.map(c => c.hermano);
+};
