@@ -56,6 +56,64 @@ window.renderizarSelectorSemanas = function() {
     });
 };
 
+/**
+ * Mapea las categorías de las casillas a las claves del motor de sugerencias
+ */
+function obtenerClaveCatSugerido(cat) {
+    if (cat === 'pres' || cat === 'presPub') return 'presi';
+    if (cat === 'orac') return 'oraciones';
+    if (cat === 'disc') return 'discurso';
+    if (cat === 'perlas') return 'perlas';
+    if (cat === 'lec' || cat === 'smm') return 'smm';
+    if (cat === 'nvc') return 'nvcOtro';
+    if (cat === 'eb') return 'estudioBiblico';
+    if (cat === 'lectorL') return 'lectorLibro';
+    if (cat === 'lectorW') return 'lectorAtalaya';
+    return '';
+}
+
+/**
+ * FASE 2: Crea el HTML de un <select> ordenado dinámicamente por sugerencias inteligentes
+ */
+function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = 'ELEGIR') {
+    let candidatos = Array.isArray(window.listaHermanos) ? [...window.listaHermanos] : [];
+    
+    // Si existe la función de filtrado por matriz de hermanos, la aplicamos
+    if (typeof filtrarHermanosPorCategoria === 'function' && cat) {
+        candidatos = filtrarHermanosPorCategoria(cat);
+    }
+
+    const claveCat = obtenerClaveCatSugerido(cat);
+
+    // Ordenamos por el motor inteligente de sugerencias de la Fase 1
+    if (claveCat && typeof window.obtenerSugeridosPorRol === 'function') {
+        candidatos = window.obtenerSugeridosPorRol(claveCat, candidatos);
+    }
+
+    const sugeridoPrincipal = candidatos[0] ? candidatos[0].nombre : '';
+
+    // Opción por defecto con Sugerido en gris cuando está vacío
+    let htmlOptions = `<option value="" ${!valorActual ? 'selected' : ''} class="text-slate-400 font-normal">
+        -- ${placeholderDefault} -- ${(!valorActual && sugeridoPrincipal) ? `(Sugerido: ${sugeridoPrincipal})` : ''}
+    </option>`;
+
+    // Opciones de hermanos ordenadas por prioridad
+    candidatos.forEach((h, index) => {
+        const esSeleccionado = h.nombre === valorActual;
+        const esPrimerSugerido = (index === 0 && !valorActual);
+        
+        htmlOptions += `<option value="${h.nombre}" ${esSeleccionado ? 'selected' : ''}>
+            ${h.nombre}${esPrimerSugerido ? ' ★' : ''}
+        </option>`;
+    });
+
+    return `
+        <select id="${idSelect}" onchange="guardarAsignacionSemana('${idSelect}')" class="w-full bg-white text-slate-900 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:border-amber-500 cursor-pointer shadow-sm">
+            ${htmlOptions}
+        </select>
+    `;
+}
+
 window.cargarSemanaEnPlanilla = function(idx) {
     if (!window.programaMes || window.programaMes.length === 0) return;
     window.semanaActivaIdx = idx;
@@ -281,14 +339,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
         let cat = 'smm';
         if (item.seccion === 'tesoros') {
             if (pIndex === 0) cat = 'disc';
-            else if (item.tit.includes('perlas')) cat = 'perlas';
-            else if (item.tit.includes('Lectura')) cat = 'lec';
+            else if (item.tit && item.tit.includes('perlas')) cat = 'perlas';
+            else if (item.tit && item.tit.includes('Lectura')) cat = 'lec';
         } else if (item.seccion === 'vida') {
             cat = 'nvc';
         }
 
         if (item.seccion === 'tesoros') {
-            if (item.tit.includes('Lectura')) {
+            if (item.tit && item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
                         <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
@@ -328,7 +386,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             `;
         } 
         else if (item.seccion === 'vida') {
-            if (!item.tit.includes('Estudio bíblico')) {
+            if (!item.tit || !item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr class="group">
                         <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
