@@ -12,7 +12,7 @@ const ORDEN_CONDICIONES = [
 ];
 
 /**
- * Busca una planilla de un mes anterior en Supabase y la carga en la vista principal
+ * Busca una planilla en el historial y actualiza el visor del editor y el link público
  */
 window.buscarYCargarPlanillaHistorial = async function() {
     const selectMes = document.getElementById('selectFiltroMes');
@@ -20,15 +20,14 @@ window.buscarYCargarPlanillaHistorial = async function() {
     
     if (!selectMes || !selectAnio) return;
 
-    // Formatear el mes buscado (Ej: "NOVIEMBRE 2026")
     const mesBuscado = `${selectMes.value} ${selectAnio.value}`.toUpperCase();
 
-    // 1. Actualizar el input del mes y la variable global
+    // 1. Escribir el mes buscado en el input del editor
     window.nombreMesGlobal = mesBuscado;
     const inputMes = document.getElementById('inputNombreMes');
     if (inputMes) inputMes.value = mesBuscado;
 
-    // 2. Consultar la planilla en Supabase
+    // 2. Consultar la planilla guardada en Supabase
     if (!window.congregacionIdActual) {
         alert("Atención: No hay una congregación activa seleccionada.");
         return;
@@ -54,13 +53,13 @@ window.buscarYCargarPlanillaHistorial = async function() {
         alert(`No se encontró una planilla guardada para ${mesBuscado}. Se mostrará una planilla vacía.`);
     }
 
-    // 3. Renderizar vista de la planilla y cambiar a la pestaña 'planilla'
+    // 3. Renderizar la planilla y cambiar a la pestaña 'planilla'
     if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(mesBuscado);
     if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
     if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
     if (typeof cambiarPestaña === 'function') cambiarPestaña('planilla');
 
-    // 4. Actualizar inmediatamente la URL verde del link público
+    // 4. Actualizar la franja verde del link público
     if (typeof window.actualizarLinkPublico === 'function') {
         window.actualizarLinkPublico();
     }
@@ -95,19 +94,19 @@ window.renderizarTablaHistorial = function() {
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-center border-collapse">
                     <colgroup>
-                        <col class="w-60"> <!-- Hermano: Ancho cómodo para nombres largos -->
-                        <col class="w-24"> <!-- Pres. Vid y Min -->
-                        <col class="w-24"> <!-- Tesoros Disc -->
-                        <col class="w-24"> <!-- Tesoros Perlas -->
-                        <col class="w-24"> <!-- SMM -->
-                        <col class="w-24"> <!-- NVC Nec. Locales -->
-                        <col class="w-24"> <!-- NVC Otro -->
-                        <col class="w-24"> <!-- Lec Libro -->
-                        <col class="w-24"> <!-- Lec Atalaya -->
-                        <col class="w-24"> <!-- Estudio Bíblico -->
-                        <col class="w-24"> <!-- Oraciones -->
-                        <col class="w-24"> <!-- P. Pública -->
-                        <col class="w-28"> <!-- PRESENCIA -->
+                        <col class="w-60">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-24">
+                        <col class="w-28">
                     </colgroup>
                     <thead>
                         <tr class="bg-slate-900 text-white font-extrabold uppercase text-xs tracking-wider border-b border-slate-800">
