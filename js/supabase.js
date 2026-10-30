@@ -344,7 +344,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
         return;
     }
 
-    if (data) {
+    if (data && data.datos) {
         window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
         window.nombreMesGlobal = data.mes_ano || "";
         
@@ -354,8 +354,13 @@ window.cargarPlanillaDesdeSupabase = async function() {
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
         if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
     } else {
-        window.programaMes = [];
+        if (typeof inicializarMesDefault === 'function') {
+            inicializarMesDefault(4);
+        } else {
+            window.programaMes = [];
+        }
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
+        if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
     }
 
     window.actualizarLinkPublico();
