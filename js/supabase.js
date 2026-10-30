@@ -1,5 +1,5 @@
 /**
- * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Super Admin Selector
+ * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Vista Pública
  */
 
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
@@ -10,8 +10,21 @@ window.usuarioActual = null;
 window.congregacionIdActual = null;
 window.slugCongregacionActual = "";
 
-// Verificar sesión al cargar la página
+// Verificar sesión o activar Vista Pública al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const congreSlugParam = urlParams.get('c');
+    const mesParam = urlParams.get('m');
+
+    // SI CONTIENE PARÁMETRO DE CONGREGACIÓN, ES VISTA PÚBLICA
+    if (congreSlugParam) {
+        document.body.classList.add('modo-publico');
+        mostrarPantallaLogin(false);
+        await cargarPlanillaVistaPublica(congreSlugParam, mesParam);
+        return;
+    }
+
+    // MODO ADMINISTRACIÓN (REQUIERE AUTENTICACIÓN)
     const { data: { session } } = await db.auth.getSession();
     if (session) {
         await cargarPerfilUsuario(session.user);
@@ -19,14 +32,67 @@ window.addEventListener('DOMContentLoaded', async () => {
         mostrarPantallaLogin(true);
     }
     
-    // Generar link público inicial si la casilla existe en el HTML
     window.actualizarLinkPublico();
 });
+
+/**
+ * Carga la planilla en modo público sin solicitar credenciales
+ */
+async function cargarPlanillaVistaPublica(slug, mes) {
+    const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
+
+    // 1. Obtener la congregación por coincidencia de nombre o UUID
+    const { data: congregaciones, error: congreError } = await db
+        .from('congregaciones')
+        .select('id, nombre');
+
+    if (congreError || !congregaciones || congregaciones.length === 0) {
+        console.error("Error obteniendo congregaciones para la vista pública");
+        return;
+    }
+
+    // Buscar coincidencia limpia omitiendo espacios y mayúsculas
+    const slugLimpio = slug.toLowerCase().replace(/\s+/g, '');
+    let congreEncontrada = congregaciones.find(c => 
+        c.nombre.toLowerCase().replace(/\s+/g, '') === slugLimpio || c.id === slug
+    );
+
+    if (!congreEncontrada) {
+        console.error("Congregación no encontrada para la vista pública:", slug);
+        return;
+    }
+
+    window.congregacionIdActual = congreEncontrada.id;
+
+    // 2. Cargar la planilla correspondiente
+    const { data: planillaData, error: planillaError } = await db
+        .from('planillas')
+        .select('*')
+        .eq('congregacion_id', congreEncontrada.id)
+        .eq('mes_ano', mesBuscado)
+        .maybeSingle();
+
+    if (planillaError) {
+        console.error("Error cargando planilla pública:", planillaError);
+        return;
+    }
+
+    if (planillaData) {
+        window.programaMes = typeof planillaData.datos === 'string' ? JSON.parse(planillaData.datos) : (planillaData.datos || []);
+        window.nombreMesGlobal = planillaData.mes_ano || mesBuscado;
+
+        if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
+        if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
+        if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
+    } else {
+        window.programaMes = [];
+        if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
+    }
+}
 
 async function cargarPerfilUsuario(user) {
     window.usuarioActual = user;
     
-    // Consultamos congregacion_id Y rol
     const { data, error } = await db
         .from('perfiles')
         .select('congregacion_id, rol')
@@ -43,15 +109,12 @@ async function cargarPerfilUsuario(user) {
     window.congregacionIdActual = data.congregacion_id;
     mostrarPantallaLogin(false);
 
-    // Si es Super Admin, renderizar el menú selector de congregaciones
     if (data.rol === 'super_admin') {
         await renderizarSelectorSuperAdmin();
     } else {
-        // Cargar el slug de la congregación normal
         await obtenerSlugCongregacion(window.congregacionIdActual);
     }
 
-    // Cargar datos iniciales y actualizar el link público
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
     
@@ -82,7 +145,6 @@ async function renderizarSelectorSuperAdmin() {
     const contenedor = document.getElementById('selector-congregacion-container');
     if (!contenedor) return;
 
-    // Obtener todas las congregaciones
     const { data: congregaciones, error } = await db
         .from('congregaciones')
         .select('id, nombre')
@@ -109,7 +171,6 @@ async function renderizarSelectorSuperAdmin() {
         </div>
     `;
 
-    // Guardar el slug activo actual
     const select = document.getElementById('selectCongreSuperAdmin');
     if (select && select.selectedOptions[0]) {
         window.slugCongregacionActual = select.selectedOptions[0].getAttribute('data-nombre').toLowerCase().replace(/\s+/g, '');
@@ -127,7 +188,6 @@ window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
         window.slugCongregacionActual = select.selectedOptions[0].getAttribute('data-nombre').toLowerCase().replace(/\s+/g, '');
     }
 
-    // Recargar hermanos, planilla y actualizar enlace público
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
     window.actualizarLinkPublico();
