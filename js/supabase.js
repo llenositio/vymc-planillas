@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const congreSlugParam = urlParams.get('c');
     const mesParam = urlParams.get('m');
 
-    // SI CONTIENE PARÁMETRO DE CONGREGACIÓN, ES VISTA PÚBLICA
+    // MODO VISTA PÚBLICA (SOLO LECTURA)
     if (congreSlugParam) {
         document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
@@ -31,10 +31,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
         mostrarPantallaLogin(true);
     }
-    
-    // Inicializar escuchador directo sobre el input de Mes
-    inicializarObservadorMes();
-    window.actualizarLinkPublico();
 });
 
 /**
@@ -116,12 +112,10 @@ async function cargarPerfilUsuario(user) {
 
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
-    
-    window.actualizarLinkPublico();
 }
 
 /**
- * Obtiene el nombre/slug de la congregación para armar URLs amigables
+ * Obtiene el slug de la congregación
  */
 async function obtenerSlugCongregacion(id) {
     const { data } = await db
@@ -138,7 +132,7 @@ async function obtenerSlugCongregacion(id) {
 }
 
 /**
- * Renderiza el menú desplegable para el Super Admin
+ * Renderiza el selector para Super Admin
  */
 async function renderizarSelectorSuperAdmin() {
     const contenedor = document.getElementById('selector-congregacion-container');
@@ -176,9 +170,6 @@ async function renderizarSelectorSuperAdmin() {
     }
 }
 
-/**
- * Cambia la congregación activa para el Super Admin y recarga la pantalla
- */
 window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
     window.congregacionIdActual = nuevaCongreId;
     
@@ -189,7 +180,6 @@ window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
 
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
-    window.actualizarLinkPublico();
 };
 
 window.iniciarSesion = async function(email, password) {
@@ -233,13 +223,12 @@ function mostrarPantallaLogin(mostrar) {
     }
 }
 
-/* GENERADOR Y COPIADOR DE LINK PÚBLICO */
+/* GENERADOR Y COPIADOR DE LINK PÚBLICO (100% VISUAL, NO GUARDA BD) */
 window.actualizarLinkPublico = function() {
     const inputMes = document.getElementById('inputNombreMes');
     const inputLink = document.getElementById('inputLinkPublico');
     if (!inputLink) return;
 
-    // Lee de forma directa e incondicional el valor escrito en el DOM
     const textoRaw = inputMes ? inputMes.value : '';
     const mesFormateado = textoRaw.trim() ? textoRaw.trim().toUpperCase().replace(/\s+/g, '-') : 'ACTUAL';
 
@@ -248,27 +237,6 @@ window.actualizarLinkPublico = function() {
 
     inputLink.value = `${urlBase}?c=${encodeURIComponent(congreSlug)}&m=${encodeURIComponent(mesFormateado)}`;
 };
-
-/**
- * Escuchador global de cambios sobre la casilla del Mes
- */
-function inicializarObservadorMes() {
-    const inputMes = document.getElementById('inputNombreMes');
-    if (!inputMes) return;
-
-    // Eventos de interacción directa
-    ['input', 'change', 'keyup', 'paste', 'blur'].forEach(evento => {
-        inputMes.addEventListener(evento, () => {
-            window.actualizarLinkPublico();
-        });
-    });
-
-    // Observador para cambios asignados dinámicamente por JavaScript
-    const observer = new MutationObserver(() => {
-        window.actualizarLinkPublico();
-    });
-    observer.observe(inputMes, { attributes: true, childList: true, characterData: true });
-}
 
 window.copiarLinkPublico = function() {
     const inputLink = document.getElementById('inputLinkPublico');
@@ -357,7 +325,7 @@ window.eliminarHermanoBD = async function(id) {
     if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
 };
 
-/* CARGAR Y GUARDAR PLANILLA MENSUAL */
+/* CARGAR PLANILLA (DESDE EDITOR) */
 window.cargarPlanillaDesdeSupabase = async function() {
     if (!window.congregacionIdActual) return;
 
@@ -393,6 +361,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
     window.actualizarLinkPublico();
 };
 
+/* GUARDAR EN SUPABASE (SOLO AL HACER CLIC EN 'GUARDAR MES') */
 window.guardarPlanillaEnSupabase = async function() {
     if (!window.congregacionIdActual) {
         alert("Error: No hay sesión activa o congregación asignada.");
