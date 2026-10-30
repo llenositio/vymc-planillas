@@ -214,6 +214,18 @@ function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = '
     `;
 }
 
+/**
+ * Guarda los cambios realizados en los números/textos de las canciones de la semana
+ */
+window.guardarCancionSemana = function(index, texto) {
+    const sem = window.programaMes[window.semanaActivaIdx];
+    if (sem) {
+        if (!Array.isArray(sem.canciones)) sem.canciones = [];
+        sem.canciones[index] = texto.trim();
+        notificarYGuardarAutosave();
+    }
+};
+
 window.cargarSemanaEnPlanilla = function(idx) {
     if (!window.programaMes || window.programaMes.length === 0) return;
     window.semanaActivaIdx = idx;
@@ -369,7 +381,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
     let filasHTML = `
         <tr class="h-6">
             <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(0, this.innerText)">
                 Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig" colspan="7">
@@ -428,7 +440,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     <th colspan="10" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold editable-field" colspan="11" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                    <td class="px-2 font-bold editable-field" colspan="11" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(1, this.innerText)">
                         Canción Nº: ${sem.canciones?.[1] || ''}
                     </td>
                 </tr>
@@ -547,7 +559,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
                     Canción y oración: 38
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -599,7 +611,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
                     Canción y oración: 38
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -624,7 +636,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </th>
             </tr>
             <tr>
-                <td class="px-2 font-medium editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomIni', this.innerText)">
                     Presidencia, canción Nº ${sem.cancionDomIni || ''} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -650,7 +662,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomMid', this.innerText)">
                     Canción Nº ${sem.cancionDomMid || ''}
                 </td>
             </tr>
@@ -682,7 +694,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomFin', this.innerText)">
                     Canción Nº ${sem.cancionDomFin || ''} y oración
                 </td>
             </tr>
