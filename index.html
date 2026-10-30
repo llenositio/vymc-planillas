@@ -19,7 +19,7 @@
         .bg-maestros { background-color: #d97706; }
         .bg-vida { background-color: #b91c1c; }
         
-        /* PLANILLA EN PANTALLA (TAMAÑO MÁS GRANDE Y CÓMODO) */
+        /* PLANILLA EN PANTALLA */
         #tablaPlanillaCompleta, .tabla-semana-publica { 
             border-collapse: collapse !important; 
             width: 100% !important; 
@@ -101,14 +101,15 @@
             text-align: center;
         }
 
-        /* VISTA PÚBLICA (TABLERO) */
+        /* VISTA PÚBLICA (ESTILO LECTURA LIMPIA) */
         body.modo-publico {
             background-color: #ffffff !important;
         }
         body.modo-publico header,
         body.modo-publico .no-print,
         body.modo-publico #modalLogin,
-        body.modo-publico .btn-accion-tabla {
+        body.modo-publico .btn-accion-tabla,
+        body.modo-publico .fa-whatsapp {
             display: none !important;
         }
         body.modo-publico .print-area {
@@ -117,6 +118,17 @@
             box-shadow: none !important;
             border: none !important;
             padding: 10px !important;
+        }
+        body.modo-publico .select-asig {
+            pointer-events: none !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            border: none !important;
+            background: transparent !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
         }
 
         /* IMPRESIÓN A4 REGULADA */
@@ -227,7 +239,12 @@
                     <div class="flex items-center gap-3 flex-wrap">
                         <div class="flex items-center gap-2">
                             <span class="text-sm font-extrabold uppercase text-slate-700">Mes:</span>
-                            <input type="text" id="inputNombreMes" placeholder="Ej: NOVIEMBRE 2026" oninput="if(typeof actualizarNombreMes === 'function') actualizarNombreMes(this.value); if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" onchange="if(typeof actualizarNombreMes === 'function') actualizarNombreMes(this.value); if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52">
+                            <input type="text" 
+                                   id="inputNombreMes" 
+                                   placeholder="Ej: NOVIEMBRE 2026" 
+                                   oninput="if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" 
+                                   class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52" 
+                                   value="NOVIEMBRE 2026">
                         </div>
 
                         <!-- BARRA DE LINK PÚBLICO -->
@@ -333,7 +350,7 @@
                     <col style="width: 5% !important;">
                     <col style="width: 5% !important;">
                     <col style="width: 5% !important;">
-                    <col style="width: 30px !important;"> <!-- Columna exclusiva para el botón eliminar -->
+                    <col style="width: 30px !important;">
                     </colgroup>
                     <thead id="cabeceraTablaPlanilla"></thead>
                     <tbody id="cuerpoTablaPlanilla"></tbody>
@@ -341,7 +358,7 @@
             </div>
         </section>
 
-        <!-- HISTORIAL (BUSCADOR POR DESPLEGABLE) -->
+        <!-- HISTORIAL -->
         <section id="sec-historial" class="tab-content hidden max-w-2xl mx-auto my-6 p-6 bg-white rounded-xl shadow-md border border-slate-200">
             <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
                 <i class="fa-solid fa-folder-open text-amber-600"></i> Buscar Planillas de Meses Anteriores
