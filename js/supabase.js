@@ -8,6 +8,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-";
 window.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.usuarioActual = null;
 window.congregacionIdActual = null;
+window.slugCongregacionActual = "";
 
 // Verificar sesión al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
@@ -17,6 +18,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
         mostrarPantallaLogin(true);
     }
+    
+    // Generar link público inicial si la casilla existe en el HTML
+    window.actualizarLinkPublico();
 });
 
 async function cargarPerfilUsuario(user) {
@@ -42,11 +46,33 @@ async function cargarPerfilUsuario(user) {
     // Si es Super Admin, renderizar el menú selector de congregaciones
     if (data.rol === 'super_admin') {
         await renderizarSelectorSuperAdmin();
+    } else {
+        // Cargar el slug de la congregación normal
+        await obtenerSlugCongregacion(window.congregacionIdActual);
     }
 
-    // Cargar datos iniciales
+    // Cargar datos iniciales y actualizar el link público
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+    
+    window.actualizarLinkPublico();
+}
+
+/**
+ * Obtiene el nombre/slug de la congregación para armar URLs amigables
+ */
+async function obtenerSlugCongregacion(id) {
+    const { data } = await db
+        .from('congregaciones')
+        .select('nombre')
+        .eq('id', id)
+        .single();
+
+    if (data && data.nombre) {
+        window.slugCongregacionActual = data.nombre.toLowerCase().replace(/\s+/g, '');
+    } else {
+        window.slugCongregacionActual = id;
+    }
 }
 
 /**
@@ -64,13 +90,12 @@ async function renderizarSelectorSuperAdmin() {
 
     if (error || !congregaciones || congregaciones.length === 0) return;
 
-    // Si por alguna razón el super admin no tiene congregacionIdActual fijado, tomamos la primera
     if (!window.congregacionIdActual && congregaciones.length > 0) {
         window.congregacionIdActual = congregaciones[0].id;
     }
 
     let opciones = congregaciones.map(c => 
-        `<option value="${c.id}" ${c.id === window.congregacionIdActual ? 'selected' : ''}>${c.nombre}</option>`
+        `<option value="${c.id}" data-nombre="${c.nombre}" ${c.id === window.congregacionIdActual ? 'selected' : ''}>${c.nombre}</option>`
     ).join('');
 
     contenedor.innerHTML = `
@@ -83,6 +108,12 @@ async function renderizarSelectorSuperAdmin() {
             </select>
         </div>
     `;
+
+    // Guardar el slug activo actual
+    const select = document.getElementById('selectCongreSuperAdmin');
+    if (select && select.selectedOptions[0]) {
+        window.slugCongregacionActual = select.selectedOptions[0].getAttribute('data-nombre').toLowerCase().replace(/\s+/g, '');
+    }
 }
 
 /**
@@ -90,11 +121,16 @@ async function renderizarSelectorSuperAdmin() {
  */
 window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
     window.congregacionIdActual = nuevaCongreId;
-    console.log("Cambiando vista a congregación ID:", nuevaCongreId);
+    
+    const select = document.getElementById('selectCongreSuperAdmin');
+    if (select && select.selectedOptions[0]) {
+        window.slugCongregacionActual = select.selectedOptions[0].getAttribute('data-nombre').toLowerCase().replace(/\s+/g, '');
+    }
 
-    // Recargar hermanos y planilla para la nueva congregación seleccionada
+    // Recargar hermanos, planilla y actualizar enlace público
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+    window.actualizarLinkPublico();
 };
 
 window.iniciarSesion = async function(email, password) {
@@ -117,10 +153,10 @@ window.cerrarSesion = async function() {
     await db.auth.signOut();
     window.usuarioActual = null;
     window.congregacionIdActual = null;
+    window.slugCongregacionActual = "";
     window.listaHermanos = [];
     window.programaMes = [];
     
-    // Limpiar selector si existía
     const contenedor = document.getElementById('selector-congregacion-container');
     if (contenedor) contenedor.innerHTML = '';
 
@@ -137,6 +173,35 @@ function mostrarPantallaLogin(mostrar) {
         }
     }
 }
+
+/* GENERADOR Y COPIADOR DE LINK PÚBLICO */
+window.actualizarLinkPublico = function() {
+    const inputMes = document.getElementById('inputNombreMes');
+    const inputLink = document.getElementById('inputLinkPublico');
+    if (!inputLink) return;
+
+    const mesTexto = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase().replace(/\s+/g, '-') : 'ACTUAL';
+    const congreSlug = window.slugCongregacionActual || 'default';
+
+    const urlBase = window.location.origin + window.location.pathname;
+    inputLink.value = `${urlBase}?c=${encodeURIComponent(congreSlug)}&m=${encodeURIComponent(mesTexto)}`;
+};
+
+window.copiarLinkPublico = function() {
+    const inputLink = document.getElementById('inputLinkPublico');
+    const lbl = document.getElementById('lblCopiarLink');
+    if (!inputLink || !inputLink.value) return;
+
+    navigator.clipboard.writeText(inputLink.value).then(() => {
+        if (lbl) {
+            const original = lbl.innerText;
+            lbl.innerText = "¡Copiado!";
+            setTimeout(() => { lbl.innerText = original; }, 2000);
+        }
+    }).catch(err => {
+        console.error("Error al copiar link:", err);
+    });
+};
 
 /* CARGAR Y GUARDAR HERMANOS */
 window.cargarHermanosDesdeSupabase = async function() {
@@ -190,6 +255,7 @@ window.agregarNuevoHermanoBD = async function() {
 
     if (data && data[0]) {
         window.listaHermanos.push(data[0]);
+        if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
     }
 };
 
@@ -205,6 +271,7 @@ window.eliminarHermanoBD = async function(id) {
     }
 
     window.listaHermanos = window.listaHermanos.filter(h => h.id !== id);
+    if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
 };
 
 /* CARGAR Y GUARDAR PLANILLA MENSUAL */
@@ -236,10 +303,11 @@ window.cargarPlanillaDesdeSupabase = async function() {
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
         if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
     } else {
-        // Si no hay planilla creada para esta congregación en este mes, reiniciamos vista local
         window.programaMes = [];
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
     }
+
+    window.actualizarLinkPublico();
 };
 
 window.guardarPlanillaEnSupabase = async function() {
@@ -264,7 +332,7 @@ window.guardarPlanillaEnSupabase = async function() {
 
     const { data, error } = await db
         .from('planillas')
-        .upsert(payload, { onConflict: 'mes_ano,congregacion_id' })
+        .upsert(payload, { onConflict: 'congregacion_id,mes_ano' })
         .select();
 
     if (error) {
@@ -272,5 +340,12 @@ window.guardarPlanillaEnSupabase = async function() {
         alert("Error al guardar en Supabase: " + error.message);
     } else {
         console.log("Guardado con éxito:", data);
+        const estado = document.getElementById('estadoGuardado');
+        if (estado) {
+            estado.classList.remove('opacity-0');
+            setTimeout(() => estado.classList.add('opacity-0'), 2500);
+        }
     }
+    
+    window.actualizarLinkPublico();
 };
