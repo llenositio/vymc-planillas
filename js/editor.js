@@ -55,9 +55,11 @@ window.onload = async function() {
     }
 
     const inputMes = document.getElementById('inputNombreMes');
-    if (inputMes && window.nombreMesGlobal) {
-        inputMes.value = window.nombreMesGlobal;
-        actualizarTextoTituloMes(window.nombreMesGlobal);
+    if (inputMes) {
+        if (window.nombreMesGlobal) {
+            inputMes.value = window.nombreMesGlobal;
+        }
+        actualizarTextoTituloMes(inputMes.value || window.nombreMesGlobal || '');
     }
     
     renderizarSelectorSemanas();
@@ -176,14 +178,12 @@ function obtenerClaveCatSugerido(cat) {
 function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = 'ELEGIR') {
     let candidatos = Array.isArray(window.listaHermanos) ? [...window.listaHermanos] : [];
     
-    // 1. Filtrado estricto según casillas marcadas en la Matriz
     if (typeof filtrarHermanosPorCategoria === 'function' && cat) {
         candidatos = filtrarHermanosPorCategoria(cat);
     }
 
     const claveCat = obtenerClaveCatSugerido(cat);
 
-    // 2. Ordenamiento por sugerencias según el rol
     if (claveCat && typeof window.obtenerSugeridosPorRol === 'function') {
         candidatos = window.obtenerSugeridosPorRol(claveCat, candidatos);
     }
@@ -191,12 +191,10 @@ function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = '
     const sugeridoPrincipal = candidatos[0] ? candidatos[0].nombre : '';
     const cantSugerido = sugeridoPrincipal ? contarAsignacionesHermanoEnMes(sugeridoPrincipal) : 0;
 
-    // Opción por defecto con Sugerido y su contador en el placeholder cuando está vacío
     let htmlOptions = `<option value="" ${!valorActual ? 'selected' : ''} class="text-slate-400 font-normal">
         -- ${placeholderDefault} -- ${(!valorActual && sugeridoPrincipal) ? `(Sugerido: ${sugeridoPrincipal} (${cantSugerido}))` : ''}
     </option>`;
 
-    // 3. Opciones de hermanos habilitados con su contador (vecesAsignado)
     candidatos.forEach((h, index) => {
         const esSeleccionado = h.nombre === valorActual;
         const esPrimerSugerido = (index === 0 && !valorActual);
@@ -378,11 +376,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
         }
     };
 
+    const rawCancion0 = (Array.isArray(sem.canciones) && sem.canciones[0]) ? String(sem.canciones[0]) : '';
+    const numCancion0 = rawCancion0.replace(/[^0-9]/g, '');
+
     let filasHTML = `
         <tr class="h-6">
             <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
             <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(0, this.innerText)">
-                Canción N° ${sem.canciones?.[0] || ''}. Presidencia: Palabras de introducción.
+                Canción N° ${numCancion0 || '1'}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig" colspan="7">
                 <div class="flex items-center justify-between w-full gap-1">
@@ -425,6 +426,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
             `;
             renderizoMaestrosHeader = true;
         } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
+            const rawCancion1 = (Array.isArray(sem.canciones) && sem.canciones[1]) ? String(sem.canciones[1]) : '';
+            const numCancion1 = rawCancion1.replace(/[^0-9]/g, '');
+
             filasHTML += `
                 <tr class="no-print bg-amber-50/50">
                     <td colspan="11" class="p-1 text-center">
@@ -441,7 +445,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </tr>
                 <tr>
                     <td class="px-2 font-bold editable-field" colspan="11" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(1, this.innerText)">
-                        Canción Nº: ${sem.canciones?.[1] || ''}
+                        Canción Nº: ${numCancion1 || ''}
                     </td>
                 </tr>
             `;
