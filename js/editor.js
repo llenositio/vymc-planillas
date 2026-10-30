@@ -121,6 +121,40 @@ window.filtrarHermanosPorCategoria = function(cat) {
 };
 
 /**
+ * Cuenta cuántas asignaciones tiene un hermano en el programa del mes activo
+ */
+function contarAsignacionesHermanoEnMes(nombre) {
+    if (!nombre || !Array.isArray(window.programaMes)) return 0;
+    let contador = 0;
+    
+    window.programaMes.forEach(sem => {
+        if (!sem) return;
+        if (sem.presidencia === nombre) contador++;
+        if (sem.oracionIni === nombre) contador++;
+        if (sem.oracionFin === nombre) contador++;
+        if (sem.repaso === nombre) contador++;
+        if (sem.domPresi === nombre) contador++;
+        if (sem.domLector === nombre) contador++;
+        if (sem.asigViajanteEntreSemana === nombre) contador++;
+        if (sem.asigViajanteDiscPub === nombre) contador++;
+        if (sem.asigViajanteDiscFin === nombre) contador++;
+
+        if (Array.isArray(sem.partes)) {
+            sem.partes.forEach(p => {
+                if (p.asig === nombre) contador++;
+                if (p.asigAyudante === nombre) contador++;
+                if (p.asigB === nombre) contador++;
+                if (p.asigBAyudante === nombre) contador++;
+                if (p.asigC === nombre) contador++;
+                if (p.asigCAyudante === nombre) contador++;
+            });
+        }
+    });
+
+    return contador;
+}
+
+/**
  * Mapea las categorías de las casillas a las claves del motor de sugerencias
  */
 function obtenerClaveCatSugerido(cat) {
@@ -137,37 +171,39 @@ function obtenerClaveCatSugerido(cat) {
 }
 
 /**
- * FASE 2: Crea el HTML de un <select> ordenado dinámicamente por sugerencias inteligentes
+ * FASE 2: Crea el HTML de un <select> ordenado dinámicamente por sugerencias inteligentes y con contador de veces asignado
  */
 function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = 'ELEGIR') {
     let candidatos = Array.isArray(window.listaHermanos) ? [...window.listaHermanos] : [];
     
-    // Si existe la función de filtrado por matriz de hermanos, la aplicamos
+    // 1. Filtrado estricto según casillas marcadas en la Matriz
     if (typeof filtrarHermanosPorCategoria === 'function' && cat) {
         candidatos = filtrarHermanosPorCategoria(cat);
     }
 
     const claveCat = obtenerClaveCatSugerido(cat);
 
-    // Ordenamos por el motor inteligente de sugerencias de la Fase 1
+    // 2. Ordenamiento por sugerencias según el rol
     if (claveCat && typeof window.obtenerSugeridosPorRol === 'function') {
         candidatos = window.obtenerSugeridosPorRol(claveCat, candidatos);
     }
 
     const sugeridoPrincipal = candidatos[0] ? candidatos[0].nombre : '';
+    const cantSugerido = sugeridoPrincipal ? contarAsignacionesHermanoEnMes(sugeridoPrincipal) : 0;
 
-    // Opción por defecto con Sugerido en gris cuando está vacío
+    // Opción por defecto con Sugerido y su contador en el placeholder cuando está vacío
     let htmlOptions = `<option value="" ${!valorActual ? 'selected' : ''} class="text-slate-400 font-normal">
-        -- ${placeholderDefault} -- ${(!valorActual && sugeridoPrincipal) ? `(Sugerido: ${sugeridoPrincipal})` : ''}
+        -- ${placeholderDefault} -- ${(!valorActual && sugeridoPrincipal) ? `(Sugerido: ${sugeridoPrincipal} (${cantSugerido}))` : ''}
     </option>`;
 
-    // Opciones de hermanos ordenadas por prioridad
+    // 3. Opciones de hermanos habilitados con su contador (vecesAsignado)
     candidatos.forEach((h, index) => {
         const esSeleccionado = h.nombre === valorActual;
         const esPrimerSugerido = (index === 0 && !valorActual);
+        const vecesAsignado = contarAsignacionesHermanoEnMes(h.nombre);
         
         htmlOptions += `<option value="${h.nombre}" ${esSeleccionado ? 'selected' : ''}>
-            ${h.nombre}${esPrimerSugerido ? ' ★' : ''}
+            ${h.nombre} (${vecesAsignado})${esPrimerSugerido ? ' ★' : ''}
         </option>`;
     });
 
