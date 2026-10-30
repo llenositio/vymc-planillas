@@ -344,6 +344,9 @@ window.cargarPlanillaDesdeSupabase = async function() {
         return;
     }
 
+    // Preserva el índice de la semana activa actual si existe
+    const idxActual = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
+
     if (data && data.datos) {
         window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
         window.nombreMesGlobal = data.mes_ano || "";
@@ -351,8 +354,11 @@ window.cargarPlanillaDesdeSupabase = async function() {
         if (inputMes) inputMes.value = window.nombreMesGlobal;
         if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
 
+        // Asegura que no se exceda del límite si cambió la cantidad de semanas
+        const idxValido = Math.min(idxActual, Math.max(0, window.programaMes.length - 1));
+
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
-        if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
+        if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(idxValido);
     } else {
         if (typeof inicializarMesDefault === 'function') {
             inicializarMesDefault(4);
@@ -363,7 +369,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
         if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
     }
 
-    window.actualizarLinkPublico();
+    if (typeof window.actualizarLinkPublico === 'function') window.actualizarLinkPublico();
 };
 
 /**
@@ -372,7 +378,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
 function generarSnapshotHTMLPublico() {
     if (!window.programaMes || window.programaMes.length === 0) return '';
 
-    const semanaActivaOriginal = window.semanaActivaIndex || 0;
+    const semanaActivaOriginal = (typeof window.semanaActivaIdx === 'number') ? window.semanaActivaIdx : 0;
 
     const tempDiv = document.createElement('div');
     tempDiv.className = 'print-area bg-white p-3 sm:p-6 rounded-xl border border-slate-300';
@@ -422,7 +428,7 @@ function generarSnapshotHTMLPublico() {
         tempDiv.appendChild(bloqueSemana);
     });
 
-    // Volver a la semana que estaba editando
+    // Volver exactamente a la semana que se estaba editando
     if (typeof cargarSemanaEnPlanilla === 'function') {
         cargarSemanaEnPlanilla(semanaActivaOriginal);
     }
