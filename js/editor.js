@@ -1,3 +1,37 @@
+// FUNCIONES DE ESTRUCTURA BASE POR DEFECTO
+window.crearEstructuraSemanaEjemplo = function() {
+    return {
+        semana: "SEMANA 1",
+        lectura: "LECTURA",
+        tipoSemana: "normal",
+        numSalas: 1,
+        canciones: [1, 2, 3],
+        presidencia: "",
+        oracionIni: "",
+        oracionFin: "",
+        repaso: "",
+        domPresi: "",
+        domLector: "",
+        partes: [
+            { seccion: "tesoros", t: "10 min", tit: "1. Discurso Tesoros", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "10 min", tit: "2. Buscemos Perlas Escondidas", desc: "", participantes: 1, asig: "" },
+            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia", desc: "", participantes: 1, asig: "" },
+            { seccion: "maestros", t: "3 min", tit: "4. Primera Conversación", desc: "", participantes: 2, asig: "", asigAyudante: "" },
+            { seccion: "vida", t: "15 min", tit: "5. Parte de Nuestra Vida Cristiana", desc: "", participantes: 1, asig: "" },
+            { seccion: "vida", t: "30 min", tit: "6. Estudio bíblico de la congregación", desc: "", participantes: 2, asig: "", asigAyudante: "" }
+        ]
+    };
+};
+
+window.inicializarMesDefault = function(cantSemanas = 4) {
+    window.programaMes = [];
+    for (let i = 0; i < cantSemanas; i++) {
+        const sem = window.crearEstructuraSemanaEjemplo();
+        sem.semana = `SEMANA ${i + 1}`;
+        window.programaMes.push(sem);
+    }
+    window.semanaActivaIdx = 0;
+};
 window.onload = async function() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('vista') === 'publica') return; 
