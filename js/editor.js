@@ -92,6 +92,35 @@ window.renderizarSelectorSemanas = function() {
 };
 
 /**
+ * Filtra los hermanos según los checkboxes habilitados en la Matriz
+ */
+window.filtrarHermanosPorCategoria = function(cat) {
+    if (!Array.isArray(window.listaHermanos)) return [];
+
+    const mapaColumnas = {
+        'pres': 'pres_vymc',
+        'presPub': 'pres_pub',
+        'orac': 'oracion',
+        'disc': 'disc_tesoros',
+        'perlas': 'perlas',
+        'lec': 'lec_biblia',
+        'smm': 'smm',
+        'nvc': 'nvc',
+        'eb': 'ebc',
+        'lectorL': 'lector_ebc',
+        'lectorW': 'lector_atalaya'
+    };
+
+    const campoBD = mapaColumnas[cat];
+    if (!campoBD) return window.listaHermanos;
+
+    return window.listaHermanos.filter(h => {
+        const val = h[campoBD];
+        return val === true || val === 'X' || val === 1;
+    });
+};
+
+/**
  * Mapea las categorías de las casillas a las claves del motor de sugerencias
  */
 function obtenerClaveCatSugerido(cat) {
