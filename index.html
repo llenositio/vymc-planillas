@@ -242,6 +242,8 @@
                             <input type="text" 
                                    id="inputNombreMes" 
                                    placeholder="Ej: NOVIEMBRE 2026" 
+                                   oninput="if(typeof window.actualizarTextoTituloMes === 'function') window.actualizarTextoTituloMes(this.value);"
+                                   onchange="if(typeof window.notificarYGuardarAutosave === 'function') window.notificarYGuardarAutosave();"
                                    class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52" 
                                    value="NOVIEMBRE 2026">
                         </div>
