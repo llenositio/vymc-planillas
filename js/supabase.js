@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const congreSlugParam = urlParams.get('c');
     const mesParam = urlParams.get('m');
 
-    // MODO VISTA PÚBLICA (SOLO LECTURA MEDIANTE SNAPSHOT HTML)
+    // MODO VISTA PÚBLICA (SOLO LECTURA MEDIANTE SNAPSHOT HTML DEL MES COMPLETO)
     if (congreSlugParam) {
         document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
@@ -34,7 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * Carga la planilla en modo público leyendo la "foto HTML" guardada (100% seguro)
+ * Carga la planilla en modo público leyendo la "foto HTML" del mes completo (100% seguro)
  */
 async function cargarPlanillaVistaPublica(slug, mes) {
     const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
@@ -223,7 +223,7 @@ function mostrarPantallaLogin(mostrar) {
     }
 }
 
-/* GENERADOR Y COPIADOR DE LINK PÚBLICO (100% VISUAL, NO GUARDA BD) */
+/* GENERADOR Y COPIADOR DE LINK PÚBLICO */
 window.actualizarLinkPublico = function() {
     const inputMes = document.getElementById('inputNombreMes');
     const inputLink = document.getElementById('inputLinkPublico');
@@ -362,36 +362,70 @@ window.cargarPlanillaDesdeSupabase = async function() {
 };
 
 /**
- * Genera la "foto estática HTML" limpia de la planilla activa
+ * Genera la "foto estática HTML" unificada con TODAS las semanas del mes
  */
 function generarSnapshotHTMLPublico() {
-    const areaPrint = document.querySelector('.print-area');
-    if (!areaPrint) return '';
+    if (!window.programaMes || window.programaMes.length === 0) return '';
 
-    const clon = areaPrint.cloneNode(true);
+    const semanaActivaOriginal = window.semanaActivaIndex || 0;
 
-    const selectsOriginales = areaPrint.querySelectorAll('select');
-    const selectsClonados = clon.querySelectorAll('select');
+    const tempDiv = document.createElement('div');
+    tempDiv.className = 'print-area bg-white p-3 sm:p-6 rounded-xl border border-slate-300';
 
-    selectsOriginales.forEach((sel, index) => {
-        const textoSeleccionado = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
-        const esVacio = !textoSeleccionado || textoSeleccionado.includes('-- ELEGIR --') || textoSeleccionado.includes('-- ASIGNAR --');
-        
-        const span = document.createElement('span');
-        span.className = 'font-bold uppercase text-slate-900 text-[11px]';
-        span.textContent = esVacio ? '' : textoSeleccionado.split('(')[0].trim();
-        
-        if (selectsClonados[index]) {
-            selectsClonados[index].parentNode.replaceChild(span, selectsClonados[index]);
+    tempDiv.innerHTML = `
+        <div class="text-center mb-4 border-b-2 border-slate-900 pb-2">
+            <h2 class="text-xl font-black text-slate-900 uppercase tracking-widest">
+                PROGRAMA DE REUNIONES - MES DE ${window.nombreMesGlobal || '---'}
+            </h2>
+        </div>
+    `;
+
+    window.programaMes.forEach((semana, index) => {
+        if (typeof cargarSemanaEnPlanilla === 'function') {
+            cargarSemanaEnPlanilla(index);
         }
+
+        const areaPrint = document.querySelector('.print-area');
+        if (!areaPrint) return;
+
+        const tablaOriginal = areaPrint.querySelector('#tablaPlanillaCompleta');
+        if (!tablaOriginal) return;
+
+        const clonTabla = tablaOriginal.cloneNode(true);
+
+        const selectsOriginales = tablaOriginal.querySelectorAll('select');
+        const selectsClonados = clonTabla.querySelectorAll('select');
+
+        selectsOriginales.forEach((sel, i) => {
+            const textoSeleccionado = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+            const esVacio = !textoSeleccionado || textoSeleccionado.includes('-- ELEGIR --') || textoSeleccionado.includes('-- ASIGNAR --');
+            
+            const span = document.createElement('span');
+            span.className = 'font-bold uppercase text-slate-900 text-[11px]';
+            span.textContent = esVacio ? '' : textoSeleccionado.split('(')[0].trim();
+            
+            if (selectsClonados[i]) {
+                selectsClonados[i].parentNode.replaceChild(span, selectsClonados[i]);
+            }
+        });
+
+        clonTabla.querySelectorAll('.btn-accion-tabla, .fa-whatsapp, button').forEach(el => el.remove());
+
+        const bloqueSemana = document.createElement('div');
+        bloqueSemana.className = 'mb-6 semana-bloque-print';
+        bloqueSemana.appendChild(clonTabla);
+        tempDiv.appendChild(bloqueSemana);
     });
 
-    clon.querySelectorAll('.btn-accion-tabla, .fa-whatsapp, button').forEach(el => el.remove());
+    // Volver a la semana que estaba editando
+    if (typeof cargarSemanaEnPlanilla === 'function') {
+        cargarSemanaEnPlanilla(semanaActivaOriginal);
+    }
 
-    return clon.innerHTML;
+    return tempDiv.innerHTML;
 }
 
-/* GUARDAR EN SUPABASE (CREA EL PAYLOAD + LA FOTO HTML) */
+/* GUARDAR EN SUPABASE (GENERA PAYLOAD + SNAPSHOT DEL MES COMPLETO) */
 window.guardarPlanillaEnSupabase = async function() {
     if (!window.congregacionIdActual) {
         alert("Error: No hay sesión activa o congregación asignada.");
@@ -423,7 +457,7 @@ window.guardarPlanillaEnSupabase = async function() {
         console.error("Error guardando en Supabase:", error);
         alert("Error al guardar en Supabase: " + error.message);
     } else {
-        console.log("Guardado y snapshot generado con éxito:", data);
+        console.log("Guardado y snapshot completo generado con éxito:", data);
         const estado = document.getElementById('estadoGuardado');
         if (estado) {
             estado.classList.remove('opacity-0');
