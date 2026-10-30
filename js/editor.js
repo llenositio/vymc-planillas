@@ -32,6 +32,7 @@ window.inicializarMesDefault = function(cantSemanas = 4) {
     }
     window.semanaActivaIdx = 0;
 };
+
 window.onload = async function() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('vista') === 'publica') return; 
@@ -935,5 +936,21 @@ window.cambiarPestaña = function(tab) {
 
     if (tab === 'estadisticas' && typeof renderizarTablaHistorial === 'function') {
         renderizarTablaHistorial();
+    }
+};
+
+/* FUNCIÓN DE CONEXIÓN CON EL TÍTULO DEL MES */
+window.actualizarTextoTituloMes = function(valor) {
+    window.nombreMesGlobal = valor;
+    
+    // Actualiza el texto dentro del span del título principal
+    const spanMes = document.getElementById('txtNombreMes');
+    if (spanMes) {
+        spanMes.innerText = valor ? valor.toUpperCase() : '---';
+    }
+    
+    // Actualiza la barra del link público
+    if (typeof window.actualizarLinkPublico === 'function') {
+        window.actualizarLinkPublico();
     }
 };
