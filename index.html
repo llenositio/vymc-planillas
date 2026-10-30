@@ -242,18 +242,17 @@
                             <input type="text" 
                                    id="inputNombreMes" 
                                    placeholder="Ej: NOVIEMBRE 2026" 
-                                   oninput="if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" 
                                    class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52" 
                                    value="NOVIEMBRE 2026">
                         </div>
 
-                        <!-- BARRA DE LINK PÚBLICO -->
+                        <!-- BARRA DE LINK PÚBLICO MANUAL -->
                         <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-lg shadow-sm">
-                            <span class="text-xs font-bold text-emerald-800 flex items-center gap-1">
-                                <i class="fa-solid fa-share-nodes"></i> Link Público:
-                            </span>
+                            <button type="button" onclick="if(typeof window.actualizarLinkPublico === 'function') window.actualizarLinkPublico();" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer">
+                                <i class="fa-solid fa-arrows-rotate"></i> Actualizar Link
+                            </button>
                             <input type="text" id="inputLinkPublico" readonly class="bg-white border border-emerald-200 text-xs px-2 py-1 rounded w-60 sm:w-72 text-slate-600 font-mono select-all outline-none" value="">
-                            <button id="btnCopiarLink" onclick="if(typeof copiarLinkPublico === 'function') copiarLinkPublico();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1 transition-all shadow-sm active:scale-95">
+                            <button type="button" id="btnCopiarLink" onclick="if(typeof window.copiarLinkPublico === 'function') window.copiarLinkPublico();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer">
                                 <i class="fa-solid fa-copy"></i> <span id="lblCopiarLink">Copiar</span>
                             </button>
                         </div>
