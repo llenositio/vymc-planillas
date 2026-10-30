@@ -18,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // SI CONTIENE PARÁMETRO DE CONGREGACIÓN, ES VISTA PÚBLICA
     if (congreSlugParam) {
-        document.body.classList.add('modo-publico'); // Oculta interfaz de edición[cite: 1]
+        document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
         await cargarPlanillaVistaPublica(congreSlugParam, mesParam);
         return;
@@ -32,6 +32,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         mostrarPantallaLogin(true);
     }
     
+    // Inicializar escuchador directo sobre el input de Mes
+    inicializarObservadorMes();
     window.actualizarLinkPublico();
 });
 
@@ -41,7 +43,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function cargarPlanillaVistaPublica(slug, mes) {
     const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
 
-    // 1. Obtener la congregación por coincidencia de nombre o UUID
     const { data: congregaciones, error: congreError } = await db
         .from('congregaciones')
         .select('id, nombre');
@@ -63,7 +64,6 @@ async function cargarPlanillaVistaPublica(slug, mes) {
 
     window.congregacionIdActual = congreEncontrada.id;
 
-    // 2. Cargar la planilla correspondiente
     const { data: planillaData, error: planillaError } = await db
         .from('planillas')
         .select('*')
@@ -239,17 +239,36 @@ window.actualizarLinkPublico = function() {
     const inputLink = document.getElementById('inputLinkPublico');
     if (!inputLink) return;
 
-    // Lee preferentemente el valor escrito en la casilla MES
-    let mesTexto = (inputMes && inputMes.value.trim()) ? inputMes.value.trim() : (window.nombreMesGlobal || 'ACTUAL');
-    
-    // Formatea con guiones y mayúsculas
-    mesTexto = mesTexto.toUpperCase().replace(/\s+/g, '-');
+    // Lee de forma directa e incondicional el valor escrito en el DOM
+    const textoRaw = inputMes ? inputMes.value : '';
+    const mesFormateado = textoRaw.trim() ? textoRaw.trim().toUpperCase().replace(/\s+/g, '-') : 'ACTUAL';
 
     const congreSlug = window.slugCongregacionActual || 'default';
     const urlBase = window.location.origin + window.location.pathname;
 
-    inputLink.value = `${urlBase}?c=${encodeURIComponent(congreSlug)}&m=${encodeURIComponent(mesTexto)}`;
+    inputLink.value = `${urlBase}?c=${encodeURIComponent(congreSlug)}&m=${encodeURIComponent(mesFormateado)}`;
 };
+
+/**
+ * Escuchador global de cambios sobre la casilla del Mes
+ */
+function inicializarObservadorMes() {
+    const inputMes = document.getElementById('inputNombreMes');
+    if (!inputMes) return;
+
+    // Eventos de interacción directa
+    ['input', 'change', 'keyup', 'paste', 'blur'].forEach(evento => {
+        inputMes.addEventListener(evento, () => {
+            window.actualizarLinkPublico();
+        });
+    });
+
+    // Observador para cambios asignados dinámicamente por JavaScript
+    const observer = new MutationObserver(() => {
+        window.actualizarLinkPublico();
+    });
+    observer.observe(inputMes, { attributes: true, childList: true, characterData: true });
+}
 
 window.copiarLinkPublico = function() {
     const inputLink = document.getElementById('inputLinkPublico');
