@@ -11,6 +11,61 @@ const ORDEN_CONDICIONES = [
     { clave: 'PNB', titulo: 'Publicadores No Bautizados' }
 ];
 
+/**
+ * Busca una planilla de un mes anterior en Supabase y la carga en la vista principal
+ */
+window.buscarYCargarPlanillaHistorial = async function() {
+    const selectMes = document.getElementById('selectFiltroMes');
+    const selectAnio = document.getElementById('selectFiltroAnio');
+    
+    if (!selectMes || !selectAnio) return;
+
+    // Formatear el mes buscado (Ej: "NOVIEMBRE 2026")
+    const mesBuscado = `${selectMes.value} ${selectAnio.value}`.toUpperCase();
+
+    // 1. Actualizar el input del mes y la variable global
+    window.nombreMesGlobal = mesBuscado;
+    const inputMes = document.getElementById('inputNombreMes');
+    if (inputMes) inputMes.value = mesBuscado;
+
+    // 2. Consultar la planilla en Supabase
+    if (!window.congregacionIdActual) {
+        alert("Atención: No hay una congregación activa seleccionada.");
+        return;
+    }
+
+    const { data, error } = await db
+        .from('planillas')
+        .select('*')
+        .eq('congregacion_id', window.congregacionIdActual)
+        .eq('mes_ano', mesBuscado)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error al buscar en el historial:", error);
+        alert("Ocurrió un error al consultar la planilla en la base de datos.");
+        return;
+    }
+
+    if (data) {
+        window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+    } else {
+        window.programaMes = [];
+        alert(`No se encontró una planilla guardada para ${mesBuscado}. Se mostrará una planilla vacía.`);
+    }
+
+    // 3. Renderizar vista de la planilla y cambiar a la pestaña 'planilla'
+    if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(mesBuscado);
+    if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
+    if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
+    if (typeof cambiarPestaña === 'function') cambiarPestaña('planilla');
+
+    // 4. Actualizar inmediatamente la URL verde del link público
+    if (typeof window.actualizarLinkPublico === 'function') {
+        window.actualizarLinkPublico();
+    }
+};
+
 window.renderizarTablaHistorial = function() {
     const contenedor = document.getElementById('contenedorTablaHistorial');
     if (!contenedor) return;
