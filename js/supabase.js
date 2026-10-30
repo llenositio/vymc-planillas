@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const congreSlugParam = urlParams.get('c');
     const mesParam = urlParams.get('m');
 
-    // MODO VISTA PÚBLICA (SOLO LECTURA)
+    // MODO VISTA PÚBLICA (SOLO LECTURA MEDIANTE SNAPSHOT HTML)
     if (congreSlugParam) {
         document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
@@ -34,7 +34,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * Carga la planilla en modo público sin solicitar credenciales
+ * Carga la planilla en modo público leyendo la "foto HTML" guardada (100% seguro)
  */
 async function cargarPlanillaVistaPublica(slug, mes) {
     const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
@@ -60,9 +60,10 @@ async function cargarPlanillaVistaPublica(slug, mes) {
 
     window.congregacionIdActual = congreEncontrada.id;
 
+    // Obtener la columna html_publico
     const { data: planillaData, error: planillaError } = await db
         .from('planillas')
-        .select('*')
+        .select('html_publico, mes_ano')
         .eq('congregacion_id', congreEncontrada.id)
         .eq('mes_ano', mesBuscado)
         .maybeSingle();
@@ -72,16 +73,15 @@ async function cargarPlanillaVistaPublica(slug, mes) {
         return;
     }
 
-    if (planillaData) {
-        window.programaMes = typeof planillaData.datos === 'string' ? JSON.parse(planillaData.datos) : (planillaData.datos || []);
-        window.nombreMesGlobal = planillaData.mes_ano || mesBuscado;
-
-        if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
-        if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
-        if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
-    } else {
-        window.programaMes = [];
-        if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
+    const contenedor = document.querySelector('.print-area');
+    if (planillaData && planillaData.html_publico && contenedor) {
+        contenedor.innerHTML = planillaData.html_publico;
+    } else if (contenedor) {
+        contenedor.innerHTML = `
+            <div class="text-center py-12 text-slate-500 font-bold">
+                <p class="text-base">No hay un programa publicado aún para el mes de ${mesBuscado}.</p>
+            </div>
+        `;
     }
 }
 
@@ -361,7 +361,37 @@ window.cargarPlanillaDesdeSupabase = async function() {
     window.actualizarLinkPublico();
 };
 
-/* GUARDAR EN SUPABASE (SOLO AL HACER CLIC EN 'GUARDAR MES') */
+/**
+ * Genera la "foto estática HTML" limpia de la planilla activa
+ */
+function generarSnapshotHTMLPublico() {
+    const areaPrint = document.querySelector('.print-area');
+    if (!areaPrint) return '';
+
+    const clon = areaPrint.cloneNode(true);
+
+    const selectsOriginales = areaPrint.querySelectorAll('select');
+    const selectsClonados = clon.querySelectorAll('select');
+
+    selectsOriginales.forEach((sel, index) => {
+        const textoSeleccionado = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+        const esVacio = !textoSeleccionado || textoSeleccionado.includes('-- ELEGIR --') || textoSeleccionado.includes('-- ASIGNAR --');
+        
+        const span = document.createElement('span');
+        span.className = 'font-bold uppercase text-slate-900 text-[11px]';
+        span.textContent = esVacio ? '' : textoSeleccionado.split('(')[0].trim();
+        
+        if (selectsClonados[index]) {
+            selectsClonados[index].parentNode.replaceChild(span, selectsClonados[index]);
+        }
+    });
+
+    clon.querySelectorAll('.btn-accion-tabla, .fa-whatsapp, button').forEach(el => el.remove());
+
+    return clon.innerHTML;
+}
+
+/* GUARDAR EN SUPABASE (CREA EL PAYLOAD + LA FOTO HTML) */
 window.guardarPlanillaEnSupabase = async function() {
     if (!window.congregacionIdActual) {
         alert("Error: No hay sesión activa o congregación asignada.");
@@ -374,10 +404,12 @@ window.guardarPlanillaEnSupabase = async function() {
     }
 
     const mesClave = window.nombreMesGlobal || "ACTUAL";
+    const htmlFoto = generarSnapshotHTMLPublico();
 
     const payload = {
         mes_ano: mesClave,
         datos: window.programaMes,
+        html_publico: htmlFoto,
         congregacion_id: window.congregacionIdActual,
         updated_at: new Date().toISOString()
     };
@@ -391,13 +423,11 @@ window.guardarPlanillaEnSupabase = async function() {
         console.error("Error guardando en Supabase:", error);
         alert("Error al guardar en Supabase: " + error.message);
     } else {
-        console.log("Guardado con éxito:", data);
+        console.log("Guardado y snapshot generado con éxito:", data);
         const estado = document.getElementById('estadoGuardado');
         if (estado) {
             estado.classList.remove('opacity-0');
             setTimeout(() => estado.classList.add('opacity-0'), 2500);
         }
     }
-    
-    window.actualizarLinkPublico();
 };
