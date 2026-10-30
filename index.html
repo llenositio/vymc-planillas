@@ -227,7 +227,7 @@
                     <div class="flex items-center gap-3 flex-wrap">
                         <div class="flex items-center gap-2">
                             <span class="text-sm font-extrabold uppercase text-slate-700">Mes:</span>
-                            <input type="text" id="inputNombreMes" placeholder="Ej: NOVIEMBRE 2026" oninput="if(typeof actualizarNombreMes === 'function') actualizarNombreMes(this.value); if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52">
+                            <input type="text" id="inputNombreMes" placeholder="Ej: NOVIEMBRE 2026" oninput="if(typeof actualizarNombreMes === 'function') actualizarNombreMes(this.value); if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" onchange="if(typeof actualizarNombreMes === 'function') actualizarNombreMes(this.value); if(typeof actualizarLinkPublico === 'function') actualizarLinkPublico();" class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52">
                         </div>
 
                         <!-- BARRA DE LINK PÚBLICO -->
