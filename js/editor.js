@@ -379,6 +379,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
     const rawCancion0 = (Array.isArray(sem.canciones) && sem.canciones[0]) ? String(sem.canciones[0]) : '';
     const numCancion0 = rawCancion0.replace(/[^0-9]/g, '');
 
+    const rawCancion2 = (Array.isArray(sem.canciones) && sem.canciones[2]) ? String(sem.canciones[2]) : '';
+    const numCancion2 = rawCancion2.replace(/[^0-9]/g, '');
+
     let filasHTML = `
         <tr class="h-6">
             <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
@@ -564,7 +567,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr>
                 <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
-                    Canción y oración: 38
+                    Canción N° ${numCancion2 || '38'} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
@@ -616,7 +619,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr>
                 <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
-                    Canción y oración: 38
+                    Canción N° ${numCancion2 || '38'} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
