@@ -946,6 +946,8 @@ window.renderizarMatrizHermanos = function() {
             'pres_pub', 'lector_atalaya'
         ];
 
+        const condicionActual = h.condicion || 'Pub';
+
         tr.innerHTML = `
             <td class="font-bold text-slate-400">${index + 1}</td>
             <td class="text-left font-bold px-2">
@@ -958,7 +960,13 @@ window.renderizarMatrizHermanos = function() {
                 </select>
             </td>
             <td>
-                <input type="text" value="${h.condicion || ''}" onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+                <select onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="text-xs bg-transparent font-semibold text-slate-700 outline-none cursor-pointer">
+                    <option value="A" ${condicionActual === 'A' ? 'selected' : ''}>A</option>
+                    <option value="SM" ${condicionActual === 'SM' ? 'selected' : ''}>SM</option>
+                    <option value="Prec" ${condicionActual === 'Prec' ? 'selected' : ''}>Prec</option>
+                    <option value="Pub" ${condicionActual === 'Pub' ? 'selected' : ''}>Pub</option>
+                    <option value="PNB" ${condicionActual === 'PNB' ? 'selected' : ''}>PNB</option>
+                </select>
             </td>
             <td>
                 <input type="number" value="${h.grupo || ''}" onchange="actualizarHermano(${h.id}, 'grupo', parseInt(this.value) || null)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
