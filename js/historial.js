@@ -90,47 +90,47 @@ window.renderizarTablaHistorial = function() {
     });
 
     let html = `
-        <div class="shadow-md rounded-xl border border-slate-300 bg-white overflow-hidden my-2">
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-center border-collapse">
-                    <colgroup>
-                        <col class="w-60">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-24">
-                        <col class="w-28">
-                    </colgroup>
-                    <thead>
-                        <tr class="bg-slate-900 text-white font-extrabold uppercase text-xs tracking-wider border-b border-slate-800">
-                            <th class="py-3 px-3 text-left border-r border-slate-800" rowspan="2">HERMANO</th>
-                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Pres.<br>Vid y Min</th>
-                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Tesoros de la Biblia</th>
-                            <th class="py-3 px-1 border-r border-slate-800" rowspan="2">SMM</th>
-                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Nuestra vida cristiana</th>
-                            <th class="py-2 px-1 border-r border-slate-800" colspan="2">Lecturas</th>
-                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Estudio<br>Bíblico</th>
-                            <th class="py-3 px-1 border-r border-slate-800" rowspan="2">Oraciones</th>
-                            <th class="py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">P. Pública<br>+ Oración</th>
-                            <th class="py-3 px-1 bg-amber-600 text-white font-black tracking-wider" rowspan="2">PRESENCIA</th>
-                        </tr>
-                        <tr class="bg-slate-800 text-slate-200 font-bold text-[11px] uppercase border-b border-slate-700">
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Discurso</th>
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Busquemos<br>perlas</th>
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Necesidades<br>Locales</th>
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Otro</th>
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Libro</th>
-                            <th class="py-2.5 px-1 border-r border-slate-700 leading-tight">Atalaya</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-200 font-medium">
+        <table class="w-full text-sm text-center border-collapse">
+            <colgroup>
+                <col class="w-60">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-24">
+                <col class="w-28">
+            </colgroup>
+            <thead>
+                <!-- PRIMERA FILA DE ENCABEZADOS (Fija arriba) -->
+                <tr class="bg-slate-900 text-white font-extrabold uppercase text-xs tracking-wider border-b border-slate-800">
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-3 text-left border-r border-slate-800" rowspan="2">HERMANO</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Pres.<br>Vid y Min</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Tesoros de la Biblia</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800" rowspan="2">SMM</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Nuestra vida cristiana</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Lecturas</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Estudio<br>Bíblico</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800" rowspan="2">Oraciones</th>
+                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">P. Pública<br>+ Oración</th>
+                    <th class="sticky top-0 z-20 bg-amber-600 text-white py-3 px-1 font-black tracking-wider border-l border-amber-500" rowspan="2">PRESENCIA</th>
+                </tr>
+                <!-- SEGUNDA FILA DE ENCABEZADOS (Fija justo debajo de la primera) -->
+                <tr class="bg-slate-800 text-slate-200 font-bold text-[11px] uppercase border-b border-slate-700">
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Discurso</th>
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Busquemos<br>perlas</th>
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Necesidades<br>Locales</th>
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Otro</th>
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Libro</th>
+                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Atalaya</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 font-medium">
     `;
 
     ORDEN_CONDICIONES.concat([{ clave: 'Otros', titulo: 'Sin Categoría' }]).forEach(grupo => {
@@ -176,10 +176,8 @@ window.renderizarTablaHistorial = function() {
     });
 
     html += `
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            </tbody>
+        </table>
     `;
 
     contenedor.innerHTML = html;
