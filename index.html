@@ -419,7 +419,7 @@
             </div>
         </section>
 
-        <!-- LISTA DE HERMANOS (MATRIZ) -->
+        <!-- LISTA DE HERMANOS (MATRIZ REORGANIZADA CON HEADER FIJO) -->
         <section id="sec-hermanos" class="tab-content hidden">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -433,29 +433,30 @@
                     </button>
                 </div>
 
-                <div class="overflow-x-auto border border-slate-300 rounded-lg">
-                    <table class="excel-table min-w-[1200px] text-center">
-                        <thead class="bg-slate-100 text-slate-800 text-xs uppercase font-extrabold">
+                <!-- CONTENEDOR CON ALTURA MÁXIMA Y SCROLL INTERNO -->
+                <div class="max-h-[65vh] overflow-y-auto border border-slate-300 rounded-lg shadow-inner bg-white">
+                    <table class="excel-table min-w-[1200px] text-center w-full border-collapse">
+                        <thead class="bg-slate-100 text-slate-800 text-xs uppercase font-extrabold sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th class="w-8">N°</th>
-                                <th class="text-left px-3 min-w-[180px]">Apellidos y Nombres</th>
-                                <th class="w-12">Sexo</th>
-                                <th class="w-16">Condición</th>
-                                <th class="w-14">Grupo</th>
-                                <th class="w-24">Resp.</th>
-                                <th class="w-28"><i class="fa-brands fa-whatsapp text-emerald-600 mr-1"></i>Celular</th>
-                                <th class="w-12">Orac</th>
-                                <th class="w-14">Pres VyMC</th>
-                                <th class="w-14">Disc Tesor</th>
-                                <th class="w-12">Perlas</th>
-                                <th class="w-14">Lec Biblia</th>
-                                <th class="w-12">SMM</th>
-                                <th class="w-12">NVC</th>
-                                <th class="w-12">EB</th>
-                                <th class="w-14">Lector L</th>
-                                <th class="w-14">Presid Púb</th>
-                                <th class="w-14">Lector W</th>
-                                <th class="w-10 no-print">Acción</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-8 border border-slate-300">N°</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 text-left px-3 min-w-[180px] border border-slate-300">Apellidos y Nombres</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Sexo</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-16 border border-slate-300">Condición</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Grupo</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-24 border border-slate-300">Resp.</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-28 border border-slate-300"><i class="fa-brands fa-whatsapp text-emerald-600 mr-1"></i>Celular</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Orac</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Pres VyMC</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Disc Tesor</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Perlas</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lec Biblia</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">SMM</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">NVC</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">EB</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lector L</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Presid Púb</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lector W</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-10 no-print border border-slate-300">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="cuerpoTablaHermanos"></tbody>
