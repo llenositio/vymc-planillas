@@ -294,19 +294,18 @@ window.agregarNuevoHermanoBD = async function() {
         congregacion_id: window.congregacionIdActual
     };
 
-    const { data, error } = await db
+    const { error } = await db
         .from('hermanos')
-        .insert([nuevo])
-        .select();
+        .insert([nuevo]);
 
     if (error) {
         console.error("Error agregando hermano:", error);
         return;
     }
 
-    if (data && data[0]) {
-        window.listaHermanos.push(data[0]);
-        if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
+    // Sincroniza y recarga toda la lista desde Supabase
+    if (typeof cargarHermanosDesdeSupabase === 'function') {
+        await cargarHermanosDesdeSupabase();
     }
 };
 
