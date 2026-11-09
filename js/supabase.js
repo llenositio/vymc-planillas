@@ -9,6 +9,7 @@ window.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.usuarioActual = null;
 window.congregacionIdActual = null;
 window.slugCongregacionActual = "";
+window.rolUsuarioActual = null;
 
 // Verificar sesión o activar Vista Pública al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
@@ -102,6 +103,8 @@ async function cargarPerfilUsuario(user) {
     }
 
     window.congregacionIdActual = data.congregacion_id;
+    window.rolUsuarioActual = data.rol || 'mensajero_vymc';
+
     mostrarPantallaLogin(false);
 
     if (data.rol === 'super_admin') {
@@ -110,8 +113,52 @@ async function cargarPerfilUsuario(user) {
         await obtenerSlugCongregacion(window.congregacionIdActual);
     }
 
+    // Aplicar restricciones visuales según el rol del usuario
+    aplicarRestriccionesPorRol(window.rolUsuarioActual);
+
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+}
+
+/**
+ * Controla la visibilidad y edición de elementos de la interfaz según el rol
+ */
+function aplicarRestriccionesPorRol(rol) {
+    const esMensajero = (typeof rol === 'string' && rol.startsWith('mensajero_'));
+
+    // Botones de acción en la planilla y matriz de hermanos
+    const botonesEdicion = [
+        document.querySelector("button[onclick='guardarMesManual()']"),
+        document.querySelector("button[onclick='resetearPlanillaMes()']"),
+        document.querySelector("button[onclick='agregarNuevaSemana()']"),
+        document.querySelector("button[onclick='abrirModalImportador()']"),
+        document.querySelector("button[onclick='eliminarSemanaActiva()']"),
+        document.querySelector("button[onclick='agregarNuevoHermano()']")
+    ];
+
+    botonesEdicion.forEach(btn => {
+        if (btn) btn.style.display = esMensajero ? 'none' : '';
+    });
+
+    // Deshabilitar inputs de encabezado
+    const inputMes = document.getElementById('inputNombreMes');
+    if (inputMes) inputMes.disabled = esMensajero;
+
+    const radiosTipoSemana = document.querySelectorAll("input[name='tipoSemana']");
+    radiosTipoSemana.forEach(r => r.disabled = esMensajero);
+
+    const selectSalas = document.getElementById('selectNumSalas');
+    if (selectSalas) selectSalas.disabled = esMensajero;
+
+    // Bloquear interacciones directas en la planilla principal
+    const tablaPlanilla = document.getElementById('tablaPlanillaCompleta');
+    if (tablaPlanilla) {
+        if (esMensajero) {
+            tablaPlanilla.classList.add('pointer-events-none', 'opacity-90');
+        } else {
+            tablaPlanilla.classList.remove('pointer-events-none', 'opacity-90');
+        }
+    }
 }
 
 /**
@@ -203,11 +250,15 @@ window.cerrarSesion = async function() {
     window.usuarioActual = null;
     window.congregacionIdActual = null;
     window.slugCongregacionActual = "";
+    window.rolUsuarioActual = null;
     window.listaHermanos = [];
     window.programaMes = [];
     
     const contenedor = document.getElementById('selector-congregacion-container');
     if (contenedor) contenedor.innerHTML = '';
+
+    // Restablecer interfaz a estado editable por defecto para próximo login
+    aplicarRestriccionesPorRol('editor_vymc');
 
     mostrarPantallaLogin(true);
 };
@@ -275,6 +326,10 @@ window.cargarHermanosDesdeSupabase = async function() {
 };
 
 window.actualizarHermanoBD = async function(id, campo, valor) {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        return;
+    }
+
     const { error } = await db
         .from('hermanos')
         .update({ [campo]: valor })
@@ -284,6 +339,11 @@ window.actualizarHermanoBD = async function(id, campo, valor) {
 };
 
 window.agregarNuevoHermanoBD = async function() {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        alert("Tu usuario no tiene permisos para agregar hermanos.");
+        return;
+    }
+
     if (!window.congregacionIdActual) return;
 
     const nuevo = {
@@ -303,13 +363,17 @@ window.agregarNuevoHermanoBD = async function() {
         return;
     }
 
-    // Sincroniza y recarga toda la lista desde Supabase
     if (typeof cargarHermanosDesdeSupabase === 'function') {
         await cargarHermanosDesdeSupabase();
     }
 };
 
 window.eliminarHermanoBD = async function(id) {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        alert("Tu usuario no tiene permisos para eliminar hermanos.");
+        return;
+    }
+
     const { error } = await db
         .from('hermanos')
         .delete()
@@ -343,7 +407,6 @@ window.cargarPlanillaDesdeSupabase = async function() {
         return;
     }
 
-    // Preserva el índice de la semana activa actual si existe
     const idxActual = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
 
     if (data && data.datos) {
@@ -353,7 +416,6 @@ window.cargarPlanillaDesdeSupabase = async function() {
         if (inputMes) inputMes.value = window.nombreMesGlobal;
         if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
 
-        // Asegura que no se exceda del límite si cambió la cantidad de semanas
         const idxValido = Math.min(idxActual, Math.max(0, window.programaMes.length - 1));
 
         if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
@@ -427,7 +489,6 @@ function generarSnapshotHTMLPublico() {
         tempDiv.appendChild(bloqueSemana);
     });
 
-    // Volver exactamente a la semana que se estaba editando
     if (typeof cargarSemanaEnPlanilla === 'function') {
         cargarSemanaEnPlanilla(semanaActivaOriginal);
     }
@@ -437,6 +498,11 @@ function generarSnapshotHTMLPublico() {
 
 /* GUARDAR EN SUPABASE (GENERA PAYLOAD + SNAPSHOT DEL MES COMPLETO) */
 window.guardarPlanillaEnSupabase = async function() {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        alert("Tu usuario tiene rol de Mensajero (Solo Lectura) y no puede modificar la planilla.");
+        return;
+    }
+
     if (!window.congregacionIdActual) {
         alert("Error: No hay sesión activa o congregación asignada.");
         return;
