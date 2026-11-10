@@ -486,9 +486,21 @@
                         </h2>
                         <p class="text-xs text-slate-500">Programación mensual con filtrado inteligente según el día de la reunión</p>
                     </div>
-                    <button onclick="if(typeof guardarPlanillaAVEnSupabase === 'function') guardarPlanillaAVEnSupabase();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-floppy-disk"></i> Guardar Planilla AV
-                    </button>
+                    
+                    <!-- CONTENEDOR DE TELÉFONO DE GRUPO Y BOTÓN GUARDAR -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-sm">
+                            <i class="fa-brands fa-whatsapp text-emerald-600 font-bold"></i>
+                            <span class="text-xs font-bold text-emerald-900">Tel. Grupo:</span>
+                            <input type="text" 
+                                   id="inputTelGrupoAV" 
+                                   placeholder="Ej: 5491122334455" 
+                                   class="bg-white border border-emerald-300 text-xs px-2 py-1 rounded w-36 sm:w-44 text-slate-700 font-mono outline-none focus:ring-1 focus:ring-emerald-500">
+                        </div>
+                        <button onclick="if(typeof guardarPlanillaAVEnSupabase === 'function') guardarPlanillaAVEnSupabase();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Planilla AV
+                        </button>
+                    </div>
                 </div>
 
                 <div id="contenedorPlanillaAV" class="overflow-x-auto border border-slate-300 rounded-lg shadow-inner bg-white mb-6 p-2"></div>
