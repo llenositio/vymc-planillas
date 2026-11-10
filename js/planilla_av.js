@@ -6,7 +6,8 @@ window.programaMesAV = [];
 window.ausenciasMes = [];
 
 /**
- * Carga la planilla AV guardada desde Supabase asegurando la carga previa de la matriz de elegibles
+ * Carga la planilla AV guardada desde Supabase. Si es un mes nuevo o no tiene teléfono,
+ * busca el teléfono del grupo registrado en la planilla más reciente como sugerencia editable.
  */
 window.cargarPlanillaAVDesdeSupabase = async function() {
     let idCongre = window.congregacionIdActual;
@@ -16,7 +17,7 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
 
     if (!idCongre) return;
 
-    // SOLUCIÓN PUNTO 2b: Cargar la matriz de elegibles automáticamente si no está en memoria
+    // Cargar la matriz de elegibles automáticamente si no está en memoria
     if (!window.listaHermanosAV || window.listaHermanosAV.length === 0) {
         if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
             await window.cargarElegiblesAVDesdeSupabase();
@@ -33,26 +34,53 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
         .eq('mes_ano', mesClave)
         .maybeSingle();
 
+    const inputTel = document.getElementById('inputTelGrupoAV');
+
     if (error) {
         console.error("Error cargando planilla AV desde Supabase:", error);
     } else if (data) {
+        // Carga de planilla existente en Supabase
         if (data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
             window.programaMesAV = data.datos;
         } else {
             window.sincronizarSemanasDesdeVyMC();
         }
 
-        // Cargar el teléfono del grupo/cuadrilla guardado
-        const inputTel = document.getElementById('inputTelGrupoAV');
+        // Si ya hay un teléfono cargado en este mes, lo asigna
         if (inputTel && data.telefono_grupo) {
             inputTel.value = data.telefono_grupo;
+        } else {
+            // Si la planilla existe pero no tenía teléfono, sugiere el último guardado en la congregación
+            await window.sugerirUltimoTelefonoGrupo(idCongre, inputTel);
         }
     } else {
-        // Si no hay datos guardados en Supabase, sincronizar semanas desde el programa VyMC principal
+        // Si NO hay planilla creada para este mes, sincroniza semanas y sugiere el último teléfono
         window.sincronizarSemanasDesdeVyMC();
+        await window.sugerirUltimoTelefonoGrupo(idCongre, inputTel);
     }
 
     window.renderizarPlanillaAV();
+};
+
+/**
+ * Busca el último teléfono del grupo guardado en planillas anteriores y lo asigna como sugerencia editable
+ */
+window.sugerirUltimoTelefonoGrupo = async function(idCongre, inputTel) {
+    if (!inputTel) return;
+
+    const { data: ultimaPlanilla } = await db
+        .from('planillas_av')
+        .select('telefono_grupo')
+        .eq('congregacion_id', idCongre)
+        .not('telefono_grupo', 'is', null)
+        .neq('telefono_grupo', '')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (ultimaPlanilla && ultimaPlanilla.telefono_grupo) {
+        inputTel.value = ultimaPlanilla.telefono_grupo;
+    }
 };
 
 /**
@@ -200,7 +228,7 @@ window.renderizarPlanillaAV = function() {
             const elegiblesES = window.obtenerElegiblesAVPorTipo(p.key, 'ES', sem.fecha, sem.puestosES);
             const disabled = esMensajero ? 'disabled' : '';
 
-            // SOLUCIÓN PUNTO 2a: Ícono chiquito de WhatsApp individual al lado del selector
+            // Ícono chiquito de WhatsApp individual al lado del selector
             html += `<td class="p-1 border border-slate-300">`;
             html += `<div class="flex items-center gap-1">`;
             html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'ES', '${p.key}', this.value)">`;
@@ -241,7 +269,7 @@ window.renderizarPlanillaAV = function() {
             const elegiblesFS = window.obtenerElegiblesAVPorTipo(p.key, 'FS', sem.fecha, sem.puestosFS);
             const disabled = esMensajero ? 'disabled' : '';
 
-            // SOLUCIÓN PUNTO 2a: Ícono chiquito de WhatsApp individual al lado del selector
+            // Ícono chiquito de WhatsApp individual al lado del selector
             html += `<td class="p-1 border border-slate-300">`;
             html += `<div class="flex items-center gap-1">`;
             html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-blue-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'FS', '${p.key}', this.value)">`;
@@ -307,7 +335,7 @@ window.asignarHermanoAV = function(indexSemana, puestoKey, nombre) {
 };
 
 /**
- * Guardar planilla AV en Supabase (incluyendo el número del grupo)
+ * Guardar planilla AV en Supabase (utilizando la columna dedicada 'telefono_grupo')
  */
 window.guardarPlanillaAVEnSupabase = async function() {
     if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
