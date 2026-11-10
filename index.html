@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor VyMC - Planilla Mensual y Asignaciones</title>
+    <title>Gestor VyMC y AV - Planilla Mensual y Asignaciones</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Client -->
@@ -207,7 +207,7 @@
             <div class="flex items-center gap-2">
                 <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-xl text-xs font-semibold">
                     <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
-                        <i class="fa-solid fa-table-cells mr-1"></i> Planilla Mensual
+                        <i class="fa-solid fa-table-cells mr-1"></i> Planilla VyMC
                     </button>
                     <button onclick="cambiarPestaña('historial')" id="tab-historial" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
                         <i class="fa-solid fa-clock-rotate-left mr-1"></i> Historial
@@ -216,7 +216,17 @@
                         <i class="fa-solid fa-chart-column mr-1"></i> Estadísticas
                     </button>
                     <button onclick="cambiarPestaña('hermanos')" id="tab-hermanos" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
-                        <i class="fa-solid fa-users mr-1"></i> Lista de Hermanos (Matriz)
+                        <i class="fa-solid fa-users mr-1"></i> Matriz VyMC
+                    </button>
+
+                    <!-- SEPARADOR Y NUEVAS PESTAÑAS DE AV -->
+                    <span class="border-r border-slate-700 mx-1"></span>
+
+                    <button onclick="cambiarPestaña('av_planilla')" id="tab-av_planilla" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-headphones mr-1"></i> Planilla AV
+                    </button>
+                    <button onclick="cambiarPestaña('av_matriz')" id="tab-av_matriz" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-sliders mr-1"></i> Matriz AV
                     </button>
                 </nav>
 
@@ -230,7 +240,7 @@
 
     <div class="max-w-[98%] mx-auto px-2 sm:px-4 mt-4">
 
-        <!-- PLANILLA MENSUAL -->
+        <!-- PLANILLA MENSUAL VyMC -->
         <section id="sec-planilla" class="tab-content">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4 no-print">
                 
@@ -420,7 +430,7 @@
             </div>
         </section>
 
-        <!-- LISTA DE HERMANOS (MATRIZ REORGANIZADA CON HEADER FIJO) -->
+        <!-- LISTA DE HERMANOS (MATRIZ VyMC) -->
         <section id="sec-hermanos" class="tab-content hidden">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -463,6 +473,56 @@
                         <tbody id="cuerpoTablaHermanos"></tbody>
                     </table>
                 </div>
+            </div>
+        </section>
+
+        <!-- NUEVA SECCIÓN: PLANILLA MENSUAL AV -->
+        <section id="sec-av_planilla" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-headphones text-emerald-600"></i> Planilla Mensual - Acomodadores y Audio / Video
+                        </h2>
+                        <p class="text-xs text-slate-500">Programación mensual con filtrado inteligente según el día de la reunión</p>
+                    </div>
+                    <button onclick="if(typeof guardarPlanillaAVEnSupabase === 'function') guardarPlanillaAVEnSupabase();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar Planilla AV
+                    </button>
+                </div>
+
+                <div id="contenedorPlanillaAV" class="overflow-x-auto border border-slate-300 rounded-lg shadow-inner bg-white mb-6 p-2"></div>
+
+                <!-- CONTENEDOR INFERIOR: BUSCADOR AMARILLO Y RESUMEN VERDE -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2 border-t border-slate-200">
+                    <div class="bg-amber-50 border border-amber-300 rounded-lg p-3 shadow-sm">
+                        <h4 class="text-xs font-bold text-amber-900 uppercase mb-2 border-b border-amber-200 pb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-magnifying-glass text-amber-600"></i> Buscador y Resaltador de Hermano
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="inputBuscarHermanoAV" onkeyup="if(typeof window.actualizarResaltadoBuscador === 'function') window.actualizarResaltadoBuscador();" placeholder="Escribe el nombre del hermano..." class="flex-1 bg-white border border-amber-300 rounded px-2.5 py-1 text-xs outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <p id="textoConteoBuscadoAV" class="text-xs font-bold text-rose-700 mt-2 min-h-[1rem]"></p>
+                    </div>
+
+                    <div id="contenedorTablaVerdeAV"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NUEVA SECCIÓN: MATRIZ DE ELEGIBLES AV -->
+        <section id="sec-av_matriz" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-emerald-600"></i> Matriz de Elegibles (Aptitudes AV)
+                        </h2>
+                        <p class="text-xs text-slate-500">Marca los puestos habilitados para Entre Semana (ES) y Fin de Semana (FS)</p>
+                    </div>
+                </div>
+
+                <div id="contenedorMatrizAV" class="max-h-[65vh] overflow-y-auto border border-slate-300 rounded-lg shadow-inner bg-white"></div>
             </div>
         </section>
 
@@ -545,16 +605,55 @@
         </div>
     </div>
 
-    <!-- CARGA DE SCRIPTS MODULARES -->
+    <!-- CARGA DE SCRIPTS MODULARES DE VyMC -->
     <script src="js/supabase.js"></script>
     <script src="js/whatsapp.js"></script>
     <script src="js/historial.js"></script>
     
-    <!-- MÓDULOS DE APLICACIÓN SEPARADOS -->
     <script src="js/state.js"></script>
     <script src="js/ui-helpers.js"></script>
     <script src="js/editor.js"></script>
     <script src="js/importador.js"></script>
     <script src="js/impresion-publico.js"></script>
+
+    <!-- CARGA DE SCRIPTS MODULARES DE ACOMODADORES / AV -->
+    <script src="js/matriz_av.js"></script>
+    <script src="js/planilla_av.js"></script>
+    <script src="js/herramientas_av.js"></script>
+
+    <script>
+        // Lógica para conmutar las pestañas incluyendo las de AV
+        window.cambiarPestaña = function(pestaña) {
+            const secciones = ['planilla', 'historial', 'estadisticas', 'hermanos', 'av_planilla', 'av_matriz'];
+            
+            secciones.forEach(sec => {
+                const elSec = document.getElementById(`sec-${sec}`);
+                const elTab = document.getElementById(`tab-${sec}`);
+                
+                if (elSec) elSec.classList.add('hidden');
+                if (elTab) {
+                    elTab.classList.remove('bg-amber-600', 'text-white', 'font-bold');
+                    elTab.classList.add('text-slate-300');
+                }
+            });
+
+            const secActiva = document.getElementById(`sec-${pestaña}`);
+            const tabActivo = document.getElementById(`tab-${pestaña}`);
+
+            if (secActiva) secActiva.classList.remove('hidden');
+            if (tabActivo) {
+                tabActivo.classList.add('bg-amber-600', 'text-white', 'font-bold');
+                tabActivo.classList.remove('text-slate-300');
+            }
+
+            // Disparar carga de datos de Supabase al abrir pestañas de AV
+            if (pestaña === 'av_matriz' && typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
+                window.cargarElegiblesAVDesdeSupabase();
+            }
+            if (pestaña === 'av_planilla' && typeof window.cargarAusenciasDesdeSupabase === 'function') {
+                window.cargarAusenciasDesdeSupabase();
+            }
+        };
+    </script>
 </body>
 </html>
