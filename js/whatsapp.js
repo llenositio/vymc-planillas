@@ -1,7 +1,10 @@
 /**
- * Módulo de envío de asignaciones S-89 por WhatsApp (Texto Plano / Sin Emojis)
+ * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla AV por WhatsApp
  */
 
+/**
+ * Envia notificación individual S-89 por WhatsApp
+ */
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
     if (!nombreHermano) {
         alert("Primero debes seleccionar a un hermano en la asignación.");
@@ -39,9 +42,66 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
     texto += `- *Intervención:* ${intervencion || '---'}\n`;
     texto += `- *Se presenta en:* ${sala}\n\n`;
     texto += `_Nota:_\n`;
-    texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).`;
+    texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).\n\n`;
+    texto += `Por favor, mandame un OK como respuesta`;
 
     // Genera la URL codificada de forma segura
     const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+};
+
+/**
+ * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp al número de grupo
+ */
+window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
+    const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
+    if (!semana) {
+        alert("No se encontró la información de la semana seleccionada.");
+        return;
+    }
+
+    const campoPuestos = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
+    const puestosSemana = semana[campoPuestos] || {};
+    const etiquetaReunion = (tipoDia === 'ES') ? 'ENTRE SEMANA' : 'FIN DE SEMANA';
+
+    let mensaje = `📋 *ASIGNACIONES AV Y ACOMODADORES*\n`;
+    mensaje += `🗓️ *Semana:* ${semana.fecha} (${etiquetaReunion})\n\n`;
+
+    let hayAsignados = false;
+
+    (window.puestosConfigAV || []).forEach(p => {
+        const nombreAsignado = puestosSemana[p.key];
+        if (nombreAsignado) {
+            hayAsignados = true;
+            mensaje += `• *${p.label}:* ${nombreAsignado}\n`;
+        }
+    });
+
+    if (!hayAsignados) {
+        alert("No hay hermanos asignados en esta reunión para enviar por WhatsApp.");
+        return;
+    }
+
+    // Pie de mensaje con solicitud de confirmación
+    mensaje += `\nPor favor, mandame un OK como respuesta`;
+
+    // Obtener el número del grupo escrito en el campo de la interfaz
+    const inputTel = document.getElementById('inputTelGrupoAV');
+    let numeroGrupo = inputTel ? inputTel.value.replace(/\D/g, '') : '';
+
+    if (!numeroGrupo) {
+        alert("Ingresa un número de celular/grupo en el campo 'Tel. Grupo' ubicado al lado del botón 'Guardar Planilla AV'.");
+        if (inputTel) inputTel.focus();
+        return;
+    }
+
+    // Formatear código de país si es necesario (Argentina)
+    if (numeroGrupo.length === 10) {
+        numeroGrupo = '549' + numeroGrupo;
+    } else if (numeroGrupo.length === 11 && numeroGrupo.startsWith('0')) {
+        numeroGrupo = '549' + numeroGrupo.substring(1);
+    }
+
+    const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 };
