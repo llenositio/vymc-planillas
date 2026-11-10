@@ -8,7 +8,15 @@ window.listaHermanosAV = [];
  * Carga los elegibles de AV desde Supabase cruzando con la tabla principal de hermanos
  */
 window.cargarElegiblesAVDesdeSupabase = async function() {
-    if (!window.congregacionIdActual) return;
+    // Resolver congregacion_id si está guardado en el objeto global
+    if (!window.congregacionIdActual && typeof window.congregacionActual === 'object') {
+        window.congregacionIdActual = window.congregacionActual ? window.congregacionActual.id : null;
+    }
+
+    if (!window.congregacionIdActual) {
+        console.warn("No hay congregación seleccionada aún.");
+        return;
+    }
 
     // 1. Obtener todos los hermanos de la congregación (de la tabla principal hermanos)
     const { data: hermanos, error: errHermanos } = await db
@@ -39,7 +47,7 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         mapaAptitudes[item.hermano_id] = item;
     });
 
-    // 3. Consolidar lista (solo varones o según criterio)
+    // 3. Consolidar lista de hermanos con sus aptitudes
     window.listaHermanosAV = (hermanos || []).map(h => {
         const apt = mapaAptitudes[h.id] || {};
         return {
@@ -63,8 +71,8 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         };
     });
 
-    if (typeof renderizarMatrizAV === 'function') {
-        renderizarMatrizAV();
+    if (typeof window.renderizarMatrizAV === 'function') {
+        window.renderizarMatrizAV();
     }
 };
 
@@ -143,6 +151,10 @@ window.renderizarMatrizAV = function() {
 window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
     if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
         return;
+    }
+
+    if (!window.congregacionIdActual && typeof window.congregacionActual === 'object') {
+        window.congregacionIdActual = window.congregacionActual ? window.congregacionActual.id : null;
     }
 
     if (!window.congregacionIdActual) return;
