@@ -6,6 +6,41 @@ window.programaMesAV = [];
 window.ausenciasMes = [];
 
 /**
+ * Carga la planilla AV guardada desde Supabase para la congregación activa
+ */
+window.cargarPlanillaAVDesdeSupabase = async function() {
+    let idCongre = window.congregacionIdActual;
+    if (!idCongre && window.congregacionActual) {
+        idCongre = window.congregacionActual.id;
+    }
+
+    if (!idCongre) return;
+
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
+
+    const { data, error } = await db
+        .from('planillas_av')
+        .select('*')
+        .eq('congregacion_id', idCongre)
+        .eq('mes_ano', mesClave)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error cargando planilla AV desde Supabase:", error);
+    } else if (data && data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
+        window.programaMesAV = data.datos;
+    } else if (window.programaMes && window.programaMes.length > 0) {
+        window.programaMesAV = window.programaMes.map(sem => ({
+            fecha: sem.fecha || 'Semana',
+            puestos: sem.puestosAV || {}
+        }));
+    }
+
+    window.renderizarPlanillaAV();
+};
+
+/**
  * Carga las ausencias registradas para la congregación activa
  */
 window.cargarAusenciasDesdeSupabase = async function() {
