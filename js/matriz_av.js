@@ -78,7 +78,7 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
 };
 
 /**
- * Renderiza la tabla HTML de la Matriz de Elegibles AV con encabezados editables
+ * Renderiza la tabla HTML de la Matriz de Elegibles AV con controles de columnas
  */
 window.renderizarMatrizAV = function() {
     const contenedor = document.getElementById('contenedorMatrizAV');
@@ -86,7 +86,23 @@ window.renderizarMatrizAV = function() {
 
     const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
 
-    let html = `
+    let html = '';
+
+    // BOTONES SUPERIORES PARA AGREGAR COLUMNAS
+    if (!esMensajero) {
+        html += `
+            <div class="mb-3 flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200">
+                <span class="text-xs font-bold text-slate-700">Gestión de Columnas (Puestos):</span>
+                <div class="flex gap-2">
+                    <button onclick="window.agregarPuestoAV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Agregar Puesto (Columna)
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    html += `
         <div class="overflow-x-auto shadow-md rounded-lg border border-slate-200">
             <table class="w-full text-xs text-left text-slate-700 bg-white">
                 <thead class="text-[11px] uppercase bg-slate-800 text-white font-bold tracking-wider">
@@ -94,14 +110,19 @@ window.renderizarMatrizAV = function() {
                         <th class="px-3 py-2 border-b border-slate-700">Hermano</th>
     `;
 
-    // Renderizar cabeceras de columnas editables (ES y FS por puesto)
+    // Renderizar cabeceras de columnas editables con botón de eliminar
     window.puestosConfigAV.forEach((p, pIdx) => {
+        const botonEliminar = !esMensajero ? `<button onclick="window.eliminarPuestoAV(${pIdx})" title="Eliminar puesto" class="ml-1 text-rose-300 hover:text-white font-bold px-1">✕</button>` : '';
+
         html += `
             <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorES}">
-                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText, 'ES')" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
+                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
             </th>
             <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorFS}">
-                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText, 'FS')" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
+                <div class="flex items-center justify-center">
+                    <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
+                    ${botonEliminar}
+                </div>
             </th>
         `;
     });
@@ -151,13 +172,59 @@ window.renderizarMatrizAV = function() {
 };
 
 /**
- * Actualiza la etiqueta visible de un puesto
+ * Agrega un nuevo puesto (par de columnas ES / FS)
  */
-window.actualizarNombrePuestoAV = function(index, nuevoTexto, tipo) {
+window.agregarPuestoAV = function() {
+    const nombre = prompt("Ingresa el nombre del nuevo puesto (ej. PLATAFORMA, PARKING):");
+    if (!nombre || !nombre.trim()) return;
+
+    const labelLimpio = nombre.trim().toUpperCase();
+    const keyLimpia = labelLimpio.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+    // Verificar que no exista la key
+    if (window.puestosConfigAV.some(p => p.key === keyLimpia)) {
+        alert("Ya existe un puesto con ese nombre.");
+        return;
+    }
+
+    const colores = [
+        { colorES: 'bg-cyan-900/40', colorFS: 'bg-cyan-800/40' },
+        { colorES: 'bg-fuchsia-900/40', colorFS: 'bg-fuchsia-800/40' },
+        { colorES: 'bg-lime-900/40', colorFS: 'bg-lime-800/40' }
+    ];
+
+    const colorElegido = colores[window.puestosConfigAV.length % colores.length];
+
+    window.puestosConfigAV.push({
+        key: keyLimpia,
+        label: labelLimpio,
+        ...colorElegido
+    });
+
+    window.renderizarMatrizAV();
+};
+
+/**
+ * Elimina un puesto (par de columnas ES / FS) por índice
+ */
+window.eliminarPuestoAV = function(index) {
+    const puesto = window.puestosConfigAV[index];
+    if (!puesto) return;
+
+    if (confirm(`¿Estás seguro de eliminar el puesto "${puesto.label}" (ES y FS)?`)) {
+        window.puestosConfigAV.splice(index, 1);
+        window.renderizarMatrizAV();
+    }
+};
+
+/**
+ * Actualiza el nombre visible de un puesto
+ */
+window.actualizarNombrePuestoAV = function(index, nuevoTexto) {
     if (!window.puestosConfigAV[index]) return;
     const textoLimpio = nuevoTexto.replace(/\s+(ES|FS)$/i, '').trim();
     if (textoLimpio) {
-        window.puestosConfigAV[index].label = textoLimpio;
+        window.puestosConfigAV[index].label = textoLimpio.toUpperCase();
     }
 };
 
