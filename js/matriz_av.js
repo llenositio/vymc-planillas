@@ -86,7 +86,7 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
 };
 
 /**
- * Renderiza la tabla HTML de la Matriz de Elegibles AV con selector de hermanas y gestión de columnas
+ * Renderiza la tabla HTML de la Matriz de Elegibles AV con selector de hermanas, gestión de columnas y acción de eliminar
  */
 window.renderizarMatrizAV = function() {
     const contenedor = document.getElementById('contenedorMatrizAV');
@@ -158,6 +158,7 @@ window.renderizarMatrizAV = function() {
     });
 
     html += `
+                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 font-medium">
@@ -197,7 +198,13 @@ window.renderizarMatrizAV = function() {
             `;
         });
 
-        html += `</tr>`;
+        html += `
+            <td class="px-2 py-1 text-center">
+                <button onclick="window.quitarHermanoDeMatrizAV(${h.hermano_id})" title="Quitar de la matriz" class="text-rose-500 hover:text-rose-700 font-bold p-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </td>
+        </tr>`;
     });
 
     html += `
@@ -237,6 +244,21 @@ window.agregarHermanaAMatrizAV = function() {
     });
 
     window.listaHermanosAV.push(nuevoObj);
+    window.renderizarMatrizAV();
+};
+
+/**
+ * Quita a un hermano/hermana de la matriz AV y elimina su registro en Supabase
+ */
+window.quitarHermanoDeMatrizAV = async function(hermanoId) {
+    if (!confirm("¿Deseas quitar a esta persona de la matriz AV?")) return;
+
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    if (idCongre) {
+        await db.from('hermanos_av').delete().eq('congregacion_id', idCongre).eq('hermano_id', hermanoId);
+    }
+
+    window.listaHermanosAV = window.listaHermanosAV.filter(h => h.hermano_id !== hermanoId);
     window.renderizarMatrizAV();
 };
 
@@ -304,11 +326,7 @@ window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
         return;
     }
 
-    let idCongre = window.congregacionIdActual;
-    if (!idCongre && window.congregacionActual) {
-        idCongre = window.congregacionActual.id;
-    }
-
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) return;
 
     const payload = {
