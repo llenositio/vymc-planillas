@@ -3,12 +3,20 @@
  */
 
 window.listaHermanosAV = [];
+window.puestosConfigAV = [
+    { key: 'puerta', label: 'PUERTA', colorES: 'bg-emerald-900/40', colorFS: 'bg-emerald-800/40' },
+    { key: 'aud1', label: 'AUD 1', colorES: 'bg-blue-900/40', colorFS: 'bg-blue-800/40' },
+    { key: 'aud2', label: 'AUD 2', colorES: 'bg-teal-900/40', colorFS: 'bg-teal-800/40' },
+    { key: 'mic1', label: 'MIC 1', colorES: 'bg-indigo-900/40', colorFS: 'bg-indigo-800/40' },
+    { key: 'mic2', label: 'MIC 2', colorES: 'bg-purple-900/40', colorFS: 'bg-purple-800/40' },
+    { key: 'audio', label: 'AUDIO', colorES: 'bg-amber-900/40', colorFS: 'bg-amber-800/40' },
+    { key: 'video', label: 'VIDEO', colorES: 'bg-rose-900/40', colorFS: 'bg-rose-800/40' }
+];
 
 /**
  * Carga los elegibles de AV desde Supabase cruzando con la tabla principal de hermanos
  */
 window.cargarElegiblesAVDesdeSupabase = async function() {
-    // Resolver congregacion_id si está guardado en el objeto global
     let idCongre = window.congregacionIdActual;
     if (!idCongre && window.congregacionActual) {
         idCongre = window.congregacionActual.id;
@@ -42,7 +50,6 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         console.error("Error cargando aptitudes AV:", errAV);
     }
 
-    // Mapear aptitudes por hermano_id
     const mapaAptitudes = {};
     (aptitudesAV || []).forEach(item => {
         mapaAptitudes[item.hermano_id] = item;
@@ -51,25 +58,18 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
     // 3. Consolidar lista de varones con sus aptitudes
     window.listaHermanosAV = (hermanos || []).map(h => {
         const apt = mapaAptitudes[h.id] || {};
-        return {
+        const obj = {
             hermano_id: h.id,
             nombre: h.nombre,
-            telefono: h.celular || '',
-            puerta_es: !!apt.puerta_es,
-            puerta_fs: !!apt.puerta_fs,
-            aud1_es: !!apt.aud1_es,
-            aud1_fs: !!apt.aud1_fs,
-            aud2_es: !!apt.aud2_es,
-            aud2_fs: !!apt.aud2_fs,
-            mic1_es: !!apt.mic1_es,
-            mic1_fs: !!apt.mic1_fs,
-            mic2_es: !!apt.mic2_es,
-            mic2_fs: !!apt.mic2_fs,
-            audio_es: !!apt.audio_es,
-            audio_fs: !!apt.audio_fs,
-            video_es: !!apt.video_es,
-            video_fs: !!apt.video_fs
+            telefono: h.celular || ''
         };
+
+        window.puestosConfigAV.forEach(p => {
+            obj[`${p.key}_es`] = !!apt[`${p.key}_es`];
+            obj[`${p.key}_fs`] = !!apt[`${p.key}_fs`];
+        });
+
+        return obj;
     });
 
     if (typeof window.renderizarMatrizAV === 'function') {
@@ -78,7 +78,7 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
 };
 
 /**
- * Renderiza la tabla HTML de la Matriz de Elegibles AV
+ * Renderiza la tabla HTML de la Matriz de Elegibles AV con encabezados editables
  */
 window.renderizarMatrizAV = function() {
     const contenedor = document.getElementById('contenedorMatrizAV');
@@ -92,43 +92,47 @@ window.renderizarMatrizAV = function() {
                 <thead class="text-[11px] uppercase bg-slate-800 text-white font-bold tracking-wider">
                     <tr>
                         <th class="px-3 py-2 border-b border-slate-700">Hermano</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-emerald-900/40">Puerta ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-emerald-800/40">Puerta FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-blue-900/40">Aud 1 ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-blue-800/40">Aud 1 FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-teal-900/40">Aud 2 ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-teal-800/40">Aud 2 FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-indigo-900/40">Mic 1 ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-indigo-800/40">Mic 1 FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-purple-900/40">Mic 2 ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-purple-800/40">Mic 2 FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-amber-900/40">Audio ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-amber-800/40">Audio FS</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-rose-900/40">Video ES</th>
-                        <th class="px-2 py-2 text-center border-b border-slate-700 bg-rose-800/40">Video FS</th>
+    `;
+
+    // Renderizar cabeceras de columnas editables (ES y FS por puesto)
+    window.puestosConfigAV.forEach((p, pIdx) => {
+        html += `
+            <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorES}">
+                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText, 'ES')" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
+            </th>
+            <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorFS}">
+                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText, 'FS')" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
+            </th>
+        `;
+    });
+
+    html += `
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 font-medium">
     `;
 
-    const campos = [
-        'puerta_es', 'puerta_fs', 'aud1_es', 'aud1_fs', 
-        'aud2_es', 'aud2_fs', 'mic1_es', 'mic1_fs', 
-        'mic2_es', 'mic2_fs', 'audio_es', 'audio_fs', 
-        'video_es', 'video_fs'
-    ];
-
+    // Renderizar filas por hermano
     (window.listaHermanosAV || []).forEach((h) => {
         html += `<tr class="hover:bg-slate-50 transition">`;
         html += `<td class="px-3 py-1.5 font-bold text-slate-900 whitespace-nowrap">${h.nombre}</td>`;
 
-        campos.forEach(campo => {
-            const checked = h[campo] ? 'checked' : '';
+        window.puestosConfigAV.forEach(p => {
+            const campoES = `${p.key}_es`;
+            const campoFS = `${p.key}_fs`;
+            const checkedES = h[campoES] ? 'checked' : '';
+            const checkedFS = h[campoFS] ? 'checked' : '';
             const disabled = esMensajero ? 'disabled' : '';
+
             html += `
                 <td class="px-2 py-1 text-center">
-                    <input type="checkbox" ${checked} ${disabled}
-                           onchange="actualizarAptitudAVInmediata(${h.hermano_id}, '${campo}', this.checked)"
+                    <input type="checkbox" ${checkedES} ${disabled}
+                           onchange="actualizarAptitudAVInmediata(${h.hermano_id}, '${campoES}', this.checked)"
+                           class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                </td>
+                <td class="px-2 py-1 text-center">
+                    <input type="checkbox" ${checkedFS} ${disabled}
+                           onchange="actualizarAptitudAVInmediata(${h.hermano_id}, '${campoFS}', this.checked)"
                            class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                 </td>
             `;
@@ -144,6 +148,17 @@ window.renderizarMatrizAV = function() {
     `;
 
     contenedor.innerHTML = html;
+};
+
+/**
+ * Actualiza la etiqueta visible de un puesto
+ */
+window.actualizarNombrePuestoAV = function(index, nuevoTexto, tipo) {
+    if (!window.puestosConfigAV[index]) return;
+    const textoLimpio = nuevoTexto.replace(/\s+(ES|FS)$/i, '').trim();
+    if (textoLimpio) {
+        window.puestosConfigAV[index].label = textoLimpio;
+    }
 };
 
 /**
