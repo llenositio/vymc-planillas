@@ -126,7 +126,35 @@ async function cargarPerfilUsuario(user) {
 function aplicarRestriccionesPorRol(rol) {
     const esMensajero = (typeof rol === 'string' && rol.startsWith('mensajero_'));
 
-    // Botones de acción en la planilla y matriz de hermanos
+    // Inyectar o remover estilos globales de bloqueo estricto para mensajero
+    let estiloMensajero = document.getElementById('estilo-restriccion-mensajero');
+    if (esMensajero) {
+        if (!estiloMensajero) {
+            estiloMensajero = document.createElement('style');
+            estiloMensajero.id = 'estilo-restriccion-mensajero';
+            estiloMensajero.innerHTML = `
+                .select-asig, select, input, [contenteditable="true"] {
+                    pointer-events: none !important;
+                }
+                .select-asig, select {
+                    background: transparent !important;
+                    border: none !important;
+                    appearance: none !important;
+                    -webkit-appearance: none !important;
+                }
+                [contenteditable="true"] {
+                    outline: none !important;
+                }
+            `;
+            document.head.appendChild(estiloMensajero);
+        }
+    } else {
+        if (estiloMensajero) {
+            estiloMensajero.remove();
+        }
+    }
+
+    // Ocultar botones de modificación de la interfaz
     const botonesEdicion = [
         document.querySelector("button[onclick='guardarMesManual()']"),
         document.querySelector("button[onclick='resetearPlanillaMes()']"),
@@ -140,7 +168,7 @@ function aplicarRestriccionesPorRol(rol) {
         if (btn) btn.style.display = esMensajero ? 'none' : '';
     });
 
-    // Deshabilitar inputs de encabezado
+    // Deshabilitar inputs de encabezado y controles
     const inputMes = document.getElementById('inputNombreMes');
     if (inputMes) inputMes.disabled = esMensajero;
 
@@ -149,16 +177,6 @@ function aplicarRestriccionesPorRol(rol) {
 
     const selectSalas = document.getElementById('selectNumSalas');
     if (selectSalas) selectSalas.disabled = esMensajero;
-
-    // Bloquear interacciones directas en la planilla principal
-    const tablaPlanilla = document.getElementById('tablaPlanillaCompleta');
-    if (tablaPlanilla) {
-        if (esMensajero) {
-            tablaPlanilla.classList.add('pointer-events-none', 'opacity-90');
-        } else {
-            tablaPlanilla.classList.remove('pointer-events-none', 'opacity-90');
-        }
-    }
 }
 
 /**
