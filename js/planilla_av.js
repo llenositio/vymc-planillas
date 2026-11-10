@@ -6,7 +6,7 @@ window.programaMesAV = [];
 window.ausenciasMes = [];
 
 /**
- * Carga la planilla AV guardada desde Supabase para la congregación activa
+ * Carga la planilla AV guardada desde Supabase asegurando la carga previa de la matriz de elegibles
  */
 window.cargarPlanillaAVDesdeSupabase = async function() {
     let idCongre = window.congregacionIdActual;
@@ -15,6 +15,13 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
     }
 
     if (!idCongre) return;
+
+    // SOLUCIÓN PUNTO 2b: Cargar la matriz de elegibles automáticamente si no está en memoria
+    if (!window.listaHermanosAV || window.listaHermanosAV.length === 0) {
+        if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
+            await window.cargarElegiblesAVDesdeSupabase();
+        }
+    }
 
     const inputMes = document.getElementById('inputNombreMes');
     const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
@@ -170,7 +177,7 @@ window.renderizarPlanillaAV = function() {
     });
 
     html += `
-                    <th class="p-2 border border-slate-700 text-center w-10">WA</th>
+                    <th class="p-2 border border-slate-700 text-center w-10">WA Grupo</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-300 font-medium">
@@ -193,8 +200,10 @@ window.renderizarPlanillaAV = function() {
             const elegiblesES = window.obtenerElegiblesAVPorTipo(p.key, 'ES', sem.fecha, sem.puestosES);
             const disabled = esMensajero ? 'disabled' : '';
 
+            // SOLUCIÓN PUNTO 2a: Ícono chiquito de WhatsApp individual al lado del selector
             html += `<td class="p-1 border border-slate-300">`;
-            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'ES', '${p.key}', this.value)">`;
+            html += `<div class="flex items-center gap-1">`;
+            html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'ES', '${p.key}', this.value)">`;
             html += `<option value="">-- SELECCIONAR --</option>`;
 
             if (asignadoES && !elegiblesES.some(e => e.nombre === asignadoES)) {
@@ -206,7 +215,11 @@ window.renderizarPlanillaAV = function() {
                 html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
             });
 
-            html += `</select></td>`;
+            html += `</select>`;
+            html += `<button onclick="if(typeof window.enviarWhatsAppIndividualAV==='function') window.enviarWhatsAppIndividualAV(${idx}, 'ES', '${p.key}');" title="WhatsApp Individual" class="text-emerald-600 hover:text-emerald-800 font-bold p-0.5">`;
+            html += `<i class="fa-brands fa-whatsapp text-sm"></i>`;
+            html += `</button>`;
+            html += `</div></td>`;
         });
 
         html += `
@@ -228,8 +241,10 @@ window.renderizarPlanillaAV = function() {
             const elegiblesFS = window.obtenerElegiblesAVPorTipo(p.key, 'FS', sem.fecha, sem.puestosFS);
             const disabled = esMensajero ? 'disabled' : '';
 
+            // SOLUCIÓN PUNTO 2a: Ícono chiquito de WhatsApp individual al lado del selector
             html += `<td class="p-1 border border-slate-300">`;
-            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-blue-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'FS', '${p.key}', this.value)">`;
+            html += `<div class="flex items-center gap-1">`;
+            html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-blue-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'FS', '${p.key}', this.value)">`;
             html += `<option value="">-- SELECCIONAR --</option>`;
 
             if (asignadoFS && !elegiblesFS.some(e => e.nombre === asignadoFS)) {
@@ -241,7 +256,11 @@ window.renderizarPlanillaAV = function() {
                 html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
             });
 
-            html += `</select></td>`;
+            html += `</select>`;
+            html += `<button onclick="if(typeof window.enviarWhatsAppIndividualAV==='function') window.enviarWhatsAppIndividualAV(${idx}, 'FS', '${p.key}');" title="WhatsApp Individual" class="text-blue-600 hover:text-blue-800 font-bold p-0.5">`;
+            html += `<i class="fa-brands fa-whatsapp text-sm"></i>`;
+            html += `</button>`;
+            html += `</div></td>`;
         });
 
         html += `
