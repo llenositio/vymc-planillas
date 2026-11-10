@@ -9,20 +9,22 @@ window.listaHermanosAV = [];
  */
 window.cargarElegiblesAVDesdeSupabase = async function() {
     // Resolver congregacion_id si está guardado en el objeto global
-    if (!window.congregacionIdActual && typeof window.congregacionActual === 'object') {
-        window.congregacionIdActual = window.congregacionActual ? window.congregacionActual.id : null;
+    let idCongre = window.congregacionIdActual;
+    if (!idCongre && window.congregacionActual) {
+        idCongre = window.congregacionActual.id;
     }
 
-    if (!window.congregacionIdActual) {
+    if (!idCongre) {
         console.warn("No hay congregación seleccionada aún.");
         return;
     }
 
-    // 1. Obtener todos los hermanos de la congregación (de la tabla principal hermanos)
+    // 1. Obtener hermanos varones ('V') de la congregación desde la tabla 'hermanos'
     const { data: hermanos, error: errHermanos } = await db
         .from('hermanos')
-        .select('id, nombre, telefono, sexo, activo')
-        .eq('congregacion_id', window.congregacionIdActual)
+        .select('id, nombre, celular, sexo, congregacion_id')
+        .eq('congregacion_id', idCongre)
+        .eq('sexo', 'V')
         .order('nombre', { ascending: true });
 
     if (errHermanos) {
@@ -34,26 +36,25 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
     const { data: aptitudesAV, error: errAV } = await db
         .from('hermanos_av')
         .select('*')
-        .eq('congregacion_id', window.congregacionIdActual);
+        .eq('congregacion_id', idCongre);
 
     if (errAV) {
         console.error("Error cargando aptitudes AV:", errAV);
-        return;
     }
 
-    // Mapear aptitudes por hermano_id para rápido acceso
+    // Mapear aptitudes por hermano_id
     const mapaAptitudes = {};
     (aptitudesAV || []).forEach(item => {
         mapaAptitudes[item.hermano_id] = item;
     });
 
-    // 3. Consolidar lista de hermanos con sus aptitudes
+    // 3. Consolidar lista de varones con sus aptitudes
     window.listaHermanosAV = (hermanos || []).map(h => {
         const apt = mapaAptitudes[h.id] || {};
         return {
             hermano_id: h.id,
             nombre: h.nombre,
-            telefono: h.telefono || '',
+            telefono: h.celular || '',
             puerta_es: !!apt.puerta_es,
             puerta_fs: !!apt.puerta_fs,
             aud1_es: !!apt.aud1_es,
@@ -117,7 +118,7 @@ window.renderizarMatrizAV = function() {
         'video_es', 'video_fs'
     ];
 
-    window.listaHermanosAV.forEach((h, idx) => {
+    (window.listaHermanosAV || []).forEach((h) => {
         html += `<tr class="hover:bg-slate-50 transition">`;
         html += `<td class="px-3 py-1.5 font-bold text-slate-900 whitespace-nowrap">${h.nombre}</td>`;
 
@@ -153,14 +154,15 @@ window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
         return;
     }
 
-    if (!window.congregacionIdActual && typeof window.congregacionActual === 'object') {
-        window.congregacionIdActual = window.congregacionActual ? window.congregacionActual.id : null;
+    let idCongre = window.congregacionIdActual;
+    if (!idCongre && window.congregacionActual) {
+        idCongre = window.congregacionActual.id;
     }
 
-    if (!window.congregacionIdActual) return;
+    if (!idCongre) return;
 
     const payload = {
-        congregacion_id: window.congregacionIdActual,
+        congregacion_id: idCongre,
         hermano_id: hermanoId,
         [campo]: valor,
         updated_at: new Date().toISOString()
@@ -173,7 +175,6 @@ window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
     if (error) {
         console.error("Error guardando aptitud AV:", error);
     } else {
-        // Actualizar array en memoria local
         const item = window.listaHermanosAV.find(x => x.hermano_id === hermanoId);
         if (item) item[campo] = valor;
     }
