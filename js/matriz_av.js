@@ -3,6 +3,8 @@
  */
 
 window.listaHermanosAV = [];
+window.listaHermanosGeneral = [];
+
 window.puestosConfigAV = [
     { key: 'puerta', label: 'PUERTA', colorES: 'bg-emerald-900/40', colorFS: 'bg-emerald-800/40' },
     { key: 'aud1', label: 'AUD 1', colorES: 'bg-blue-900/40', colorFS: 'bg-blue-800/40' },
@@ -14,7 +16,8 @@ window.puestosConfigAV = [
 ];
 
 /**
- * Carga los elegibles de AV desde Supabase cruzando con la tabla principal de hermanos
+ * Carga los elegibles de AV desde Supabase.
+ * Carga varones por defecto e incluye a hermanas si están registradas en 'hermanos_av'.
  */
 window.cargarElegiblesAVDesdeSupabase = async function() {
     let idCongre = window.congregacionIdActual;
@@ -27,12 +30,11 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         return;
     }
 
-    // 1. Obtener hermanos varones ('V') de la congregación desde la tabla 'hermanos'
-    const { data: hermanos, error: errHermanos } = await db
+    // 1. Obtener la lista general de hermanos (de la tabla 'hermanos')
+    const { data: hermanosGral, error: errHermanos } = await db
         .from('hermanos')
         .select('id, nombre, celular, sexo, congregacion_id')
         .eq('congregacion_id', idCongre)
-        .eq('sexo', 'V')
         .order('nombre', { ascending: true });
 
     if (errHermanos) {
@@ -40,7 +42,9 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         return;
     }
 
-    // 2. Obtener la matriz de aptitudes AV (tabla hermanos_av)
+    window.listaHermanosGeneral = hermanosGral || [];
+
+    // 2. Obtener los registros de aptitudes de la tabla 'hermanos_av'
     const { data: aptitudesAV, error: errAV } = await db
         .from('hermanos_av')
         .select('*')
@@ -55,12 +59,16 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
         mapaAptitudes[item.hermano_id] = item;
     });
 
-    // 3. Consolidar lista de varones con sus aptitudes
-    window.listaHermanosAV = (hermanos || []).map(h => {
+    // 3. Consolidar: Varones ('V') + Hermanas ('M') registradas previamente en 'hermanos_av'
+    window.listaHermanosAV = window.listaHermanosGeneral.filter(h => {
+        const tieneAptitudRegistrada = !!mapaAptitudes[h.id];
+        return h.sexo === 'V' || tieneAptitudRegistrada;
+    }).map(h => {
         const apt = mapaAptitudes[h.id] || {};
         const obj = {
             hermano_id: h.id,
             nombre: h.nombre,
+            sexo: h.sexo,
             telefono: h.celular || ''
         };
 
@@ -78,7 +86,7 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
 };
 
 /**
- * Renderiza la tabla HTML de la Matriz de Elegibles AV con controles de columnas
+ * Renderiza la tabla HTML de la Matriz de Elegibles AV con selector de hermanas y gestión de columnas
  */
 window.renderizarMatrizAV = function() {
     const contenedor = document.getElementById('contenedorMatrizAV');
@@ -88,14 +96,35 @@ window.renderizarMatrizAV = function() {
 
     let html = '';
 
-    // BOTONES SUPERIORES PARA AGREGAR COLUMNAS
+    // BARRA SUPERIOR: AGREGAR HERMANA EXCEPCIONAL Y AGREGAR PUESTOS
     if (!esMensajero) {
+        const hermanasDisponibles = (window.listaHermanosGeneral || []).filter(h => 
+            h.sexo === 'M' && !window.listaHermanosAV.some(av => av.hermano_id === h.id)
+        );
+
         html += `
-            <div class="mb-3 flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200">
-                <span class="text-xs font-bold text-slate-700">Gestión de Columnas (Puestos):</span>
-                <div class="flex gap-2">
-                    <button onclick="window.agregarPuestoAV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> Agregar Puesto (Columna)
+            <div class="mb-3 flex items-center justify-between bg-slate-100 p-2.5 rounded-lg border border-slate-200 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-700">Agregar Hermana (Excepcional):</span>
+                    <select id="selectAgregarHermanaAV" class="bg-white border border-slate-300 text-xs rounded px-2 py-1 outline-none focus:ring-1 focus:ring-emerald-500">
+                        <option value="">-- Seleccionar Hermana --</option>
+        `;
+
+        hermanasDisponibles.forEach(h => {
+            html += `<option value="${h.id}">${h.nombre}</option>`;
+        });
+
+        html += `
+                    </select>
+                    <button onclick="window.agregarHermanaAMatrizAV()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-2.5 py-1 rounded transition shadow-sm">
+                        + Incluir en Matriz
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-700">Gestión de Columnas:</span>
+                    <button onclick="window.agregarPuestoAV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded transition flex items-center gap-1 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> Agregar Puesto
                     </button>
                 </div>
             </div>
@@ -107,10 +136,11 @@ window.renderizarMatrizAV = function() {
             <table class="w-full text-xs text-left text-slate-700 bg-white">
                 <thead class="text-[11px] uppercase bg-slate-800 text-white font-bold tracking-wider">
                     <tr>
-                        <th class="px-3 py-2 border-b border-slate-700">Hermano</th>
+                        <th class="px-3 py-2 border-b border-slate-700">Hermano / Hermana</th>
+                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12">Sexo</th>
     `;
 
-    // Renderizar cabeceras de columnas editables con botón de eliminar
+    // Renderizar cabeceras de columnas editables
     window.puestosConfigAV.forEach((p, pIdx) => {
         const botonEliminar = !esMensajero ? `<button onclick="window.eliminarPuestoAV(${pIdx})" title="Eliminar puesto" class="ml-1 text-rose-300 hover:text-white font-bold px-1">✕</button>` : '';
 
@@ -133,10 +163,18 @@ window.renderizarMatrizAV = function() {
                 <tbody class="divide-y divide-slate-200 font-medium">
     `;
 
-    // Renderizar filas por hermano
+    // Renderizar filas por hermano / hermana
     (window.listaHermanosAV || []).forEach((h) => {
-        html += `<tr class="hover:bg-slate-50 transition">`;
-        html += `<td class="px-3 py-1.5 font-bold text-slate-900 whitespace-nowrap">${h.nombre}</td>`;
+        const esMujer = h.sexo === 'M';
+        const bgFila = esMujer ? 'bg-pink-50/60 hover:bg-pink-100/60' : 'hover:bg-slate-50';
+
+        html += `<tr class="${bgFila} transition">`;
+        html += `
+            <td class="px-3 py-1.5 font-bold text-slate-900 whitespace-nowrap">
+                ${h.nombre} ${esMujer ? '<span class="text-[10px] text-pink-600 font-normal ml-1">(Excepcional)</span>' : ''}
+            </td>
+        `;
+        html += `<td class="px-2 py-1.5 text-center font-black ${esMujer ? 'text-pink-600' : 'text-slate-600'}">${h.sexo}</td>`;
 
         window.puestosConfigAV.forEach(p => {
             const campoES = `${p.key}_es`;
@@ -172,6 +210,37 @@ window.renderizarMatrizAV = function() {
 };
 
 /**
+ * Agrega una hermana excepcionalmente a la lista activa de la Matriz AV
+ */
+window.agregarHermanaAMatrizAV = function() {
+    const select = document.getElementById('selectAgregarHermanaAV');
+    if (!select || !select.value) {
+        alert("Por favor selecciona una hermana de la lista.");
+        return;
+    }
+
+    const hermanoId = parseInt(select.value, 10);
+    const hermana = (window.listaHermanosGeneral || []).find(h => h.id === hermanoId);
+
+    if (!hermana) return;
+
+    const nuevoObj = {
+        hermano_id: hermana.id,
+        nombre: hermana.nombre,
+        sexo: hermana.sexo,
+        telefono: hermana.celular || ''
+    };
+
+    window.puestosConfigAV.forEach(p => {
+        nuevoObj[`${p.key}_es`] = false;
+        nuevoObj[`${p.key}_fs`] = false;
+    });
+
+    window.listaHermanosAV.push(nuevoObj);
+    window.renderizarMatrizAV();
+};
+
+/**
  * Agrega un nuevo puesto (par de columnas ES / FS)
  */
 window.agregarPuestoAV = function() {
@@ -181,7 +250,6 @@ window.agregarPuestoAV = function() {
     const labelLimpio = nombre.trim().toUpperCase();
     const keyLimpia = labelLimpio.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
-    // Verificar que no exista la key
     if (window.puestosConfigAV.some(p => p.key === keyLimpia)) {
         alert("Ya existe un puesto con ese nombre.");
         return;
@@ -205,7 +273,7 @@ window.agregarPuestoAV = function() {
 };
 
 /**
- * Elimina un puesto (par de columnas ES / FS) por índice
+ * Elimina un puesto por índice
  */
 window.eliminarPuestoAV = function(index) {
     const puesto = window.puestosConfigAV[index];
@@ -218,7 +286,7 @@ window.eliminarPuestoAV = function(index) {
 };
 
 /**
- * Actualiza el nombre visible de un puesto
+ * Actualiza el nombre de un puesto en la configuración local
  */
 window.actualizarNombrePuestoAV = function(index, nuevoTexto) {
     if (!window.puestosConfigAV[index]) return;
