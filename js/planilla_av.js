@@ -9,12 +9,17 @@ window.ausenciasMes = [];
  * Carga las ausencias registradas para la congregación activa
  */
 window.cargarAusenciasDesdeSupabase = async function() {
-    if (!window.congregacionIdActual) return;
+    let idCongre = window.congregacionIdActual;
+    if (!idCongre && window.congregacionActual) {
+        idCongre = window.congregacionActual.id;
+    }
+
+    if (!idCongre) return;
 
     const { data, error } = await db
         .from('ausencias')
         .select('*')
-        .eq('congregacion_id', window.congregacionIdActual);
+        .eq('congregacion_id', idCongre);
 
     if (error) {
         console.error("Error cargando ausencias:", error);
@@ -24,27 +29,20 @@ window.cargarAusenciasDesdeSupabase = async function() {
 };
 
 /**
- * Mapeo de columnas unificadas y su correspondencia en la tabla hermanos_av
- */
-const CONFIG_COLUMNAS_AV = [
-    { clave: 'puerta', titulo: 'PUERTA', es: 'puerta_es', fs: 'puerta_fs' },
-    { clave: 'aud1', titulo: 'AUDITORIO 1', es: 'aud1_es', fs: 'aud1_fs' },
-    { clave: 'aud2', titulo: 'AUDITORIO 2', es: 'aud2_es', fs: 'aud2_fs' },
-    { clave: 'mic1', titulo: 'MIC 1', es: 'mic1_es', fs: 'mic1_fs' },
-    { clave: 'mic2', titulo: 'MIC 2', es: 'mic2_es', fs: 'mic2_fs' },
-    { clave: 'audio', titulo: 'AUDIO', es: 'audio_es', fs: 'audio_fs' },
-    { clave: 'video', titulo: 'VIDEO', es: 'video_es', fs: 'video_fs' }
-];
-
-/**
  * Evalúa si una fecha corresponde a Entre Semana (ES) o Fin de Semana (FS)
- * Lunes (1) a Viernes (5) => ES | Sábado (6) y Domingo (0) => FS
  */
 function determinarTipoDia(fechaStr) {
     if (!fechaStr) return 'ES';
+    const texto = fechaStr.toLowerCase();
+    if (texto.includes('sáb') || texto.includes('sab') || texto.includes('dom') || texto.includes('fin')) {
+        return 'FS';
+    }
     const fecha = new Date(fechaStr);
-    const diaSemana = fecha.getDay();
-    return (diaSemana === 0 || diaSemana === 6) ? 'FS' : 'ES';
+    if (!isNaN(fecha.getTime())) {
+        const diaSemana = fecha.getDay();
+        return (diaSemana === 0 || diaSemana === 6) ? 'FS' : 'ES';
+    }
+    return 'ES';
 }
 
 /**
@@ -52,17 +50,14 @@ function determinarTipoDia(fechaStr) {
  * Obtiene la lista filtrada de hermanos elegibles para un puesto y fecha específica
  */
 window.obtenerElegiblesAV = function(puestoClave, fechaStr, asignacionesSemanaAV = {}, asignacionesVyMCFecha = []) {
-    const config = CONFIG_COLUMNAS_AV.find(c => c.clave === puestoClave);
-    if (!config) return [];
-
     const tipoDia = determinarTipoDia(fechaStr);
-    const campoAptitud = (tipoDia === 'FS') ? config.fs : config.es;
+    const campoAptitud = `${puestoClave}_${tipoDia.toLowerCase()}`;
 
     // 1. Filtrar por aptitud en la tabla hermanos_av
     let elegibles = (window.listaHermanosAV || []).filter(h => h[campoAptitud] === true);
 
     // 2. Filtro de Ausencias Programadas
-    if (fechaStr && window.ausenciasMes.length > 0) {
+    if (fechaStr && window.ausenciasMes && window.ausenciasMes.length > 0) {
         const fechaObj = new Date(fechaStr);
         elegibles = elegibles.filter(h => {
             const ausente = window.ausenciasMes.some(a => {
@@ -106,6 +101,100 @@ window.detectarConflictoVyMC = function(nombreHermano, asignacionesVyMCFecha = [
 };
 
 /**
+ * Renderiza la Planilla Mensual AV en pantalla adaptada a los puestos dinámicos
+ */
+window.renderizarPlanillaAV = function() {
+    const contenedor = document.getElementById('contenedorPlanillaAV');
+    if (!contenedor) return;
+
+    // Si no hay programa cargado, tomar semanas de VyMC
+    if ((!window.programaMesAV || window.programaMesAV.length === 0) && window.programaMes) {
+        window.programaMesAV = window.programaMes.map(sem => ({
+            fecha: sem.fecha || 'Semana',
+            puestos: sem.puestosAV || {}
+        }));
+    }
+
+    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
+
+    let html = `
+        <table class="w-full text-xs text-left border-collapse bg-white">
+            <thead class="bg-slate-800 text-white font-bold uppercase text-[11px]">
+                <tr>
+                    <th class="p-2 border border-slate-700 w-36">Fecha / Semana</th>
+    `;
+
+    // Encabezados según los puestos activos
+    (window.puestosConfigAV || []).forEach(p => {
+        html += `<th class="p-2 border border-slate-700 text-center">${p.label}</th>`;
+    });
+
+    html += `
+                    <th class="p-2 border border-slate-700 text-center w-12">WA</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+    `;
+
+    (window.programaMesAV || []).forEach((sem, idx) => {
+        html += `<tr class="hover:bg-slate-50">`;
+        html += `<td class="p-2 font-bold text-slate-900 border border-slate-200">${sem.fecha}</td>`;
+
+        (window.puestosConfigAV || []).forEach(p => {
+            const asignadoActual = (sem.puestos && sem.puestos[p.key]) || '';
+            const elegibles = window.obtenerElegiblesAV(p.key, sem.fecha, sem.puestos || {});
+            const disabled = esMensajero ? 'disabled' : '';
+
+            html += `<td class="p-1 border border-slate-200">`;
+            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-semibold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAV(${idx}, '${p.key}', this.value)">`;
+            html += `<option value="">-- SELECCIONAR --</option>`;
+            
+            if (asignadoActual && !elegibles.some(e => e.nombre === asignadoActual)) {
+                html += `<option value="${asignadoActual}" selected>${asignadoActual}</option>`;
+            }
+
+            elegibles.forEach(e => {
+                const sel = (e.nombre === asignadoActual) ? 'selected' : '';
+                html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
+            });
+
+            html += `</select></td>`;
+        });
+
+        html += `
+            <td class="p-1 border border-slate-200 text-center">
+                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx});" title="Enviar WhatsApp a la cuadrilla" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
+                    <i class="fa-brands fa-whatsapp text-lg"></i>
+                </button>
+            </td>
+        `;
+        html += `</tr>`;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    contenedor.innerHTML = html;
+
+    if (typeof window.actualizarTablaVerdeRepeticiones === 'function') {
+        window.actualizarTablaVerdeRepeticiones();
+    }
+};
+
+/**
+ * Asigna un hermano a un puesto en la semana seleccionada
+ */
+window.asignarHermanoAV = function(indexSemana, puestoKey, nombre) {
+    if (!window.programaMesAV[indexSemana]) return;
+    if (!window.programaMesAV[indexSemana].puestos) window.programaMesAV[indexSemana].puestos = {};
+    
+    window.programaMesAV[indexSemana].puestos[puestoKey] = nombre;
+    window.renderizarPlanillaAV();
+};
+
+/**
  * Guardar planilla AV en Supabase
  */
 window.guardarPlanillaAVEnSupabase = async function() {
@@ -114,13 +203,18 @@ window.guardarPlanillaAVEnSupabase = async function() {
         return;
     }
 
-    if (!window.congregacionIdActual) return;
+    let idCongre = window.congregacionIdActual;
+    if (!idCongre && window.congregacionActual) {
+        idCongre = window.congregacionActual.id;
+    }
+
+    if (!idCongre) return;
 
     const inputMes = document.getElementById('inputNombreMes');
     const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
 
     const payload = {
-        congregacion_id: window.congregacionIdActual,
+        congregacion_id: idCongre,
         mes_ano: mesClave,
         datos: window.programaMesAV,
         updated_at: new Date().toISOString()
@@ -136,5 +230,6 @@ window.guardarPlanillaAVEnSupabase = async function() {
         alert("Error al guardar planilla AV: " + error.message);
     } else {
         console.log("Planilla AV guardada con éxito:", data);
+        alert("Planilla AV guardada con éxito.");
     }
 };
