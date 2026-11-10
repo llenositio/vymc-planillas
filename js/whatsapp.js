@@ -45,13 +45,12 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).\n\n`;
     texto += `Por favor, mandame un OK como respuesta`;
 
-    // Genera la URL codificada de forma segura
-    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
+    const url = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
 
 /**
- * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp al número de grupo
+ * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp directamente al número de grupo indicado
  */
 window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
@@ -83,7 +82,8 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     }
 
     // Pie de mensaje con solicitud de confirmación
-    mensaje += `\nPor favor, mandame un OK como respuesta`;
+    mensaje += `\n_Por favor, si alguno no puede cumplir con su asignación, avise con anticipación para coordinar el reemplazo._\n\n`;
+    mensaje += `Por favor, mandame un OK como respuesta`;
 
     // Obtener el número del grupo escrito en el campo de la interfaz
     const inputTel = document.getElementById('inputTelGrupoAV');
@@ -102,7 +102,8 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
         numeroGrupo = '549' + numeroGrupo.substring(1);
     }
 
-    const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
+    // Apertura directa indicando explícitamente el teléfono destino en el parámetro phone
+    const url = `https://api.whatsapp.com/send?phone=${numeroGrupo}&text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 };
 
@@ -160,6 +161,6 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
     texto += `- *Semana:* ${semana.fecha}\n\n`;
     texto += `Por favor, mandame un OK como respuesta`;
 
-    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
+    const url = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
