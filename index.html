@@ -650,8 +650,16 @@
             if (pestaña === 'av_matriz' && typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
                 window.cargarElegiblesAVDesdeSupabase();
             }
-            if (pestaña === 'av_planilla' && typeof window.cargarAusenciasDesdeSupabase === 'function') {
-                window.cargarAusenciasDesdeSupabase();
+
+            if (pestaña === 'av_planilla') {
+                if (typeof window.cargarAusenciasDesdeSupabase === 'function') {
+                    window.cargarAusenciasDesdeSupabase();
+                }
+                if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
+                    window.cargarPlanillaAVDesdeSupabase();
+                } else if (typeof window.renderizarPlanillaAV === 'function') {
+                    window.renderizarPlanillaAV();
+                }
             }
         };
     </script>
