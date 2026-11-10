@@ -1,3 +1,9 @@
+// FUNCIONES DE COMPROBACIÓN DE ROL
+window.esRolMensajero = function() {
+    const rol = window.usuarioRol || window.rolUsuario || (window.perfilUsuario ? window.perfilUsuario.rol : null);
+    return rol === 'mensajero_vymc' || rol === 'mensajero_acomodador';
+};
+
 // FUNCIONES DE ESTRUCTURA BASE POR DEFECTO
 window.crearEstructuraSemanaEjemplo = function() {
     return {
@@ -60,6 +66,9 @@ window.onload = async function() {
             inputMes.value = window.nombreMesGlobal;
         }
         actualizarTextoTituloMes(inputMes.value || window.nombreMesGlobal || '');
+        if (window.esRolMensajero()) {
+            inputMes.disabled = true;
+        }
     }
     
     renderizarSelectorSemanas();
@@ -67,6 +76,8 @@ window.onload = async function() {
 };
 
 window.notificarYGuardarAutosave = async function() {
+    if (window.esRolMensajero()) return; // Bloqueo estricto para Mensajero
+
     if (typeof guardarPlanillaEnSupabase === 'function') {
         await guardarPlanillaEnSupabase();
     }
@@ -93,9 +104,6 @@ window.renderizarSelectorSemanas = function() {
     });
 };
 
-/**
- * Filtra los hermanos según los checkboxes habilitados en la Matriz
- */
 window.filtrarHermanosPorCategoria = function(cat) {
     if (!Array.isArray(window.listaHermanos)) return [];
 
@@ -122,9 +130,6 @@ window.filtrarHermanosPorCategoria = function(cat) {
     });
 };
 
-/**
- * Cuenta cuántas asignaciones tiene un hermano en el programa del mes activo
- */
 function contarAsignacionesHermanoEnMes(nombre) {
     if (!nombre || !Array.isArray(window.programaMes)) return 0;
     let contador = 0;
@@ -156,9 +161,6 @@ function contarAsignacionesHermanoEnMes(nombre) {
     return contador;
 }
 
-/**
- * Mapea las categorías de las casillas a las claves del motor de sugerencias
- */
 function obtenerClaveCatSugerido(cat) {
     if (cat === 'pres' || cat === 'presPub') return 'presi';
     if (cat === 'orac') return 'oraciones';
@@ -172,10 +174,8 @@ function obtenerClaveCatSugerido(cat) {
     return '';
 }
 
-/**
- * FASE 2: Crea el HTML de un <select> ordenado dinámicamente por sugerencias inteligentes y con contador de veces asignado
- */
 function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = 'ELEGIR') {
+    const esMensajero = window.esRolMensajero();
     let candidatos = Array.isArray(window.listaHermanos) ? [...window.listaHermanos] : [];
     
     if (typeof filtrarHermanosPorCategoria === 'function' && cat) {
@@ -206,16 +206,14 @@ function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = '
     });
 
     return `
-        <select id="${idSelect}" onchange="guardarAsignacionSemana('${idSelect}')" class="w-full bg-white text-slate-900 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:border-amber-500 cursor-pointer shadow-sm">
+        <select id="${idSelect}" ${esMensajero ? 'disabled' : ''} onchange="guardarAsignacionSemana('${idSelect}')" class="w-full bg-white text-slate-900 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:border-amber-500 cursor-pointer shadow-sm ${esMensajero ? 'opacity-80 pointer-events-none' : ''}">
             ${htmlOptions}
         </select>
     `;
 }
 
-/**
- * Guarda los cambios realizados en los números/textos de las canciones de la semana
- */
 window.guardarCancionSemana = function(index, texto) {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (sem) {
         if (!Array.isArray(sem.canciones)) sem.canciones = [];
@@ -231,11 +229,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
     const sem = window.programaMes[idx];
     const esViajante = sem.tipoSemana === 'viajante';
     const numSalas = esViajante ? 1 : (sem.numSalas || 1);
+    const esMensajero = window.esRolMensajero();
+    const isEditableAttr = esMensajero ? 'contenteditable="false"' : 'contenteditable="true"';
     
     const selSalas = document.getElementById('selectNumSalas');
     if (selSalas) {
         selSalas.value = numSalas;
-        selSalas.disabled = esViajante || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion';
+        selSalas.disabled = esMensajero || esViajante || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion';
     }
 
     const cabecera = document.getElementById('cabeceraTablaPlanilla');
@@ -245,9 +245,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <th colspan="11" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
                     <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
                         <span>Semana del</span>
-                        <input type="text" value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[200px]" placeholder="FECHA">
+                        <input type="text" ${esMensajero ? 'disabled' : ''} value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[200px]" placeholder="FECHA">
                         <span>,</span>
-                        <input type="text" value="${sem.lectura || ''}" onchange="actualizarEncabezadoSemana('lectura', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[180px]" placeholder="LECTURA">
+                        <input type="text" ${esMensajero ? 'disabled' : ''} value="${sem.lectura || ''}" onchange="actualizarEncabezadoSemana('lectura', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[180px]" placeholder="LECTURA">
                     </div>
                 </th>
             </tr>
@@ -255,7 +255,10 @@ window.cargarSemanaEnPlanilla = function(idx) {
     }
 
     const radios = document.getElementsByName('tipoSemana');
-    radios.forEach(r => r.checked = (r.value === sem.tipoSemana));
+    radios.forEach(r => {
+        r.checked = (r.value === sem.tipoSemana);
+        if (esMensajero) r.disabled = true;
+    });
 
     const banner = document.getElementById('bannerEventoEspecial');
     const tabla = document.getElementById('tablaPlanillaCompleta');
@@ -298,18 +301,16 @@ window.cargarSemanaEnPlanilla = function(idx) {
         };
 
         let html = '';
+        const btnParticipantes = esMensajero ? '' : `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">${cantP === 1 ? '1 Asig' : '2 Asig'}</button>`;
+
         if (numSalas === 1) {
             html += `<td class="p-1 col-asig relative group" colspan="7">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
+                ${btnParticipantes}
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>`;
         } else if (numSalas === 2) {
             html += `<td class="p-1 col-asig relative group" colspan="4">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
+                ${btnParticipantes}
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>
             <td class="p-1 col-asig" colspan="3">
@@ -317,9 +318,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </td>`;
         } else if (numSalas === 3) {
             html += `<td class="p-1 col-asig relative group" colspan="3">
-                <button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">
-                    ${cantP === 1 ? '1 Asig' : '2 Asig'}
-                </button>
+                ${btnParticipantes}
                 ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
             </td>
             <td class="p-1 col-asig" colspan="2">
@@ -384,8 +383,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
 
     let filasHTML = `
         <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">1 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(0, this.innerText)">
+            <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">1 min</td>
+            <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(0, this.innerText)">
                 Canción N° ${numCancion0 || '1'}. Presidencia: Palabras de introducción.
             </td>
             <td class="px-2 col-asig" colspan="7">
@@ -397,8 +396,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <td class="no-print text-center w-8"></td>
         </tr>
         <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
-            <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Oración</td>
+            <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)"></td>
+            <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Oración</td>
             <td class="px-2 col-asig" colspan="7">
                 <div class="flex items-center justify-between w-full gap-1">
                     ${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}
@@ -433,13 +432,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
             const numCancion1 = rawCancion1.replace(/[^0-9]/g, '');
 
             filasHTML += `
-                <tr class="no-print bg-amber-50/50">
+                ${esMensajero ? '' : `<tr class="no-print bg-amber-50/50">
                     <td colspan="11" class="p-1 text-center">
                         <button onclick="agregarFilaMaestros()" class="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded border border-amber-300 transition">
                             <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Seamos Mejores Maestros
                         </button>
                     </td>
-                </tr>
+                </tr>`}
                 <tr>
                     <th class="bg-vida text-white text-center c-tiempo py-1">
                         <img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja">
@@ -447,7 +446,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     <th colspan="10" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
                 </tr>
                 <tr>
-                    <td class="px-2 font-bold editable-field" colspan="11" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(1, this.innerText)">
+                    <td class="px-2 font-bold editable-field" colspan="11" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(1, this.innerText)">
                         Canción Nº: ${numCancion1 || ''}
                     </td>
                 </tr>
@@ -464,12 +463,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
             cat = 'nvc';
         }
 
+        const btnEliminarFila = esMensajero ? '' : `<button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>`;
+
         if (item.seccion === 'tesoros') {
             if (item.tit && item.tit.includes('Lectura')) {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
                         ${renderSalasLectura(pIndex, cat)}
                         <td class="no-print text-center w-8"></td>
                     </tr>
@@ -477,9 +478,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="7">
                             <div class="flex items-center justify-between w-full gap-1">
                                 ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
@@ -494,23 +495,23 @@ window.cargarSemanaEnPlanilla = function(idx) {
         else if (item.seccion === 'maestros') {
             filasHTML += `
                 <tr class="group">
-                    <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                    <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                    <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                    <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                    <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                     ${renderSalasMaestros(pIndex, cat)}
                     <td class="no-print text-center w-8 align-middle">
-                        <button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                        ${btnEliminarFila}
                     </td>
                 </tr>
             `;
-        } 
+        }
         else if (item.seccion === 'vida') {
             if (!item.tit || !item.tit.includes('Estudio bíblico')) {
                 filasHTML += `
                     <tr class="group">
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
+                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
+                        <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
+                        <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
                         <td class="px-2 col-asig" colspan="7">
                             <div class="flex items-center justify-between w-full gap-1">
                                 ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
@@ -518,7 +519,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                             </div>
                         </td>
                         <td class="no-print text-center w-8 align-middle">
-                            <button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>
+                            ${btnEliminarFila}
                         </td>
                     </tr>
                 `;
@@ -526,21 +527,23 @@ window.cargarSemanaEnPlanilla = function(idx) {
         }
     });
 
-    filasHTML += `
-        <tr class="no-print bg-slate-50">
-            <td colspan="11" class="p-1 text-center">
-                <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
-                    <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
-                </button>
-            </td>
-        </tr>
-    `;
+    if (!esMensajero) {
+        filasHTML += `
+            <tr class="no-print bg-slate-50">
+                <td colspan="11" class="p-1 text-center">
+                    <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
+                        <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
+                    </button>
+                </td>
+            </tr>
+        `;
+    }
 
     if (esViajante) {
         filasHTML += `
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
                     Repaso de esta reunión y adelanto de la próxima.
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -553,7 +556,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr>
                 <td class="c-tiempo font-bold text-blue-900 bg-blue-50/50">30 min</td>
-                <td class="px-2 font-black text-blue-900 bg-blue-50/50 editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaViajanteEntreSemana', this.innerText)">
+                <td class="px-2 font-black text-blue-900 bg-blue-50/50 editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaViajanteEntreSemana', this.innerText)">
                     ${sem.temaViajanteEntreSemana || 'Discurso del superintendente de circuito'}
                 </td>
                 <td class="px-2 col-asig bg-blue-50/50" colspan="7">
@@ -565,8 +568,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)"></td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)"></td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
                     Canción N° ${numCancion2 || '38'} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -584,8 +587,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
         
         filasHTML += `
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
                     ${itemEB.tit}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -597,7 +600,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Lector:</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Lector:</td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
                         ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_ayudante` : 'asig_eb_lector', 'lectorL', itemEB.asigAyudante)}
@@ -607,8 +610,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
+                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
                 <td class="px-2 col-asig" colspan="7">
                     <div class="flex items-center justify-between w-full gap-1">
                         ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
@@ -618,7 +621,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
                     Canción N° ${numCancion2 || '38'} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -643,7 +646,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </th>
             </tr>
             <tr>
-                <td class="px-2 font-medium editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomIni', this.innerText)">
+                <td class="px-2 font-medium editable-field" colspan="3" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomIni', this.innerText)">
                     Presidencia, canción Nº ${sem.cancionDomIni || ''} y oración
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -655,8 +658,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscPub', this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscPub', this.innerText)">
                     ${sem.temaDiscPub || 'Discurso público:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -668,14 +671,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomMid', this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="10" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomMid', this.innerText)">
                     Canción Nº ${sem.cancionDomMid || ''}
                 </td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaAtalaya', this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaAtalaya', this.innerText)">
                     ${sem.temaAtalaya || 'La Atalaya:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -687,8 +690,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscFin', this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
+                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscFin', this.innerText)">
                     ${sem.temaDiscFin || 'Discurso final:'}
                 </td>
                 <td class="px-2 col-asig" colspan="7">
@@ -700,8 +703,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="no-print text-center w-8"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" contenteditable="true" onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomFin', this.innerText)">
+                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
+                <td class="px-2 font-medium editable-field" colspan="10" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomFin', this.innerText)">
                     Canción Nº ${sem.cancionDomFin || ''} y oración
                 </td>
             </tr>
@@ -709,14 +712,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
     } else {
         filasHTML += `
             <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-                <td class="px-2 font-bold py-1.5 editable-field" colspan="3" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-bold py-1.5 editable-field" colspan="3" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
                     Domingo, presidencia: 
                     <div class="inline-flex items-center ml-2 w-48 gap-1">
                         ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
                         ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
                     </div>
                 </td>
-                <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="8" contenteditable="true" onpaste="limpiarTextoPegado(event)">
+                <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="8" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
                     Lector: 
                     <div class="inline-flex items-center ml-2 text-left w-48 gap-1">
                         ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
@@ -731,6 +734,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
 };
 
 window.guardarTextoEditable = function(pIndex, campo, valor) {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex][campo] = valor;
@@ -739,6 +743,7 @@ window.guardarTextoEditable = function(pIndex, campo, valor) {
 };
 
 window.guardarEncabezadoSemana = async function(campo, valor) {
+    if (window.esRolMensajero()) return;
     if (window.programaMes[window.semanaActivaIdx]) {
         window.programaMes[window.semanaActivaIdx][campo] = valor.trim();
         await notificarYGuardarAutosave();
@@ -746,6 +751,7 @@ window.guardarEncabezadoSemana = async function(campo, valor) {
 };
 
 window.actualizarEncabezadoSemana = async function(campo, valor) {
+    if (window.esRolMensajero()) return;
     if (window.programaMes[window.semanaActivaIdx]) {
         window.programaMes[window.semanaActivaIdx][campo] = valor;
         await notificarYGuardarAutosave();
@@ -753,6 +759,7 @@ window.actualizarEncabezadoSemana = async function(campo, valor) {
 };
 
 window.guardarAsignacionSemana = async function(elemId) {
+    if (window.esRolMensajero()) return;
     const el = document.getElementById(elemId);
     if (!el) return;
     const val = el.value;
@@ -793,6 +800,7 @@ window.guardarAsignacionSemana = async function(elemId) {
 };
 
 window.toggleParticipantesParte = async function(pIndex) {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
@@ -802,6 +810,7 @@ window.toggleParticipantesParte = async function(pIndex) {
 };
 
 window.agregarNuevaSemana = async function() {
+    if (window.esRolMensajero()) return;
     const numSem = window.programaMes.length + 1;
     const nuevaSem = crearEstructuraSemanaEjemplo();
     nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
@@ -813,6 +822,7 @@ window.agregarNuevaSemana = async function() {
 };
 
 window.eliminarSemanaActiva = async function() {
+    if (window.esRolMensajero()) return;
     if (!window.programaMes || window.programaMes.length === 0) return;
     
     if (confirm(`¿Estás seguro de que deseas eliminar la semana "${window.programaMes[window.semanaActivaIdx].semana}"?`)) {
@@ -831,6 +841,7 @@ window.eliminarSemanaActiva = async function() {
 };
 
 window.cambiarNumSalasSemana = async function(cantidad) {
+    if (window.esRolMensajero()) return;
     if (!window.programaMes[window.semanaActivaIdx]) return;
     window.programaMes[window.semanaActivaIdx].numSalas = parseInt(cantidad);
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
@@ -838,6 +849,7 @@ window.cambiarNumSalasSemana = async function(cantidad) {
 };
 
 window.actualizarTipoSemana = async function(tipo) {
+    if (window.esRolMensajero()) return;
     if (!window.programaMes[window.semanaActivaIdx]) return;
     window.programaMes[window.semanaActivaIdx].tipoSemana = tipo;
     if (tipo === 'viajante' || tipo === 'asamblea' || tipo === 'conmemoracion') window.programaMes[window.semanaActivaIdx].numSalas = 1;
@@ -846,6 +858,7 @@ window.actualizarTipoSemana = async function(tipo) {
 };
 
 window.agregarFilaMaestros = async function() {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (!sem) return;
     
@@ -875,6 +888,7 @@ window.agregarFilaMaestros = async function() {
 };
 
 window.agregarFilaVida = async function() {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (!sem) return;
     
@@ -899,6 +913,7 @@ window.agregarFilaVida = async function() {
 };
 
 window.eliminarFilaParte = async function(pIndex) {
+    if (window.esRolMensajero()) return;
     const sem = window.programaMes[window.semanaActivaIdx];
     if (sem && sem.partes && sem.partes[pIndex]) {
         sem.partes.splice(pIndex, 1);
@@ -908,11 +923,16 @@ window.eliminarFilaParte = async function(pIndex) {
 };
 
 window.guardarMesManual = async function() {
+    if (window.esRolMensajero()) {
+        alert("Tu usuario es Mensajero (Solo Lectura) y no tiene permisos para guardar o editar.");
+        return;
+    }
     await notificarYGuardarAutosave();
     alert("¡Trabajo del mes guardado correctamente!");
 };
 
 window.resetearPlanillaMes = async function() {
+    if (window.esRolMensajero()) return;
     if (confirm("¿Estás seguro de resetear la planilla para iniciar un NUEVO MES? Esto limpiará las semanas actuales.")) {
         window.nombreMesGlobal = "";
         const inputMes = document.getElementById('inputNombreMes');
@@ -935,6 +955,7 @@ window.renderizarMatrizHermanos = function() {
     cuerpo.innerHTML = '';
 
     if (!Array.isArray(window.listaHermanos)) return;
+    const esMensajero = window.esRolMensajero();
 
     window.listaHermanos.forEach((h, index) => {
         const tr = document.createElement('tr');
@@ -951,16 +972,16 @@ window.renderizarMatrizHermanos = function() {
         tr.innerHTML = `
             <td class="font-bold text-slate-400">${index + 1}</td>
             <td class="text-left font-bold px-2">
-                <input type="text" value="${h.nombre || ''}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" onpaste="limpiarTextoPegado(event)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
+                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.nombre || ''}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" onpaste="limpiarTextoPegado(event)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
             </td>
             <td>
-                <select onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
+                <select ${esMensajero ? 'disabled' : ''} onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
                     <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
                     <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
                 </select>
             </td>
             <td>
-                <select onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="text-xs bg-transparent font-semibold text-slate-700 outline-none cursor-pointer">
+                <select ${esMensajero ? 'disabled' : ''} onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="text-xs bg-transparent font-semibold text-slate-700 outline-none cursor-pointer">
                     <option value="A" ${condicionActual === 'A' ? 'selected' : ''}>A</option>
                     <option value="SM" ${condicionActual === 'SM' ? 'selected' : ''}>SM</option>
                     <option value="Prec" ${condicionActual === 'Prec' ? 'selected' : ''}>Prec</option>
@@ -969,23 +990,23 @@ window.renderizarMatrizHermanos = function() {
                 </select>
             </td>
             <td>
-                <input type="number" value="${h.grupo || ''}" onchange="actualizarHermano(${h.id}, 'grupo', parseInt(this.value) || null)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+                <input type="number" ${esMensajero ? 'disabled' : ''} value="${h.grupo || ''}" onchange="actualizarHermano(${h.id}, 'grupo', parseInt(this.value) || null)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
             </td>
             <td>
-                <input type="text" value="${h.responsabilidades || ''}" onchange="actualizarHermano(${h.id}, 'responsabilidades', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
+                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.responsabilidades || ''}" onchange="actualizarHermano(${h.id}, 'responsabilidades', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
             </td>
             <td>
-                <input type="text" value="${h.celular || ''}" onchange="actualizarHermano(${h.id}, 'celular', this.value)" placeholder="+54..." class="w-full text-center font-mono text-slate-700 bg-transparent border-b border-transparent hover:border-slate-300">
+                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.celular || ''}" onchange="actualizarHermano(${h.id}, 'celular', this.value)" placeholder="+54..." class="w-full text-center font-mono text-slate-700 bg-transparent border-b border-transparent hover:border-slate-300">
             </td>
 
             ${colsBool.map(col => `
                 <td>
-                    <input type="checkbox" ${(h[col] === true || h[col] === 'X') ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked)" class="rounded text-amber-600 cursor-pointer">
+                    <input type="checkbox" ${esMensajero ? 'disabled' : ''} ${(h[col] === true || h[col] === 'X') ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked)" class="rounded text-amber-600 cursor-pointer">
                 </td>
             `).join('')}
 
             <td class="no-print">
-                <button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-1 py-0.5" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                ${esMensajero ? '' : `<button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-1 py-0.5" title="Eliminar"><i class="fa-solid fa-trash"></i></button>`}
             </td>
         `;
         cuerpo.appendChild(tr);
@@ -993,18 +1014,21 @@ window.renderizarMatrizHermanos = function() {
 };
 
 window.actualizarHermano = async function(id, campo, valor) {
+    if (window.esRolMensajero()) return;
     if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
     if (window.programaMes.length > 0) cargarSemanaEnPlanilla(window.semanaActivaIdx);
     if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
 window.agregarNuevoHermano = async function() {
+    if (window.esRolMensajero()) return;
     if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
     renderizarMatrizHermanos();
     if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
 window.eliminarHermano = async function(id) {
+    if (window.esRolMensajero()) return;
     if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
     renderizarMatrizHermanos();
     if (window.programaMes.length > 0) cargarSemanaEnPlanilla(window.semanaActivaIdx);
@@ -1031,17 +1055,14 @@ window.cambiarPestaña = function(tab) {
     }
 };
 
-/* FUNCIÓN DE CONEXIÓN CON EL TÍTULO DEL MES */
 window.actualizarTextoTituloMes = function(valor) {
     window.nombreMesGlobal = valor;
     
-    // Actualiza el texto dentro del span del título principal
     const spanMes = document.getElementById('txtNombreMes');
     if (spanMes) {
         spanMes.innerText = valor ? valor.toUpperCase() : '---';
     }
     
-    // Actualiza la barra del link público
     if (typeof window.actualizarLinkPublico === 'function') {
         window.actualizarLinkPublico();
     }
