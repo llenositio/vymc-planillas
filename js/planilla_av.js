@@ -28,8 +28,18 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
 
     if (error) {
         console.error("Error cargando planilla AV desde Supabase:", error);
-    } else if (data && data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
-        window.programaMesAV = data.datos;
+    } else if (data) {
+        if (data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
+            window.programaMesAV = data.datos;
+        } else {
+            window.sincronizarSemanasDesdeVyMC();
+        }
+
+        // Cargar el teléfono del grupo/cuadrilla guardado
+        const inputTel = document.getElementById('inputTelGrupoAV');
+        if (inputTel && data.telefono_grupo) {
+            inputTel.value = data.telefono_grupo;
+        }
     } else {
         // Si no hay datos guardados en Supabase, sincronizar semanas desde el programa VyMC principal
         window.sincronizarSemanasDesdeVyMC();
@@ -278,7 +288,7 @@ window.asignarHermanoAV = function(indexSemana, puestoKey, nombre) {
 };
 
 /**
- * Guardar planilla AV en Supabase
+ * Guardar planilla AV en Supabase (incluyendo el número del grupo)
  */
 window.guardarPlanillaAVEnSupabase = async function() {
     if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
@@ -296,10 +306,14 @@ window.guardarPlanillaAVEnSupabase = async function() {
     const inputMes = document.getElementById('inputNombreMes');
     const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
 
+    const inputTel = document.getElementById('inputTelGrupoAV');
+    const telGrupo = inputTel ? inputTel.value.trim() : '';
+
     const payload = {
         congregacion_id: idCongre,
         mes_ano: mesClave,
         datos: window.programaMesAV,
+        telefono_grupo: telGrupo,
         updated_at: new Date().toISOString()
     };
 
