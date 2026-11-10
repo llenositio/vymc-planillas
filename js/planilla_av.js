@@ -30,14 +30,25 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
         console.error("Error cargando planilla AV desde Supabase:", error);
     } else if (data && data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
         window.programaMesAV = data.datos;
-    } else if (window.programaMes && window.programaMes.length > 0) {
-        window.programaMesAV = window.programaMes.map(sem => ({
-            fecha: sem.fecha || 'Semana',
-            puestos: sem.puestosAV || {}
-        }));
+    } else {
+        // Si no hay datos guardados en Supabase, sincronizar semanas desde el programa VyMC principal
+        window.sincronizarSemanasDesdeVyMC();
     }
 
     window.renderizarPlanillaAV();
+};
+
+/**
+ * Toma las semanas generadas en el programa principal VyMC
+ */
+window.sincronizarSemanasDesdeVyMC = function() {
+    const programaBase = window.programaMes || window.programaVyMC || window.programaActual || [];
+    if (Array.isArray(programaBase) && programaBase.length > 0) {
+        window.programaMesAV = programaBase.map(sem => ({
+            fecha: sem.fecha || sem.semana || 'Semana',
+            puestos: sem.puestosAV || {}
+        }));
+    }
 };
 
 /**
@@ -142,37 +153,46 @@ window.renderizarPlanillaAV = function() {
     const contenedor = document.getElementById('contenedorPlanillaAV');
     if (!contenedor) return;
 
-    // Si no hay programa cargado, tomar semanas de VyMC
-    if ((!window.programaMesAV || window.programaMesAV.length === 0) && window.programaMes) {
-        window.programaMesAV = window.programaMes.map(sem => ({
-            fecha: sem.fecha || 'Semana',
-            puestos: sem.puestosAV || {}
-        }));
+    // Si no hay semanas en programaMesAV, intentar traer del programa principal
+    if (!window.programaMesAV || window.programaMesAV.length === 0) {
+        window.sincronizarSemanasDesdeVyMC();
+    }
+
+    // Si sigue vacío, mostrar aviso
+    if (!window.programaMesAV || window.programaMesAV.length === 0) {
+        contenedor.innerHTML = `
+            <div class="p-6 text-center text-slate-500 bg-white rounded-lg border border-slate-200 shadow-sm">
+                <i class="fa-solid fa-calendar-xmark text-3xl mb-2 text-slate-400"></i>
+                <p class="font-bold">No hay programa de reuniones cargado aún.</p>
+                <p class="text-xs text-slate-400 mt-1">Carga o genera primero las semanas en la pestaña "Planilla VyMC".</p>
+            </div>
+        `;
+        return;
     }
 
     const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
 
     let html = `
-        <table class="w-full text-xs text-left border-collapse bg-white">
+        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
             <thead class="bg-slate-800 text-white font-bold uppercase text-[11px]">
                 <tr>
-                    <th class="p-2 border border-slate-700 w-36">Fecha / Semana</th>
+                    <th class="p-2.5 border border-slate-700 w-36">Fecha / Semana</th>
     `;
 
-    // Encabezados según los puestos activos
+    // Encabezados según los puestos activos de matriz_av
     (window.puestosConfigAV || []).forEach(p => {
-        html += `<th class="p-2 border border-slate-700 text-center">${p.label}</th>`;
+        html += `<th class="p-2.5 border border-slate-700 text-center">${p.label}</th>`;
     });
 
     html += `
-                    <th class="p-2 border border-slate-700 text-center w-12">WA</th>
+                    <th class="p-2.5 border border-slate-700 text-center w-12">WA</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
     `;
 
     (window.programaMesAV || []).forEach((sem, idx) => {
-        html += `<tr class="hover:bg-slate-50">`;
+        html += `<tr class="hover:bg-slate-50 transition">`;
         html += `<td class="p-2 font-bold text-slate-900 border border-slate-200">${sem.fecha}</td>`;
 
         (window.puestosConfigAV || []).forEach(p => {
@@ -268,3 +288,10 @@ window.guardarPlanillaAVEnSupabase = async function() {
         alert("Planilla AV guardada con éxito.");
     }
 };
+
+// Disparo inicial automático
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    window.cargarPlanillaAVDesdeSupabase();
+} else {
+    document.addEventListener('DOMContentLoaded', () => window.cargarPlanillaAVDesdeSupabase());
+}
