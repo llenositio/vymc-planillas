@@ -1,9 +1,9 @@
 /**
- * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla AV por WhatsApp
+ * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla/Individual AV por WhatsApp
  */
 
 /**
- * Envia notificación individual S-89 por WhatsApp
+ * Envia notificación individual S-89 por WhatsApp (VyMC)
  */
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
     if (!nombreHermano) {
@@ -103,5 +103,63 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     }
 
     const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, '_blank');
+};
+
+/**
+ * Envía una notificación individual de asignación AV por WhatsApp a un hermano específico
+ */
+window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
+    const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
+    if (!semana) {
+        alert("No se encontró la información de la semana.");
+        return;
+    }
+
+    const campoPuestos = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
+    const nombreHermano = semana[campoPuestos] ? semana[campoPuestos][puestoKey] : null;
+
+    if (!nombreHermano) {
+        alert("Primero debes seleccionar a un hermano en esta función.");
+        return;
+    }
+
+    // Buscar celular en las listas de hermanos disponibles en memoria
+    const hermano = (window.listaHermanosAV || []).find(h => h.nombre === nombreHermano) || 
+                    (window.listaHermanosGeneral || []).find(h => h.nombre === nombreHermano) ||
+                    (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre === nombreHermano) : null);
+
+    const celular = hermano ? (hermano.celular || hermano.telefono) : null;
+
+    if (!celular) {
+        alert(`No se encontró un número de celular registrado para "${nombreHermano}" en Supabase.`);
+        return;
+    }
+
+    let numeroLimpio = celular.replace(/\D/g, '');
+    if (!numeroLimpio) {
+        alert(`El número de celular de "${nombreHermano}" no tiene un formato válido.`);
+        return;
+    }
+
+    if (numeroLimpio.length === 10) {
+        numeroLimpio = '549' + numeroLimpio;
+    } else if (numeroLimpio.length === 11 && numeroLimpio.startsWith('0')) {
+        numeroLimpio = '549' + numeroLimpio.substring(1);
+    }
+
+    // Determinar la etiqueta del puesto
+    const puestoObj = (window.puestosConfigAV || []).find(p => p.key === puestoKey);
+    const nombrePuesto = puestoObj ? puestoObj.label : puestoKey.toUpperCase();
+    const etiquetaReunion = (tipoDia === 'ES') ? 'Entre Semana' : 'Fin de Semana';
+
+    let texto = `*ASIGNACIÓN DE ACOMODADORES / AUDIO Y VIDEO*\n\n`;
+    texto += `- *Hermano/a:* ${nombreHermano}\n`;
+    texto += `- *Función:* ${nombrePuesto}\n`;
+    texto += `- *Reunión:* ${etiquetaReunion}\n`;
+    texto += `- *Semana:* ${semana.fecha}\n\n`;
+    texto += `Por favor, mandame un OK como respuesta`;
+
+    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
