@@ -1,5 +1,5 @@
 /**
- * Módulo de Planilla Mensual de Acomodadores y Audio / Video (AV)
+ * Módulo de Planilla Mensual de Acomodadores y Audio / Video (AV) - Estructura Desglosada (ES / FS)
  */
 
 window.programaMesAV = [];
@@ -39,14 +39,15 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
 };
 
 /**
- * Toma las semanas generadas en el programa principal VyMC
+ * Sincroniza semanas generando la estructura desglosada para ES y FS
  */
 window.sincronizarSemanasDesdeVyMC = function() {
     const programaBase = window.programaMes || window.programaVyMC || window.programaActual || [];
     if (Array.isArray(programaBase) && programaBase.length > 0) {
         window.programaMesAV = programaBase.map(sem => ({
             fecha: sem.fecha || sem.semana || 'Semana',
-            puestos: sem.puestosAV || {}
+            puestosES: sem.puestosAV_ES || sem.puestosAV || {},
+            puestosFS: sem.puestosAV_FS || {}
         }));
     }
 };
@@ -75,31 +76,13 @@ window.cargarAusenciasDesdeSupabase = async function() {
 };
 
 /**
- * Evalúa si una fecha corresponde a Entre Semana (ES) o Fin de Semana (FS)
- */
-function determinarTipoDia(fechaStr) {
-    if (!fechaStr) return 'ES';
-    const texto = fechaStr.toLowerCase();
-    if (texto.includes('sáb') || texto.includes('sab') || texto.includes('dom') || texto.includes('fin')) {
-        return 'FS';
-    }
-    const fecha = new Date(fechaStr);
-    if (!isNaN(fecha.getTime())) {
-        const diaSemana = fecha.getDay();
-        return (diaSemana === 0 || diaSemana === 6) ? 'FS' : 'ES';
-    }
-    return 'ES';
-}
-
-/**
  * MOTOR DE DESCARTE INTELIGENTE
- * Obtiene la lista filtrada de hermanos elegibles para un puesto y fecha específica
+ * Obtiene la lista filtrada de hermanos elegibles según el puesto y tipo de reunión ('ES' o 'FS')
  */
-window.obtenerElegiblesAV = function(puestoClave, fechaStr, asignacionesSemanaAV = {}, asignacionesVyMCFecha = []) {
-    const tipoDia = determinarTipoDia(fechaStr);
+window.obtenerElegiblesAVPorTipo = function(puestoClave, tipoDia, fechaStr, asignacionesSemanaAV = {}, asignacionesVyMCFecha = []) {
     const campoAptitud = `${puestoClave}_${tipoDia.toLowerCase()}`;
 
-    // 1. Filtrar por aptitud en la tabla hermanos_av
+    // 1. Filtrar por aptitud en la matriz hermanos_av
     let elegibles = (window.listaHermanosAV || []).filter(h => h[campoAptitud] === true);
 
     // 2. Filtro de Ausencias Programadas
@@ -117,11 +100,11 @@ window.obtenerElegiblesAV = function(puestoClave, fechaStr, asignacionesSemanaAV
     }
 
     // 3. Filtro VyMC (Escuela): Excluir si tiene asignación en la Escuela esa misma reunión
-    if (asignacionesVyMCFecha.length > 0) {
+    if (tipoDia === 'ES' && asignacionesVyMCFecha.length > 0) {
         elegibles = elegibles.filter(h => !asignacionesVyMCFecha.includes(h.nombre));
     }
 
-    // 4. Filtro de Doble Asignación en AV ese mismo día
+    // 4. Filtro de Doble Asignación en AV en la misma reunión
     const asignadosHoy = Object.entries(asignacionesSemanaAV)
         .filter(([puesto, nombre]) => puesto !== puestoClave && nombre)
         .map(([_, nombre]) => nombre);
@@ -139,26 +122,17 @@ window.obtenerElegiblesAV = function(puestoClave, fechaStr, asignacionesSemanaAV
 };
 
 /**
- * Verifica si la asignación actual genera un conflicto con VyMC a posteriori
- */
-window.detectarConflictoVyMC = function(nombreHermano, asignacionesVyMCFecha = []) {
-    if (!nombreHermano || nombreHermano.startsWith('--') || nombreHermano === 'ASAMBLEA') return false;
-    return asignacionesVyMCFecha.includes(nombreHermano);
-};
-
-/**
- * Renderiza la Planilla Mensual AV en pantalla adaptada a los puestos dinámicos
+ * Renderiza la Planilla Mensual AV desglosada en 2 filas por semana (ES y FS)
  */
 window.renderizarPlanillaAV = function() {
     const contenedor = document.getElementById('contenedorPlanillaAV');
     if (!contenedor) return;
 
-    // Si no hay semanas en programaMesAV, intentar traer del programa principal
+    // Si no hay semanas cargadas, intentar sincronizar con VyMC
     if (!window.programaMesAV || window.programaMesAV.length === 0) {
         window.sincronizarSemanasDesdeVyMC();
     }
 
-    // Si sigue vacío, mostrar aviso
     if (!window.programaMesAV || window.programaMesAV.length === 0) {
         contenedor.innerHTML = `
             <div class="p-6 text-center text-slate-500 bg-white rounded-lg border border-slate-200 shadow-sm">
@@ -173,43 +147,52 @@ window.renderizarPlanillaAV = function() {
     const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
 
     let html = `
-        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
-            <thead class="bg-slate-800 text-white font-bold uppercase text-[11px]">
+        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-300">
+            <thead class="bg-slate-900 text-white font-bold uppercase text-[11px]">
                 <tr>
-                    <th class="p-2.5 border border-slate-700 w-36">Fecha / Semana</th>
+                    <th class="p-2 border border-slate-700 w-36 text-center">Semana</th>
+                    <th class="p-2 border border-slate-700 w-28 text-center">Reunión</th>
     `;
 
-    // Encabezados según los puestos activos de matriz_av
+    // Encabezados dinámicos según matriz_av
     (window.puestosConfigAV || []).forEach(p => {
-        html += `<th class="p-2.5 border border-slate-700 text-center">${p.label}</th>`;
+        html += `<th class="p-2 border border-slate-700 text-center">${p.label}</th>`;
     });
 
     html += `
-                    <th class="p-2.5 border border-slate-700 text-center w-12">WA</th>
+                    <th class="p-2 border border-slate-700 text-center w-10">WA</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200">
+            <tbody class="divide-y divide-slate-300 font-medium">
     `;
 
     (window.programaMesAV || []).forEach((sem, idx) => {
-        html += `<tr class="hover:bg-slate-50 transition">`;
-        html += `<td class="p-2 font-bold text-slate-900 border border-slate-200">${sem.fecha}</td>`;
+        // Asegurar la inicialización de los objetos ES y FS
+        if (!sem.puestosES) sem.puestosES = sem.puestos || {};
+        if (!sem.puestosFS) sem.puestosFS = {};
+
+        // ---------------------------------------------------------------------
+        // FILA 1: ENTRE SEMANA (JUEVES / ES)
+        // ---------------------------------------------------------------------
+        html += `<tr class="bg-slate-50/80 hover:bg-slate-100/80 transition">`;
+        html += `<td rowspan="2" class="p-2 font-black text-slate-900 border border-slate-300 bg-white align-middle text-center">${sem.fecha}</td>`;
+        html += `<td class="p-1.5 border border-slate-300 text-center bg-emerald-100/70 text-emerald-900 font-black tracking-wide">ENTRE SEMANA</td>`;
 
         (window.puestosConfigAV || []).forEach(p => {
-            const asignadoActual = (sem.puestos && sem.puestos[p.key]) || '';
-            const elegibles = window.obtenerElegiblesAV(p.key, sem.fecha, sem.puestos || {});
+            const asignadoES = sem.puestosES[p.key] || '';
+            const elegiblesES = window.obtenerElegiblesAVPorTipo(p.key, 'ES', sem.fecha, sem.puestosES);
             const disabled = esMensajero ? 'disabled' : '';
 
-            html += `<td class="p-1 border border-slate-200">`;
-            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-semibold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAV(${idx}, '${p.key}', this.value)">`;
+            html += `<td class="p-1 border border-slate-300">`;
+            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'ES', '${p.key}', this.value)">`;
             html += `<option value="">-- SELECCIONAR --</option>`;
-            
-            if (asignadoActual && !elegibles.some(e => e.nombre === asignadoActual)) {
-                html += `<option value="${asignadoActual}" selected>${asignadoActual}</option>`;
+
+            if (asignadoES && !elegiblesES.some(e => e.nombre === asignadoES)) {
+                html += `<option value="${asignadoES}" selected>${asignadoES}</option>`;
             }
 
-            elegibles.forEach(e => {
-                const sel = (e.nombre === asignadoActual) ? 'selected' : '';
+            elegiblesES.forEach(e => {
+                const sel = (e.nombre === asignadoES) ? 'selected' : '';
                 html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
             });
 
@@ -217,13 +200,47 @@ window.renderizarPlanillaAV = function() {
         });
 
         html += `
-            <td class="p-1 border border-slate-200 text-center">
-                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx});" title="Enviar WhatsApp a la cuadrilla" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
+            <td class="p-1 border border-slate-300 text-center">
+                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx}, 'ES');" title="WhatsApp Entre Semana" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
                     <i class="fa-brands fa-whatsapp text-lg"></i>
                 </button>
             </td>
-        `;
-        html += `</tr>`;
+        </tr>`;
+
+        // ---------------------------------------------------------------------
+        // FILA 2: FIN DE SEMANA (DOMINGO / FS)
+        // ---------------------------------------------------------------------
+        html += `<tr class="bg-white hover:bg-slate-50 transition border-b-2 border-slate-400">`;
+        html += `<td class="p-1.5 border border-slate-300 text-center bg-blue-100/70 text-blue-900 font-black tracking-wide">FIN DE SEMANA</td>`;
+
+        (window.puestosConfigAV || []).forEach(p => {
+            const asignadoFS = sem.puestosFS[p.key] || '';
+            const elegiblesFS = window.obtenerElegiblesAVPorTipo(p.key, 'FS', sem.fecha, sem.puestosFS);
+            const disabled = esMensajero ? 'disabled' : '';
+
+            html += `<td class="p-1 border border-slate-300">`;
+            html += `<select ${disabled} class="celda-asignacion-av w-full bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-blue-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'FS', '${p.key}', this.value)">`;
+            html += `<option value="">-- SELECCIONAR --</option>`;
+
+            if (asignadoFS && !elegiblesFS.some(e => e.nombre === asignadoFS)) {
+                html += `<option value="${asignadoFS}" selected>${asignadoFS}</option>`;
+            }
+
+            elegiblesFS.forEach(e => {
+                const sel = (e.nombre === asignadoFS) ? 'selected' : '';
+                html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
+            });
+
+            html += `</select></td>`;
+        });
+
+        html += `
+            <td class="p-1 border border-slate-300 text-center">
+                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx}, 'FS');" title="WhatsApp Fin de Semana" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
+                    <i class="fa-brands fa-whatsapp text-lg"></i>
+                </button>
+            </td>
+        </tr>`;
     });
 
     html += `
@@ -239,14 +256,25 @@ window.renderizarPlanillaAV = function() {
 };
 
 /**
- * Asigna un hermano a un puesto en la semana seleccionada
+ * Asigna un hermano diferenciando ENTRE SEMANA (ES) y FIN DE SEMANA (FS)
+ */
+window.asignarHermanoAVPorTipo = function(indexSemana, tipoDia, puestoKey, nombre) {
+    if (!window.programaMesAV[indexSemana]) return;
+    
+    const campo = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
+    if (!window.programaMesAV[indexSemana][campo]) {
+        window.programaMesAV[indexSemana][campo] = {};
+    }
+
+    window.programaMesAV[indexSemana][campo][puestoKey] = nombre;
+    window.renderizarPlanillaAV();
+};
+
+/**
+ * Mantiene compatibilidad con llamadas antiguas
  */
 window.asignarHermanoAV = function(indexSemana, puestoKey, nombre) {
-    if (!window.programaMesAV[indexSemana]) return;
-    if (!window.programaMesAV[indexSemana].puestos) window.programaMesAV[indexSemana].puestos = {};
-    
-    window.programaMesAV[indexSemana].puestos[puestoKey] = nombre;
-    window.renderizarPlanillaAV();
+    window.asignarHermanoAVPorTipo(indexSemana, 'ES', puestoKey, nombre);
 };
 
 /**
