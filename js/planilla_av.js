@@ -60,6 +60,38 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
     }
 
     window.renderizarPlanillaAV();
+    window.actualizarLinkCompartirAV();
+};
+
+/**
+ * Genera el link público dinámico por mes para compartir la planilla AV
+ */
+window.actualizarLinkCompartirAV = function() {
+    const inputLink = document.getElementById('inputLinkCompartirAV');
+    if (!inputLink) return;
+
+    const idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : '');
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesClave = (inputMes && inputMes.value.trim()) ? encodeURIComponent(inputMes.value.trim().toUpperCase()) : '';
+
+    const baseUrl = window.location.origin + window.location.pathname;
+    const linkFinal = `${baseUrl}?congre=${idCongre}&mes=${mesClave}&vista=av`;
+
+    inputLink.value = linkFinal;
+};
+
+/**
+ * Copia el link público generado al portapapeles
+ */
+window.copiarLinkAV = function() {
+    const inputLink = document.getElementById('inputLinkCompartirAV');
+    if (!inputLink || !inputLink.value) return;
+
+    navigator.clipboard.writeText(inputLink.value).then(() => {
+        alert("¡Link de la Planilla AV copiado al portapapeles!");
+    }).catch(err => {
+        console.error("Error al copiar link: ", err);
+    });
 };
 
 /**
@@ -178,8 +210,23 @@ window.renderizarPlanillaAV = function() {
         window.sincronizarSemanasDesdeVyMC();
     }
 
+    let html = '';
+
+    // BARRA SUPERIOR CON LINK DE COMPARTIR POR MES (IDÉNTICO A VYMC)
+    html += `
+        <div class="mb-4 flex items-center gap-2 bg-slate-100 p-2.5 rounded-lg border border-slate-200 flex-wrap">
+            <button onclick="window.actualizarLinkCompartirAV()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-rotate"></i> Actualizar Link
+            </button>
+            <input type="text" id="inputLinkCompartirAV" readonly class="bg-white border border-slate-300 text-xs text-slate-600 rounded px-2.5 py-1.5 flex-1 outline-none font-mono min-w-[280px]">
+            <button onclick="window.copiarLinkAV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-copy"></i> Copiar
+            </button>
+        </div>
+    `;
+
     if (!window.programaMesAV || window.programaMesAV.length === 0) {
-        contenedor.innerHTML = `
+        contenedor.innerHTML = html + `
             <div class="p-6 text-center text-slate-500 bg-white rounded-lg border border-slate-200 shadow-sm">
                 <i class="fa-solid fa-calendar-xmark text-3xl mb-2 text-slate-400"></i>
                 <p class="font-bold">No hay programa de reuniones cargado aún.</p>
@@ -191,7 +238,7 @@ window.renderizarPlanillaAV = function() {
 
     const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
 
-    let html = `
+    html += `
         <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-300">
             <thead class="bg-slate-900 text-white font-bold uppercase text-[11px]">
                 <tr>
@@ -306,6 +353,7 @@ window.renderizarPlanillaAV = function() {
     `;
 
     contenedor.innerHTML = html;
+    window.actualizarLinkCompartirAV();
 
     if (typeof window.actualizarTablaVerdeRepeticiones === 'function') {
         window.actualizarTablaVerdeRepeticiones();
