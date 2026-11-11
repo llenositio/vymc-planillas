@@ -1353,21 +1353,33 @@ window.buscarYCargarPlanillaHistorial = async function() {
         console.error("Error al reabrir planilla:", e);
     }
 };
-
 /* ===================================================
-   LÓGICA DE VISTA PÚBLICA VÍA LINK Y REALTIME
+   LÓGICA DE VISTA PÚBLICA VÍA LINK Y REALTIME (VyMC y AV)
 =================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
-    const esVistaPublica = params.get('vista') === 'publica';
-    const mesSolicitado = params.get('mes');
+    const vista = params.get('vista');
+    const mesSolicitado = params.get('mes') || params.get('mes_ano');
+    const congre = params.get('congre');
 
-    if (esVistaPublica && mesSolicitado) {
+    if (congre) {
+        window.congregacionIdActual = congre;
+    }
+
+    // 1. Vista pública de VyMC
+    if (vista === 'publica' && mesSolicitado) {
         activarModoPublico(mesSolicitado);
+    } 
+    // 2. Vista pública de Acomodadores / AV
+    else if (vista === 'av') {
+        activarModoPublicoAV(mesSolicitado);
     }
 });
 
+/**
+ * Modo público VyMC ("Foto" pública sin login)
+ */
 async function activarModoPublico(mes) {
     document.body.classList.add('modo-publico');
     const modalLogin = document.getElementById('modalLogin');
@@ -1375,6 +1387,58 @@ async function activarModoPublico(mes) {
 
     await cargarYRenderizarMesPublico(mes);
     suscribirRealtimeMesPublico(mes);
+}
+
+/**
+ * Modo público AV ("Foto" pública sin login)
+ */
+async function activarModoPublicoAV(mes) {
+    document.body.classList.add('modo-publico');
+    window.rolUsuarioActual = 'mensajero_av'; // Bloquea edición
+
+    const modalLogin = document.getElementById('modalLogin');
+    if (modalLogin) modalLogin.remove();
+
+    // Ocultar navegación y paneles de edición
+    const navBar = document.querySelector('nav');
+    if (navBar) navBar.classList.add('hidden');
+
+    const panelEdicion = document.getElementById('panelEdicionAV');
+    if (panelEdicion) panelEdicion.classList.add('hidden');
+
+    if (typeof window.cambiarPestaña === 'function') {
+        window.cambiarPestaña('av');
+    }
+
+    if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
+        await window.cargarPlanillaAVDesdeSupabase();
+    }
+
+    suscribirRealtimeAV(mes);
+}
+
+/**
+ * Suscripción Realtime para la Planilla AV
+ */
+function suscribirRealtimeAV(mes) {
+    const clienteSupabase = typeof db !== 'undefined' ? db : (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
+    if (!clienteSupabase) return;
+
+    const idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : '');
+
+    clienteSupabase
+        .channel('publico-planillas-av')
+        .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'planillas_av', 
+            filter: `congregacion_id=eq.${idCongre}` 
+        }, () => {
+            if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
+                window.cargarPlanillaAVDesdeSupabase();
+            }
+        })
+        .subscribe();
 }
 
 async function cargarYRenderizarMesPublico(mes) {
