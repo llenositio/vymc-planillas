@@ -39,9 +39,10 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         return;
     }
 
-    // Busca al hermano cruzando las listas disponibles
-    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre === nombreHermano) : null) ||
-                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => h.nombre === nombreHermano) : null);
+    // Busca al hermano cruzando las listas disponibles (con comparación flexible de texto)
+    const objetivo = nombreHermano.trim().toLowerCase();
+    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null) ||
+                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
 
     const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
@@ -132,10 +133,12 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
         return;
     }
 
-    // Buscar celular cruzando todas las listas de memoria
-    const hermano = (window.listaHermanosAV || []).find(h => h.nombre === nombreHermano) || 
-                    (window.listaHermanosGeneral || []).find(h => h.nombre === nombreHermano) ||
-                    (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre === nombreHermano) : null);
+    const objetivo = nombreHermano.trim().toLowerCase();
+
+    // Buscar celular cruzando todas las listas de memoria con búsqueda insensible a mayúsculas/espacios
+    const hermano = (window.listaHermanosAV || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo) || (h.apellidos_nombres && h.apellidos_nombres.trim().toLowerCase() === objetivo)) || 
+                    (window.listaHermanosGeneral || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) ||
+                    (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
 
     const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
