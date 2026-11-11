@@ -3,6 +3,34 @@
  */
 
 /**
+ * Función auxiliar para limpiar y formatear números de teléfono al estándar internacional (Argentina +54 9)
+ */
+function formatearNumeroWhatsApp(telefonoRaw) {
+    if (!telefonoRaw) return null;
+    let num = telefonoRaw.toString().replace(/\D/g, '');
+    if (!num) return null;
+
+    // Si ya empieza con 549 y tiene la longitud internacional correcta (12 a 13 dígitos)
+    if (num.startsWith('549') && num.length >= 12) {
+        return num;
+    }
+    // Si empieza con 54 pero le falta el 9 (ej: 541169070758)
+    if (num.startsWith('54') && !num.startsWith('549')) {
+        return '549' + num.substring(2);
+    }
+    // Si empieza con 0 (ej: 01169070758 o 02804507929)
+    if (num.startsWith('0')) {
+        num = num.substring(1);
+    }
+    // Si tiene 10 dígitos (ej: 1169070758 o 2804507929 como están en tu tabla)
+    if (num.length === 10) {
+        return '549' + num;
+    }
+
+    return num.length >= 10 ? '549' + num : num;
+}
+
+/**
  * Envia notificación individual S-89 por WhatsApp (VyMC)
  */
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
@@ -11,30 +39,18 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         return;
     }
 
-    // Busca los datos del hermano en la lista cargada desde Supabase
-    const hermano = (typeof listaHermanos !== 'undefined') ? listaHermanos.find(h => h.nombre === nombreHermano) : null;
+    // Busca al hermano cruzando las listas disponibles
+    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre === nombreHermano) : null) ||
+                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => h.nombre === nombreHermano) : null);
 
-    if (!hermano || !hermano.celular) {
-        alert(`No se encontró un número de celular registrado para "${nombreHermano}" en Supabase.`);
-        return;
-    }
-
-    // Limpia el número quitando caracteres no numéricos
-    let numeroLimpio = hermano.celular.replace(/\D/g, '');
+    const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
+    const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
 
     if (!numeroLimpio) {
-        alert(`El número de celular de "${nombreHermano}" no tiene un formato válido.`);
+        alert(`No se encontró un número de celular válido registrado para "${nombreHermano}".`);
         return;
     }
 
-    // Ajuste automático de código de país (Argentina)
-    if (numeroLimpio.length === 10) {
-        numeroLimpio = '549' + numeroLimpio;
-    } else if (numeroLimpio.length === 11 && numeroLimpio.startsWith('0')) {
-        numeroLimpio = '549' + numeroLimpio.substring(1);
-    }
-
-    // Plantilla 100% texto plano con formato estándar
     let texto = `*ASIGNACIÓN PARA LA REUNIÓN VIDA Y MINISTERIO CRISTIANOS*\n\n`;
     texto += `- *Nombre:* ${nombreHermano}\n`;
     texto += `- *Ayudante:* ${nombreAyudante || '---'}\n`;
@@ -50,7 +66,7 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
 };
 
 /**
- * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp directamente al número de grupo indicado
+ * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp al número de grupo
  */
 window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
@@ -81,28 +97,19 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
         return;
     }
 
-    // Pie de mensaje con solicitud de confirmación
     mensaje += `\n_Por favor, si alguno no puede cumplir con su asignación, avise con anticipación para coordinar el reemplazo._\n\n`;
     mensaje += `Por favor, mandame un OK como respuesta`;
 
-    // Obtener el número del grupo escrito en el campo de la interfaz
     const inputTel = document.getElementById('inputTelGrupoAV');
-    let numeroGrupo = inputTel ? inputTel.value.replace(/\D/g, '') : '';
+    const telRaw = inputTel ? inputTel.value : '';
+    const numeroGrupo = formatearNumeroWhatsApp(telRaw);
 
     if (!numeroGrupo) {
-        alert("Ingresa un número de celular/grupo en el campo 'Tel. Grupo' ubicado al lado del botón 'Guardar Planilla AV'.");
+        alert("Ingresa un número de celular/grupo válido en el campo 'Tel. Grupo'.");
         if (inputTel) inputTel.focus();
         return;
     }
 
-    // Formatear código de país si es necesario (Argentina)
-    if (numeroGrupo.length === 10) {
-        numeroGrupo = '549' + numeroGrupo;
-    } else if (numeroGrupo.length === 11 && numeroGrupo.startsWith('0')) {
-        numeroGrupo = '549' + numeroGrupo.substring(1);
-    }
-
-    // Apertura directa indicando explícitamente el teléfono destino en el parámetro phone
     const url = `https://api.whatsapp.com/send?phone=${numeroGrupo}&text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 };
@@ -125,31 +132,19 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
         return;
     }
 
-    // Buscar celular en las listas de hermanos disponibles en memoria
+    // Buscar celular cruzando todas las listas de memoria
     const hermano = (window.listaHermanosAV || []).find(h => h.nombre === nombreHermano) || 
                     (window.listaHermanosGeneral || []).find(h => h.nombre === nombreHermano) ||
                     (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre === nombreHermano) : null);
 
-    const celular = hermano ? (hermano.celular || hermano.telefono) : null;
+    const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
+    const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
 
-    if (!celular) {
-        alert(`No se encontró un número de celular registrado para "${nombreHermano}" en Supabase.`);
-        return;
-    }
-
-    let numeroLimpio = celular.replace(/\D/g, '');
     if (!numeroLimpio) {
-        alert(`El número de celular de "${nombreHermano}" no tiene un formato válido.`);
+        alert(`No se encontró un número de celular registrado para "${nombreHermano}".`);
         return;
     }
 
-    if (numeroLimpio.length === 10) {
-        numeroLimpio = '549' + numeroLimpio;
-    } else if (numeroLimpio.length === 11 && numeroLimpio.startsWith('0')) {
-        numeroLimpio = '549' + numeroLimpio.substring(1);
-    }
-
-    // Determinar la etiqueta del puesto
     const puestoObj = (window.puestosConfigAV || []).find(p => p.key === puestoKey);
     const nombrePuesto = puestoObj ? puestoObj.label : puestoKey.toUpperCase();
     const etiquetaReunion = (tipoDia === 'ES') ? 'Entre Semana' : 'Fin de Semana';
