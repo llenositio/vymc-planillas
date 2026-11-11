@@ -39,10 +39,12 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         return;
     }
 
-    // Busca al hermano cruzando las listas disponibles (con comparación flexible de texto)
     const objetivo = nombreHermano.trim().toLowerCase();
-    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null) ||
-                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
+
+    // Busca al hermano en todas las listas disponibles
+    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null) ||
+                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null) ||
+                    (window.listaHermanosAV ? window.listaHermanosAV.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null);
 
     const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
@@ -135,12 +137,17 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
 
     const objetivo = nombreHermano.trim().toLowerCase();
 
-    // Buscar celular cruzando todas las listas de memoria con búsqueda insensible a mayúsculas/espacios
-    const hermano = (window.listaHermanosAV || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo) || (h.apellidos_nombres && h.apellidos_nombres.trim().toLowerCase() === objetivo)) || 
-                    (window.listaHermanosGeneral || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) ||
-                    (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
+    // 1. Buscar en listaHermanosAV (priorizando 'telefono' o 'celular')
+    let hermano = (window.listaHermanosAV || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo));
+    
+    // 2. Si no lo encuentra, buscar en la lista general de la congregación
+    if (!hermano) {
+        hermano = (window.listaHermanosGeneral || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) ||
+                  (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
+    }
 
-    const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
+    // Lee indistintamente si la propiedad vino como 'telefono' (AV) o 'celular' (General/VyMC)
+    const celularRaw = hermano ? (hermano.telefono || hermano.celular) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
 
     if (!numeroLimpio) {
