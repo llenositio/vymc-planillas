@@ -1,143 +1,17 @@
 /**
- * Módulo de Planilla Mensual de Acomodadores y Audio / Video (AV) - Estructura Desglosada (ES / FS)
+ * Módulo de Planilla Mensual de Acomodadores y Audio / Video (planillas_av)
+ * Incluye motor de descarte inteligente (Aptitud + Ausencia + Cruce VyMC),
+ * resaltado buscador y envío WhatsApp cuadrilla/individual.
  */
 
 window.programaMesAV = [];
 window.ausenciasMes = [];
 
 /**
- * Carga la planilla AV guardada desde Supabase. Si es un mes nuevo o no tiene teléfono,
- * busca el teléfono del grupo registrado en la planilla más reciente como sugerencia editable.
- */
-window.cargarPlanillaAVDesdeSupabase = async function() {
-    let idCongre = window.congregacionIdActual;
-    if (!idCongre && window.congregacionActual) {
-        idCongre = window.congregacionActual.id;
-    }
-
-    if (!idCongre) return;
-
-    // Cargar la matriz de elegibles automáticamente si no está en memoria
-    if (!window.listaHermanosAV || window.listaHermanosAV.length === 0) {
-        if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
-            await window.cargarElegiblesAVDesdeSupabase();
-        }
-    }
-
-    const inputMes = document.getElementById('inputNombreMes');
-    const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
-
-    const { data, error } = await db
-        .from('planillas_av')
-        .select('*')
-        .eq('congregacion_id', idCongre)
-        .eq('mes_ano', mesClave)
-        .maybeSingle();
-
-    const inputTel = document.getElementById('inputTelGrupoAV');
-
-    if (error) {
-        console.error("Error cargando planilla AV desde Supabase:", error);
-    } else if (data) {
-        // Carga de planilla existente en Supabase
-        if (data.datos && Array.isArray(data.datos) && data.datos.length > 0) {
-            window.programaMesAV = data.datos;
-        } else {
-            window.sincronizarSemanasDesdeVyMC();
-        }
-
-        // Si ya hay un teléfono cargado en este mes, lo asigna
-        if (inputTel && data.telefono_grupo) {
-            inputTel.value = data.telefono_grupo;
-        } else {
-            // Si la planilla existe pero no tenía teléfono, sugiere el último guardado en la congregación
-            await window.sugerirUltimoTelefonoGrupo(idCongre, inputTel);
-        }
-    } else {
-        // Si NO hay planilla creada para este mes, sincroniza semanas y sugiere el último teléfono
-        window.sincronizarSemanasDesdeVyMC();
-        await window.sugerirUltimoTelefonoGrupo(idCongre, inputTel);
-    }
-
-    window.renderizarPlanillaAV();
-    window.actualizarLinkCompartirAV();
-};
-
-/**
- * Genera el link público dinámico por mes para compartir la planilla AV
- */
-window.actualizarLinkCompartirAV = function() {
-    const inputLink = document.getElementById('inputLinkCompartirAV');
-    if (!inputLink) return;
-
-    const idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : '');
-    const inputMes = document.getElementById('inputNombreMes');
-    const mesClave = (inputMes && inputMes.value.trim()) ? encodeURIComponent(inputMes.value.trim().toUpperCase()) : '';
-
-    const baseUrl = window.location.origin + window.location.pathname;
-    const linkFinal = `${baseUrl}?congre=${idCongre}&mes=${mesClave}&vista=av`;
-
-    inputLink.value = linkFinal;
-};
-
-/**
- * Copia el link público generado al portapapeles
- */
-window.copiarLinkAV = function() {
-    const inputLink = document.getElementById('inputLinkCompartirAV');
-    if (!inputLink || !inputLink.value) return;
-
-    navigator.clipboard.writeText(inputLink.value).then(() => {
-        alert("¡Link de la Planilla AV copiado al portapapeles!");
-    }).catch(err => {
-        console.error("Error al copiar link: ", err);
-    });
-};
-
-/**
- * Busca el último teléfono del grupo guardado en planillas anteriores y lo asigna como sugerencia editable
- */
-window.sugerirUltimoTelefonoGrupo = async function(idCongre, inputTel) {
-    if (!inputTel) return;
-
-    const { data: ultimaPlanilla } = await db
-        .from('planillas_av')
-        .select('telefono_grupo')
-        .eq('congregacion_id', idCongre)
-        .not('telefono_grupo', 'is', null)
-        .neq('telefono_grupo', '')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (ultimaPlanilla && ultimaPlanilla.telefono_grupo) {
-        inputTel.value = ultimaPlanilla.telefono_grupo;
-    }
-};
-
-/**
- * Sincroniza semanas generando la estructura desglosada para ES y FS
- */
-window.sincronizarSemanasDesdeVyMC = function() {
-    const programaBase = window.programaMes || window.programaVyMC || window.programaActual || [];
-    if (Array.isArray(programaBase) && programaBase.length > 0) {
-        window.programaMesAV = programaBase.map(sem => ({
-            fecha: sem.fecha || sem.semana || 'Semana',
-            puestosES: sem.puestosAV_ES || sem.puestosAV || {},
-            puestosFS: sem.puestosAV_FS || {}
-        }));
-    }
-};
-
-/**
- * Carga las ausencias registradas para la congregación activa
+ * Carga las ausencias de la congregación desde Supabase
  */
 window.cargarAusenciasDesdeSupabase = async function() {
-    let idCongre = window.congregacionIdActual;
-    if (!idCongre && window.congregacionActual) {
-        idCongre = window.congregacionActual.id;
-    }
-
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) return;
 
     const { data, error } = await db
@@ -149,202 +23,321 @@ window.cargarAusenciasDesdeSupabase = async function() {
         console.error("Error cargando ausencias:", error);
         return;
     }
+
     window.ausenciasMes = data || [];
 };
 
 /**
- * MOTOR DE DESCARTE INTELIGENTE
- * Obtiene la lista filtrada de hermanos elegibles según el puesto y tipo de reunión ('ES' o 'FS')
+ * Convierte una cadena YYYY-MM-DD a objeto Date en hora local (00:00:00) para evitar desfases UTC
  */
-window.obtenerElegiblesAVPorTipo = function(puestoClave, tipoDia, fechaStr, asignacionesSemanaAV = {}, asignacionesVyMCFecha = []) {
-    const campoAptitud = `${puestoClave}_${tipoDia.toLowerCase()}`;
+function parsearFechaLocal(fechaStr) {
+    if (!fechaStr) return null;
+    const limpio = String(fechaStr).split('T')[0];
+    const partes = limpio.split('-');
+    if (partes.length !== 3) return null;
+    return new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]), 0, 0, 0);
+}
 
-    // 1. Filtrar por aptitud en la matriz hermanos_av
-    let elegibles = (window.listaHermanosAV || []).filter(h => h[campoAptitud] === true);
+/**
+ * Convierte un texto de semana (ej. "2-8 DE NOVIEMBRE") y mes (ej. "NOVIEMBRE 2026")
+ * en un rango de fechas aproximado { inicio, fin } en hora local
+ */
+function parsearRangoSemana(textoSemana, mesAnoStr) {
+    if (!textoSemana) return null;
 
-    // 2. Filtro de Ausencias Programadas
-    if (fechaStr && window.ausenciasMes && window.ausenciasMes.length > 0) {
-        const fechaObj = new Date(fechaStr);
-        elegibles = elegibles.filter(h => {
-            const ausente = window.ausenciasMes.some(a => {
-                if (a.hermano_id !== h.hermano_id) return false;
-                const inicio = new Date(a.fecha_inicio);
-                const fin = new Date(a.fecha_fin);
-                return fechaObj >= inicio && fechaObj <= fin;
-            });
-            return !ausente;
-        });
+    const mesesMap = {
+        'ENERO': 0, 'FEBRERO': 1, 'MARZO': 2, 'ABRIL': 3,
+        'MAYO': 4, 'JUNIO': 5, 'JULIO': 6, 'AGOSTO': 7,
+        'SEPTIEMBRE': 8, 'OCTUBRE': 9, 'NOVIEMBRE': 10, 'DICIEMBRE': 11
+    };
+
+    const strUpper = (mesAnoStr || "").toUpperCase();
+    let anio = new Date().getFullYear();
+    const matchAnio = strUpper.match(/\d{4}/);
+    if (matchAnio) anio = parseInt(matchAnio[0]);
+
+    let mesIdx = new Date().getMonth();
+    for (const [nombreMes, idx] of Object.entries(mesesMap)) {
+        if (strUpper.includes(nombreMes)) {
+            mesIdx = idx;
+            break;
+        }
     }
 
-    // 3. Filtro VyMC (Escuela): Excluir si tiene asignación en la Escuela esa misma reunión
-    if (tipoDia === 'ES' && asignacionesVyMCFecha.length > 0) {
-        elegibles = elegibles.filter(h => !asignacionesVyMCFecha.includes(h.nombre));
+    const nums = textoSemana.match(/\d+/g);
+    if (!nums || nums.length === 0) return null;
+
+    const diaIni = parseInt(nums[0]);
+    const diaFin = nums.length > 1 ? parseInt(nums[1]) : diaIni + 6;
+
+    const inicio = new Date(anio, mesIdx, diaIni, 0, 0, 0);
+    let fin = new Date(anio, mesIdx, diaFin, 23, 59, 59);
+    if (diaFin < diaIni) {
+        fin = new Date(anio, mesIdx + 1, diaFin, 23, 59, 59);
     }
 
-    // 4. Filtro de Doble Asignación en AV en la misma reunión
-    const asignadosHoy = Object.entries(asignacionesSemanaAV)
-        .filter(([puesto, nombre]) => puesto !== puestoClave && nombre)
-        .map(([_, nombre]) => nombre);
+    return { inicio, fin };
+}
 
-    elegibles = elegibles.filter(h => !asignadosHoy.includes(h.nombre));
+/**
+ * Obtiene la lista normalizada en minúsculas de nombres de hermanos asignados en VyMC en una semana específica
+ */
+function obtenerAsignadosVyMCEnSemana(indexSemana) {
+    const asignados = new Set();
+    if (!Array.isArray(window.programaMes) || !window.programaMes[indexSemana]) {
+        return asignados;
+    }
 
-    // 5. Ordenar por contador histórico (sugeridos primero los de menor participación)
-    elegibles.sort((a, b) => {
-        const cantA = (window.conteoHistoricoAV && window.conteoHistoricoAV[a.nombre]) || 0;
-        const cantB = (window.conteoHistoricoAV && window.conteoHistoricoAV[b.nombre]) || 0;
-        return cantA - cantB;
+    const sem = window.programaMes[indexSemana];
+    const camposDirectos = [
+        sem.presidencia, sem.oracionIni, sem.repaso, sem.oracionFin,
+        sem.domPresi, sem.domLector, sem.asigViajanteEntreSemana,
+        sem.asigViajanteDiscPub, sem.asigViajanteDiscFin
+    ];
+
+    camposDirectos.forEach(nombre => {
+        if (nombre && nombre.trim() !== "") {
+            asignados.add(nombre.trim().toLowerCase());
+        }
     });
 
-    return elegibles;
+    (sem.partes || []).forEach(p => {
+        [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(nombre => {
+            if (nombre && nombre.trim() !== "") {
+                asignados.add(nombre.trim().toLowerCase());
+            }
+        });
+    });
+
+    return asignados;
+}
+
+/**
+ * Motor de filtrado inteligente:
+ * 1. Filtra por aptitud en la Matriz AV (es / fs)
+ * 2. Descarta por Ausencias registradas en la semana
+ * 3. Descarta por Cruce de asignación en la planilla VyMC de esa misma semana
+ */
+window.obtenerElegiblesAVPorTipo = function(puestoKey, tipoDia, indexSemana, valorActual = "") {
+    const campoAptitud = (tipoDia === 'ES') ? `${puestoKey}_es` : `${puestoKey}_fs`;
+    const semanaObj = window.programaMesAV[indexSemana];
+    const textoSemana = semanaObj ? semanaObj.fecha : "";
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesAno = inputMes ? inputMes.value : (window.nombreMesGlobal || "");
+
+    const rangoSemana = parsearRangoSemana(textoSemana, mesAno);
+    const asignadosVyMC = obtenerAsignadosVyMCEnSemana(indexSemana);
+    const valorActualNorm = (valorActual || "").trim().toLowerCase();
+
+    return (window.listaHermanosAV || []).filter(h => {
+        const nombreNorm = (h.nombre || "").trim().toLowerCase();
+
+        // Mantener siempre visible al que ya está seleccionado en ese casillero
+        if (valorActualNorm && nombreNorm === valorActualNorm) return true;
+
+        // 1. Filtro de Aptitud
+        if (!h[campoAptitud]) return false;
+
+        // 2. Filtro de Ausencias
+        if (rangoSemana && Array.isArray(window.ausenciasMes) && window.ausenciasMes.length > 0) {
+            const hId = Number(h.hermano_id);
+            const estaAusente = window.ausenciasMes.some(a => {
+                if (Number(a.hermano_id) !== hId) return false;
+                const fIni = parsearFechaLocal(a.fecha_inicio);
+                const fFin = parsearFechaLocal(a.fecha_fin);
+                if (!fIni || !fFin) return false;
+                fFin.setHours(23, 59, 59, 999);
+                return (fIni <= rangoSemana.fin && fFin >= rangoSemana.inicio);
+            });
+            if (estaAusente) return false;
+        }
+
+        // 3. Filtro de Cruce con VyMC
+        if (asignadosVyMC.has(nombreNorm)) return false;
+
+        return true;
+    });
 };
 
 /**
- * Renderiza la Planilla Mensual AV desglosada en 2 filas por semana (ES y FS)
+ * Carga la planilla mensual AV desde Supabase (o la inicializa desde el programa VyMC)
+ */
+window.cargarPlanillaAVDesdeSupabase = async function() {
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    if (!idCongre) return;
+
+    // Asegurar que la matriz de elegibles y teléfonos esté cargada antes de renderizar
+    if (!Array.isArray(window.listaHermanosAV) || window.listaHermanosAV.length === 0) {
+        if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
+            await window.cargarElegiblesAVDesdeSupabase();
+        }
+    }
+
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesBuscado = (inputMes && inputMes.value.trim())
+        ? inputMes.value.trim().toUpperCase()
+        : (window.nombreMesGlobal || 'ACTUAL');
+
+    const { data, error } = await db
+        .from('planillas_av')
+        .select('*')
+        .eq('congregacion_id', idCongre)
+        .eq('mes_ano', mesBuscado)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error cargando planilla AV:", error);
+    }
+
+    const inputTelGrupo = document.getElementById('inputTelGrupoAV');
+
+    if (data && data.datos) {
+        window.programaMesAV = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+        if (inputTelGrupo) {
+            inputTelGrupo.value = data.telefono_grupo || '';
+        }
+    } else {
+        // Inicializar semanas sincronizadas con el programa VyMC del mes
+        const semanasBase = (Array.isArray(window.programaMes) && window.programaMes.length > 0)
+            ? window.programaMes
+            : [{ semana: "SEMANA 1" }, { semana: "SEMANA 2" }, { semana: "SEMANA 3" }, { semana: "SEMANA 4" }];
+
+        window.programaMesAV = semanasBase.map((s, idx) => ({
+            fecha: s.semana || `SEMANA ${idx + 1}`,
+            puestosES: {},
+            puestosFS: {}
+        }));
+
+        if (inputTelGrupo && !inputTelGrupo.value) {
+            // Intentar recuperar el teléfono de grupo de algún registro previo de la misma congregación
+            const { data: previo } = await db
+                .from('planillas_av')
+                .select('telefono_grupo')
+                .eq('congregacion_id', idCongre)
+                .not('telefono_grupo', 'is', null)
+                .limit(1)
+                .maybeSingle();
+
+            if (previo && previo.telefono_grupo) {
+                inputTelGrupo.value = previo.telefono_grupo;
+            }
+        }
+    }
+
+    window.renderizarPlanillaAV();
+};
+
+/**
+ * Renderiza la tabla mensual de Acomodadores / Audio y Video
  */
 window.renderizarPlanillaAV = function() {
     const contenedor = document.getElementById('contenedorPlanillaAV');
     if (!contenedor) return;
 
-    // Si no hay semanas cargadas, intentar sincronizar con VyMC
-    if (!window.programaMesAV || window.programaMesAV.length === 0) {
-        window.sincronizarSemanasDesdeVyMC();
-    }
+    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
+    const puestos = window.puestosConfigAV || [];
 
-    let html = '';
-
-    // BARRA SUPERIOR CON LINK DE COMPARTIR POR MES (IDÉNTICO A VYMC)
-    html += `
-        <div class="mb-4 flex items-center gap-2 bg-slate-100 p-2.5 rounded-lg border border-slate-200 flex-wrap">
-            <button onclick="window.actualizarLinkCompartirAV()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
-                <i class="fa-solid fa-rotate"></i> Actualizar Link
-            </button>
-            <input type="text" id="inputLinkCompartirAV" readonly class="bg-white border border-slate-300 text-xs text-slate-600 rounded px-2.5 py-1.5 flex-1 outline-none font-mono min-w-[280px]">
-            <button onclick="window.copiarLinkAV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded transition flex items-center gap-1 shadow-sm">
-                <i class="fa-solid fa-copy"></i> Copiar
-            </button>
-        </div>
-    `;
-
-    if (!window.programaMesAV || window.programaMesAV.length === 0) {
-        contenedor.innerHTML = html + `
-            <div class="p-6 text-center text-slate-500 bg-white rounded-lg border border-slate-200 shadow-sm">
-                <i class="fa-solid fa-calendar-xmark text-3xl mb-2 text-slate-400"></i>
-                <p class="font-bold">No hay programa de reuniones cargado aún.</p>
-                <p class="text-xs text-slate-400 mt-1">Carga o genera primero las semanas en la pestaña "Planilla VyMC".</p>
-            </div>
-        `;
+    if (!Array.isArray(window.programaMesAV) || window.programaMesAV.length === 0) {
+        contenedor.innerHTML = `<p class="text-center text-xs text-slate-500 py-6">No hay semanas cargadas. Guarda o carga un mes en la Planilla VyMC.</p>`;
         return;
     }
 
-    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
-
-    html += `
-        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-300">
-            <thead class="bg-slate-900 text-white font-bold uppercase text-[11px]">
-                <tr>
-                    <th class="p-2 border border-slate-700 w-36 text-center">Semana</th>
-                    <th class="p-2 border border-slate-700 w-28 text-center">Reunión</th>
+    let html = `
+        <table class="w-full text-xs border-collapse border border-slate-400 bg-white">
+            <thead>
+                <tr class="bg-slate-900 text-white uppercase text-[11px] font-extrabold">
+                    <th class="border border-slate-600 px-2 py-2 w-36 text-center">Semana</th>
+                    <th class="border border-slate-600 px-2 py-2 w-24 text-center">Reunión</th>
     `;
 
-    // Encabezados dinámicos según matriz_av
-    (window.puestosConfigAV || []).forEach(p => {
-        html += `<th class="p-2 border border-slate-700 text-center">${p.label}</th>`;
+    puestos.forEach(p => {
+        html += `<th class="border border-slate-600 px-2 py-2 text-center">${p.label}</th>`;
     });
 
     html += `
-                    <th class="p-2 border border-slate-700 text-center w-10">WA Grupo</th>
+                    <th class="border border-slate-600 px-2 py-2 w-24 text-center no-print">Cuadrilla</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-300 font-medium">
+            <tbody>
     `;
 
-    (window.programaMesAV || []).forEach((sem, idx) => {
-        // Asegurar la inicialización de los objetos ES y FS
-        if (!sem.puestosES) sem.puestosES = sem.puestos || {};
-        if (!sem.puestosFS) sem.puestosFS = {};
+    window.programaMesAV.forEach((sem, sIdx) => {
+        const filasDia = [
+            { tipo: 'ES', etiqueta: 'Entre Semana', badgeClase: 'bg-sky-100 text-sky-900 border-sky-300', campo: 'puestosES' },
+            { tipo: 'FS', etiqueta: 'Fin de Semana', badgeClase: 'bg-amber-100 text-amber-900 border-amber-300', campo: 'puestosFS' }
+        ];
 
-        // ---------------------------------------------------------------------
-        // FILA 1: ENTRE SEMANA (JUEVES / ES)
-        // ---------------------------------------------------------------------
-        html += `<tr class="bg-slate-50/80 hover:bg-slate-100/80 transition">`;
-        html += `<td rowspan="2" class="p-2 font-black text-slate-900 border border-slate-300 bg-white align-middle text-center">${sem.fecha}</td>`;
-        html += `<td class="p-1.5 border border-slate-300 text-center bg-emerald-100/70 text-emerald-900 font-black tracking-wide">ENTRE SEMANA</td>`;
+        filasDia.forEach((dia, dIdx) => {
+            const puestosAsignados = sem[dia.campo] || {};
+            const bgFila = (sIdx % 2 === 0) ? 'bg-white' : 'bg-slate-50/70';
 
-        (window.puestosConfigAV || []).forEach(p => {
-            const asignadoES = sem.puestosES[p.key] || '';
-            const elegiblesES = window.obtenerElegiblesAVPorTipo(p.key, 'ES', sem.fecha, sem.puestosES);
-            const disabled = esMensajero ? 'disabled' : '';
+            html += `<tr class="${bgFila} hover:bg-emerald-50/40 transition">`;
 
-            // Ícono chiquito de WhatsApp individual al lado del selector
-            html += `<td class="p-1 border border-slate-300">`;
-            html += `<div class="flex items-center gap-1">`;
-            html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-emerald-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'ES', '${p.key}', this.value)">`;
-            html += `<option value="">-- SELECCIONAR --</option>`;
-
-            if (asignadoES && !elegiblesES.some(e => e.nombre === asignadoES)) {
-                html += `<option value="${asignadoES}" selected>${asignadoES}</option>`;
+            if (dIdx === 0) {
+                html += `
+                    <td rowspan="2" class="border border-slate-400 px-2 py-2 font-black text-slate-900 text-center align-middle bg-slate-100">
+                        <span contenteditable="${!esMensajero}" 
+                              onblur="window.actualizarFechaSemanaAV(${sIdx}, this.innerText)"
+                              class="editable-field uppercase block">${sem.fecha || ''}</span>
+                    </td>
+                `;
             }
 
-            elegiblesES.forEach(e => {
-                const sel = (e.nombre === asignadoES) ? 'selected' : '';
-                html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
+            html += `
+                <td class="border border-slate-400 px-1.5 py-1.5 text-center align-middle">
+                    <span class="inline-block px-1.5 py-0.5 rounded border text-[10px] font-extrabold ${dia.badgeClase}">
+                        ${dia.etiqueta}
+                    </span>
+                </td>
+            `;
+
+            puestos.forEach(p => {
+                const valorActual = puestosAsignados[p.key] || "";
+                const elegibles = window.obtenerElegiblesAVPorTipo(p.key, dia.tipo, sIdx, valorActual);
+
+                let opciones = `<option value="">-- Elegir --</option>`;
+                elegibles.forEach(h => {
+                    const selected = (h.nombre === valorActual) ? 'selected' : '';
+                    opciones += `<option value="${h.nombre}" ${selected}>${h.nombre}</option>`;
+                });
+
+                const disabledAttr = esMensajero ? 'disabled' : '';
+                const selectBg = valorActual ? 'bg-emerald-50 font-bold text-slate-900' : 'bg-transparent text-slate-500';
+
+                html += `
+                    <td class="border border-slate-400 px-1 py-1 align-middle cel-asignacion-av" data-hermano="${valorActual.toLowerCase()}">
+                        <div class="flex items-center gap-1">
+                            <select onchange="window.asignarHermanoAVPorTipo(${sIdx}, '${dia.tipo}', '${p.key}', this.value)"
+                                    ${disabledAttr}
+                                    class="w-full text-[11px] py-1 px-1 rounded border border-slate-300 outline-none focus:ring-1 focus:ring-emerald-500 uppercase ${selectBg}">
+                                ${opciones}
+                            </select>
+                            ${valorActual ? `
+                                <button type="button"
+                                        onclick="window.enviarWhatsAppIndividualAV(${sIdx}, '${dia.tipo}', '${p.key}')"
+                                        title="Enviar notificación por WhatsApp a ${valorActual}"
+                                        class="no-print text-emerald-600 hover:text-emerald-800 shrink-0 px-0.5 transition">
+                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
             });
 
-            html += `</select>`;
-            html += `<button onclick="if(typeof window.enviarWhatsAppIndividualAV==='function') window.enviarWhatsAppIndividualAV(${idx}, 'ES', '${p.key}');" title="WhatsApp Individual" class="text-emerald-600 hover:text-emerald-800 font-bold p-0.5">`;
-            html += `<i class="fa-brands fa-whatsapp text-sm"></i>`;
-            html += `</button>`;
-            html += `</div></td>`;
+            html += `
+                <td class="border border-slate-400 px-1.5 py-1 text-center align-middle no-print">
+                    <button type="button"
+                            onclick="window.enviarWhatsAppCuadrillaAV(${sIdx}, '${dia.tipo}')"
+                            title="Enviar cuadrilla ${dia.etiqueta} al grupo de WhatsApp"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm inline-flex items-center gap-1 transition">
+                        <i class="fa-brands fa-whatsapp"></i> Enviar
+                    </button>
+                </td>
+            `;
+
+            html += `</tr>`;
         });
-
-        html += `
-            <td class="p-1 border border-slate-300 text-center">
-                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx}, 'ES');" title="WhatsApp Entre Semana" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
-                    <i class="fa-brands fa-whatsapp text-lg"></i>
-                </button>
-            </td>
-        </tr>`;
-
-        // ---------------------------------------------------------------------
-        // FILA 2: FIN DE SEMANA (DOMINGO / FS)
-        // ---------------------------------------------------------------------
-        html += `<tr class="bg-white hover:bg-slate-50 transition border-b-2 border-slate-400">`;
-        html += `<td class="p-1.5 border border-slate-300 text-center bg-blue-100/70 text-blue-900 font-black tracking-wide">FIN DE SEMANA</td>`;
-
-        (window.puestosConfigAV || []).forEach(p => {
-            const asignadoFS = sem.puestosFS[p.key] || '';
-            const elegiblesFS = window.obtenerElegiblesAVPorTipo(p.key, 'FS', sem.fecha, sem.puestosFS);
-            const disabled = esMensajero ? 'disabled' : '';
-
-            // Ícono chiquito de WhatsApp individual al lado del selector
-            html += `<td class="p-1 border border-slate-300">`;
-            html += `<div class="flex items-center gap-1">`;
-            html += `<select ${disabled} class="celda-asignacion-av flex-1 bg-transparent font-bold text-xs border border-slate-300 rounded p-1 outline-none focus:ring-2 focus:ring-blue-500" onchange="window.asignarHermanoAVPorTipo(${idx}, 'FS', '${p.key}', this.value)">`;
-            html += `<option value="">-- SELECCIONAR --</option>`;
-
-            if (asignadoFS && !elegiblesFS.some(e => e.nombre === asignadoFS)) {
-                html += `<option value="${asignadoFS}" selected>${asignadoFS}</option>`;
-            }
-
-            elegiblesFS.forEach(e => {
-                const sel = (e.nombre === asignadoFS) ? 'selected' : '';
-                html += `<option value="${e.nombre}" ${sel}>${e.nombre}</option>`;
-            });
-
-            html += `</select>`;
-            html += `<button onclick="if(typeof window.enviarWhatsAppIndividualAV==='function') window.enviarWhatsAppIndividualAV(${idx}, 'FS', '${p.key}');" title="WhatsApp Individual" class="text-blue-600 hover:text-blue-800 font-bold p-0.5">`;
-            html += `<i class="fa-brands fa-whatsapp text-sm"></i>`;
-            html += `</button>`;
-            html += `</div></td>`;
-        });
-
-        html += `
-            <td class="p-1 border border-slate-300 text-center">
-                <button onclick="if(typeof window.enviarWhatsAppCuadrillaAV==='function') window.enviarWhatsAppCuadrillaAV(${idx}, 'FS');" title="WhatsApp Fin de Semana" class="text-emerald-600 hover:text-emerald-800 font-bold p-1">
-                    <i class="fa-brands fa-whatsapp text-lg"></i>
-                </button>
-            </td>
-        </tr>`;
     });
 
     html += `
@@ -353,56 +346,66 @@ window.renderizarPlanillaAV = function() {
     `;
 
     contenedor.innerHTML = html;
-    window.actualizarLinkCompartirAV();
 
-    if (typeof window.actualizarTablaVerdeRepeticiones === 'function') {
-        window.actualizarTablaVerdeRepeticiones();
+    if (typeof window.renderizarTablaResumenAV === 'function') {
+        window.renderizarTablaResumenAV();
+    }
+    if (typeof window.actualizarResaltadoBuscador === 'function') {
+        window.actualizarResaltadoBuscador();
     }
 };
 
 /**
- * Asigna un hermano diferenciando ENTRE SEMANA (ES) y FIN DE SEMANA (FS)
+ * Actualiza el texto de fecha de una semana en la planilla AV
  */
-window.asignarHermanoAVPorTipo = function(indexSemana, tipoDia, puestoKey, nombre) {
+window.actualizarFechaSemanaAV = function(indexSemana, nuevoTexto) {
     if (!window.programaMesAV[indexSemana]) return;
-    
-    const campo = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
-    if (!window.programaMesAV[indexSemana][campo]) {
-        window.programaMesAV[indexSemana][campo] = {};
+    const limpio = nuevoTexto.trim().toUpperCase();
+    if (limpio) {
+        window.programaMesAV[indexSemana].fecha = limpio;
+    }
+};
+
+/**
+ * Asigna un hermano a un puesto ES o FS y re-renderiza para actualizar botones de WhatsApp y conteos
+ */
+window.asignarHermanoAVPorTipo = function(indexSemana, tipoDia, puestoKey, nombreHermano) {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        return;
     }
 
-    window.programaMesAV[indexSemana][campo][puestoKey] = nombre;
+    if (!window.programaMesAV[indexSemana]) return;
+    const campoPuestos = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
+    if (!window.programaMesAV[indexSemana][campoPuestos]) {
+        window.programaMesAV[indexSemana][campoPuestos] = {};
+    }
+
+    window.programaMesAV[indexSemana][campoPuestos][puestoKey] = nombreHermano || "";
     window.renderizarPlanillaAV();
 };
 
 /**
- * Mantiene compatibilidad con llamadas antiguas
- */
-window.asignarHermanoAV = function(indexSemana, puestoKey, nombre) {
-    window.asignarHermanoAVPorTipo(indexSemana, 'ES', puestoKey, nombre);
-};
-
-/**
- * Guardar planilla AV en Supabase (utilizando la columna dedicada 'telefono_grupo')
+ * Guarda la planilla mensual AV y el teléfono de grupo en Supabase
  */
 window.guardarPlanillaAVEnSupabase = async function() {
     if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        alert("El usuario mensajero no tiene permisos para modificar la planilla.");
+        alert("Tu usuario tiene rol de solo lectura y no puede guardar cambios.");
         return;
     }
 
-    let idCongre = window.congregacionIdActual;
-    if (!idCongre && window.congregacionActual) {
-        idCongre = window.congregacionActual.id;
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    if (!idCongre) {
+        alert("Error: No hay sesión activa o congregación asignada.");
+        return;
     }
 
-    if (!idCongre) return;
-
     const inputMes = document.getElementById('inputNombreMes');
-    const mesClave = (inputMes && inputMes.value.trim()) ? inputMes.value.trim().toUpperCase() : 'ACTUAL';
+    const mesClave = (inputMes && inputMes.value.trim())
+        ? inputMes.value.trim().toUpperCase()
+        : (window.nombreMesGlobal || "ACTUAL");
 
-    const inputTel = document.getElementById('inputTelGrupoAV');
-    const telGrupo = inputTel ? inputTel.value.trim() : '';
+    const inputTelGrupo = document.getElementById('inputTelGrupoAV');
+    const telGrupo = inputTelGrupo ? inputTelGrupo.value.trim() : "";
 
     const payload = {
         congregacion_id: idCongre,
@@ -412,23 +415,14 @@ window.guardarPlanillaAVEnSupabase = async function() {
         updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await db
+    const { error } = await db
         .from('planillas_av')
-        .upsert(payload, { onConflict: 'congregacion_id,mes_ano' })
-        .select();
+        .upsert(payload, { onConflict: 'congregacion_id,mes_ano' });
 
     if (error) {
-        console.error("Error guardando planilla AV:", error);
-        alert("Error al guardar planilla AV: " + error.message);
+        console.error("Error guardando Planilla AV:", error);
+        alert("Error al guardar Planilla AV en Supabase: " + error.message);
     } else {
-        console.log("Planilla AV guardada con éxito:", data);
-        alert("Planilla AV guardada con éxito.");
+        alert("Planilla AV guardada correctamente en Supabase.");
     }
 };
-
-// Disparo inicial automático
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    window.cargarPlanillaAVDesdeSupabase();
-} else {
-    document.addEventListener('DOMContentLoaded', () => window.cargarPlanillaAVDesdeSupabase());
-}
