@@ -1,7 +1,7 @@
 /**
  * Módulo de Planilla Mensual de Acomodadores y Audio / Video (planillas_av)
- * Incluye motor de descarte inteligente (Aptitud + Ausencia + Cruce VyMC),
- * resaltado buscador y envío WhatsApp cuadrilla/individual.
+ * Incluye motor de descarte inteligente (Aptitud + Ausencia + Cruce ES/FS separado + No duplicar en misma reunión),
+ * contador de asignaciones (N), resaltado buscador y envío WhatsApp cuadrilla/individual.
  */
 
 window.programaMesAV = [];
@@ -80,43 +80,86 @@ function parsearRangoSemana(textoSemana, mesAnoStr) {
 }
 
 /**
- * Obtiene la lista normalizada en minúsculas de nombres de hermanos asignados en VyMC en una semana específica
+ * Obtiene los nombres (normalizados en minúsculas) de hermanos con parte en VyMC/Reunión Pública
+ * discriminando estrictamente entre Entre Semana ('ES') y Fin de Semana ('FS').
  */
-function obtenerAsignadosVyMCEnSemana(indexSemana) {
+function obtenerAsignadosReunionPorTipo(indexSemana, tipoDia) {
     const asignados = new Set();
     if (!Array.isArray(window.programaMes) || !window.programaMes[indexSemana]) {
         return asignados;
     }
 
     const sem = window.programaMes[indexSemana];
-    const camposDirectos = [
-        sem.presidencia, sem.oracionIni, sem.repaso, sem.oracionFin,
-        sem.domPresi, sem.domLector, sem.asigViajanteEntreSemana,
-        sem.asigViajanteDiscPub, sem.asigViajanteDiscFin
-    ];
 
-    camposDirectos.forEach(nombre => {
-        if (nombre && nombre.trim() !== "") {
-            asignados.add(nombre.trim().toLowerCase());
-        }
-    });
+    if (tipoDia === 'ES') {
+        const camposES = [
+            sem.presidencia,
+            sem.oracionIni,
+            sem.repaso,
+            sem.oracionFin,
+            sem.asigViajanteEntreSemana
+        ];
 
-    (sem.partes || []).forEach(p => {
-        [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(nombre => {
+        camposES.forEach(nombre => {
             if (nombre && nombre.trim() !== "") {
                 asignados.add(nombre.trim().toLowerCase());
             }
         });
-    });
+
+        (sem.partes || []).forEach(p => {
+            [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(nombre => {
+                if (nombre && nombre.trim() !== "") {
+                    asignados.add(nombre.trim().toLowerCase());
+                }
+            });
+        });
+    } else if (tipoDia === 'FS') {
+        const camposFS = [
+            sem.domPresi,
+            sem.domLector,
+            sem.asigViajanteDiscPub,
+            sem.asigViajanteDiscFin
+        ];
+
+        camposFS.forEach(nombre => {
+            if (nombre && nombre.trim() !== "") {
+                asignados.add(nombre.trim().toLowerCase());
+            }
+        });
+    }
 
     return asignados;
+}
+
+/**
+ * Calcula el conteo actual de asignaciones AV en el mes para cada hermano
+ */
+function obtenerConteoMensualAV() {
+    const conteo = {};
+    (window.programaMesAV || []).forEach(sem => {
+        Object.values(sem.puestosES || {}).forEach(nombre => {
+            if (nombre && nombre.trim()) {
+                const k = nombre.trim().toLowerCase();
+                conteo[k] = (conteo[k] || 0) + 1;
+            }
+        });
+        Object.values(sem.puestosFS || {}).forEach(nombre => {
+            if (nombre && nombre.trim()) {
+                const k = nombre.trim().toLowerCase();
+                conteo[k] = (conteo[k] || 0) + 1;
+            }
+        });
+    });
+    return conteo;
 }
 
 /**
  * Motor de filtrado inteligente:
  * 1. Filtra por aptitud en la Matriz AV (es / fs)
  * 2. Descarta por Ausencias registradas en la semana
- * 3. Descarta por Cruce de asignación en la planilla VyMC de esa misma semana
+ * 3. Descarta por Cruce de asignación en la misma reunión (ES vs ES / FS vs FS)
+ * 4. Descarta a quienes ya están asignados en OTRO puesto de esa misma reunión
+ * 5. Ordena por menor cantidad de asignaciones en el mes y devuelve { nombre, conteoMes }
  */
 window.obtenerElegiblesAVPorTipo = function(puestoKey, tipoDia, indexSemana, valorActual = "") {
     const campoAptitud = (tipoDia === 'ES') ? `${puestoKey}_es` : `${puestoKey}_fs`;
@@ -126,13 +169,25 @@ window.obtenerElegiblesAVPorTipo = function(puestoKey, tipoDia, indexSemana, val
     const mesAno = inputMes ? inputMes.value : (window.nombreMesGlobal || "");
 
     const rangoSemana = parsearRangoSemana(textoSemana, mesAno);
-    const asignadosVyMC = obtenerAsignadosVyMCEnSemana(indexSemana);
+    const asignadosReunion = obtenerAsignadosReunionPorTipo(indexSemana, tipoDia);
     const valorActualNorm = (valorActual || "").trim().toLowerCase();
+    const conteoMensual = obtenerConteoMensualAV();
 
-    return (window.listaHermanosAV || []).filter(h => {
+    // Hermanos ya ocupados en OTRO puesto dentro de esta misma reunión (ES o FS)
+    const ocupadosMismaReunion = new Set();
+    if (semanaObj) {
+        const mapaPuestos = (tipoDia === 'ES') ? (semanaObj.puestosES || {}) : (semanaObj.puestosFS || {});
+        Object.entries(mapaPuestos).forEach(([kPuesto, nom]) => {
+            if (kPuesto !== puestoKey && nom && nom.trim() !== "") {
+                ocupadosMismaReunion.add(nom.trim().toLowerCase());
+            }
+        });
+    }
+
+    const filtrados = (window.listaHermanosAV || []).filter(h => {
         const nombreNorm = (h.nombre || "").trim().toLowerCase();
 
-        // Mantener siempre visible al que ya está seleccionado en ese casillero
+        // Mantener siempre visible al que ya está seleccionado en este casillero exacto
         if (valorActualNorm && nombreNorm === valorActualNorm) return true;
 
         // 1. Filtro de Aptitud
@@ -152,11 +207,27 @@ window.obtenerElegiblesAVPorTipo = function(puestoKey, tipoDia, indexSemana, val
             if (estaAusente) return false;
         }
 
-        // 3. Filtro de Cruce con VyMC
-        if (asignadosVyMC.has(nombreNorm)) return false;
+        // 3. Filtro de Cruce con la misma reunión (ES solo bloquea ES; FS solo bloquea FS)
+        if (asignadosReunion.has(nombreNorm)) return false;
+
+        // 4. Filtro de no repetir puesto en la misma reunión
+        if (ocupadosMismaReunion.has(nombreNorm)) return false;
 
         return true;
     });
+
+    return filtrados
+        .map(h => {
+            const nombreNorm = (h.nombre || "").trim().toLowerCase();
+            return {
+                ...h,
+                conteoMes: conteoMensual[nombreNorm] || 0
+            };
+        })
+        .sort((a, b) => {
+            if (a.conteoMes !== b.conteoMes) return a.conteoMes - b.conteoMes;
+            return a.nombre.localeCompare(b.nombre);
+        });
 };
 
 /**
@@ -166,7 +237,6 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
     let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) return;
 
-    // Asegurar que la matriz de elegibles y teléfonos esté cargada antes de renderizar
     if (!Array.isArray(window.listaHermanosAV) || window.listaHermanosAV.length === 0) {
         if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
             await window.cargarElegiblesAVDesdeSupabase();
@@ -197,7 +267,6 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
             inputTelGrupo.value = data.telefono_grupo || '';
         }
     } else {
-        // Inicializar semanas sincronizadas con el programa VyMC del mes
         const semanasBase = (Array.isArray(window.programaMes) && window.programaMes.length > 0)
             ? window.programaMes
             : [{ semana: "SEMANA 1" }, { semana: "SEMANA 2" }, { semana: "SEMANA 3" }, { semana: "SEMANA 4" }];
@@ -209,7 +278,6 @@ window.cargarPlanillaAVDesdeSupabase = async function() {
         }));
 
         if (inputTelGrupo && !inputTelGrupo.value) {
-            // Intentar recuperar el teléfono de grupo de algún registro previo de la misma congregación
             const { data: previo } = await db
                 .from('planillas_av')
                 .select('telefono_grupo')
@@ -298,7 +366,7 @@ window.renderizarPlanillaAV = function() {
                 let opciones = `<option value="">-- Elegir --</option>`;
                 elegibles.forEach(h => {
                     const selected = (h.nombre === valorActual) ? 'selected' : '';
-                    opciones += `<option value="${h.nombre}" ${selected}>${h.nombre}</option>`;
+                    opciones += `<option value="${h.nombre}" ${selected}>${h.nombre} (${h.conteoMes})</option>`;
                 });
 
                 const disabledAttr = esMensajero ? 'disabled' : '';
