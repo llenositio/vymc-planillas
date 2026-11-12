@@ -7,7 +7,10 @@
  */
 function formatearNumeroWhatsApp(telefonoRaw) {
     if (!telefonoRaw) return null;
-    let num = telefonoRaw.toString().replace(/\D/g, '');
+    const strRaw = String(telefonoRaw).trim();
+    if (!strRaw || strRaw.toLowerCase().includes('sin tel')) return null;
+
+    let num = strRaw.replace(/\D/g, '');
     if (!num) return null;
 
     // Si ya empieza con 549 y tiene la longitud internacional correcta (12 a 13 dígitos)
@@ -31,7 +34,41 @@ function formatearNumeroWhatsApp(telefonoRaw) {
 }
 
 /**
- * Envia notificación individual S-89 por WhatsApp (VyMC)
+ * Función interna unificada para buscar un hermano por nombre en todas las listas cargadas en memoria
+ */
+function buscarHermanoEnTodasLasListas(nombreHermano) {
+    if (!nombreHermano) return null;
+    const objetivo = nombreHermano.trim().toLowerCase();
+
+    const fuentes = [
+        typeof listaHermanos !== 'undefined' ? listaHermanos : null,
+        window.listaHermanos,
+        window.listaHermanosGeneral,
+        window.listaHermanosAV
+    ];
+
+    for (const lista of fuentes) {
+        if (Array.isArray(lista) && lista.length > 0) {
+            const encontrado = lista.find(h => h && h.nombre && h.nombre.trim().toLowerCase() === objetivo);
+            if (encontrado && (encontrado.celular || encontrado.telefono)) {
+                return encontrado;
+            }
+        }
+    }
+
+    // Segunda pasada por si está en alguna lista sin teléfono cargado pero existe el registro
+    for (const lista of fuentes) {
+        if (Array.isArray(lista) && lista.length > 0) {
+            const encontrado = lista.find(h => h && h.nombre && h.nombre.trim().toLowerCase() === objetivo);
+            if (encontrado) return encontrado;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Envía notificación individual S-89 por WhatsApp (VyMC)
  */
 window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaSemana, intervencion, sala = "Sala Principal") {
     if (!nombreHermano) {
@@ -39,13 +76,7 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
         return;
     }
 
-    const objetivo = nombreHermano.trim().toLowerCase();
-
-    // Busca al hermano en todas las listas disponibles
-    const hermano = (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null) ||
-                    (window.listaHermanosGeneral ? window.listaHermanosGeneral.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null) ||
-                    (window.listaHermanosAV ? window.listaHermanosAV.find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) : null);
-
+    const hermano = buscarHermanoEnTodasLasListas(nombreHermano);
     const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
 
@@ -135,23 +166,12 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
         return;
     }
 
-    const objetivo = nombreHermano.trim().toLowerCase();
-
-    // 1. Buscar en listaHermanosAV (priorizando 'telefono' o 'celular')
-    let hermano = (window.listaHermanosAV || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo));
-    
-    // 2. Si no lo encuentra, buscar en la lista general de la congregación
-    if (!hermano) {
-        hermano = (window.listaHermanosGeneral || []).find(h => (h.nombre && h.nombre.trim().toLowerCase() === objetivo)) ||
-                  (typeof listaHermanos !== 'undefined' ? listaHermanos.find(h => h.nombre && h.nombre.trim().toLowerCase() === objetivo) : null);
-    }
-
-    // Lee indistintamente si la propiedad vino como 'telefono' (AV) o 'celular' (General/VyMC)
-    const celularRaw = hermano ? (hermano.telefono || hermano.celular) : null;
+    const hermano = buscarHermanoEnTodasLasListas(nombreHermano);
+    const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
     const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
 
     if (!numeroLimpio) {
-        alert(`No se encontró un número de celular registrado para "${nombreHermano}".`);
+        alert(`No se encontró un número de celular válido registrado para "${nombreHermano}".`);
         return;
     }
 
