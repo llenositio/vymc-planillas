@@ -25,7 +25,7 @@ function formatearNumeroWhatsApp(telefonoRaw) {
     if (num.startsWith('0')) {
         num = num.substring(1);
     }
-    // Si tiene 10 dígitos (ej: 1169070758 o 2804507929 como están en tu tabla)
+    // Si tiene 10 dígitos (ej: 1169070758 o 2804507929)
     if (num.length === 10) {
         return '549' + num;
     }
@@ -56,7 +56,6 @@ function buscarHermanoEnTodasLasListas(nombreHermano) {
         }
     }
 
-    // Segunda pasada por si está en alguna lista sin teléfono cargado pero existe el registro
     for (const lista of fuentes) {
         if (Array.isArray(lista) && lista.length > 0) {
             const encontrado = lista.find(h => h && h.nombre && h.nombre.trim().toLowerCase() === objetivo);
@@ -95,12 +94,12 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
     texto += `En la Guía de actividades encontrará la información que necesita para su intervención. Repase también las indicaciones que se describen en las Instrucciones para la reunión Vida y Ministerio Cristianos (S-38).\n\n`;
     texto += `Por favor, mandame un OK como respuesta`;
 
-    const url = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${encodeURIComponent(texto)}`;
+    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
     window.open(url, '_blank');
 };
 
 /**
- * Envía el resumen de la cuadrilla de Acomodadores / AV por WhatsApp al número de grupo
+ * Envía el resumen de la cuadrilla de Acomodadores / AV (fila completa) por WhatsApp al número de grupo
  */
 window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
@@ -113,16 +112,19 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     const puestosSemana = semana[campoPuestos] || {};
     const etiquetaReunion = (tipoDia === 'ES') ? 'ENTRE SEMANA' : 'FIN DE SEMANA';
 
-    let mensaje = `📋 *ASIGNACIONES AV Y ACOMODADORES*\n`;
-    mensaje += `🗓️ *Semana:* ${semana.fecha} (${etiquetaReunion})\n\n`;
+    let mensaje = `*ASIGNACIONES AV Y ACOMODADORES*\n`;
+    mensaje += `*Semana:* ${semana.fecha} (${etiquetaReunion})\n\n`;
 
     let hayAsignados = false;
+    const puestos = (Array.isArray(window.puestosConfigAV) && window.puestosConfigAV.length > 0)
+        ? window.puestosConfigAV
+        : Object.keys(puestosSemana).map(k => ({ key: k, label: k.toUpperCase() }));
 
-    (window.puestosConfigAV || []).forEach(p => {
+    puestos.forEach(p => {
         const nombreAsignado = puestosSemana[p.key];
-        if (nombreAsignado) {
+        if (nombreAsignado && String(nombreAsignado).trim() !== '') {
             hayAsignados = true;
-            mensaje += `• *${p.label}:* ${nombreAsignado}\n`;
+            mensaje += `- *${p.label}:* ${nombreAsignado}\n`;
         }
     });
 
@@ -139,12 +141,12 @@ window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
     const numeroGrupo = formatearNumeroWhatsApp(telRaw);
 
     if (!numeroGrupo) {
-        alert("Ingresa un número de celular/grupo válido en el campo 'Tel. Grupo'.");
+        alert("Ingresa un número de celular/grupo válido en el campo 'Tel. Grupo' arriba a la derecha.");
         if (inputTel) inputTel.focus();
         return;
     }
 
-    const url = `https://api.whatsapp.com/send?phone=${numeroGrupo}&text=${encodeURIComponent(mensaje)}`;
+    const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 };
 
@@ -186,6 +188,6 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
     texto += `- *Semana:* ${semana.fecha}\n\n`;
     texto += `Por favor, mandame un OK como respuesta`;
 
-    const url = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${encodeURIComponent(texto)}`;
+    const url = `https://wa.me/${numeroLimpio}&text=${encodeURIComponent(texto)}`.replace('&text=', '?text=');
     window.open(url, '_blank');
 };
