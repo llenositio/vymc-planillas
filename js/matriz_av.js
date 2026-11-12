@@ -56,20 +56,28 @@ window.cargarElegiblesAVDesdeSupabase = async function() {
 
     const mapaAptitudes = {};
     (aptitudesAV || []).forEach(item => {
-        mapaAptitudes[item.hermano_id] = item;
+        if (item.hermano_id !== null && item.hermano_id !== undefined) {
+            mapaAptitudes[Number(item.hermano_id)] = item;
+        }
     });
 
     // 3. Consolidar: Varones ('V') + Hermanas ('M') registradas previamente en 'hermanos_av'
     window.listaHermanosAV = window.listaHermanosGeneral.filter(h => {
-        const tieneAptitudRegistrada = !!mapaAptitudes[h.id];
+        const hId = Number(h.id);
+        const tieneAptitudRegistrada = !!mapaAptitudes[hId];
         return h.sexo === 'V' || tieneAptitudRegistrada;
     }).map(h => {
-        const apt = mapaAptitudes[h.id] || {};
+        const hId = Number(h.id);
+        const apt = mapaAptitudes[hId] || {};
+        const celLimpio = (h.celular && h.celular !== 'Sin teléfono') ? String(h.celular).trim() : '';
+
         const obj = {
-            hermano_id: h.id,
+            hermano_id: hId,
+            id: hId,
             nombre: h.nombre,
             sexo: h.sexo,
-            telefono: h.celular || ''
+            telefono: celLimpio,
+            celular: celLimpio
         };
 
         window.puestosConfigAV.forEach(p => {
@@ -99,7 +107,7 @@ window.renderizarMatrizAV = function() {
     // BARRA SUPERIOR: AGREGAR HERMANA EXCEPCIONAL Y AGREGAR PUESTOS
     if (!esMensajero) {
         const hermanasDisponibles = (window.listaHermanosGeneral || []).filter(h => 
-            h.sexo === 'M' && !window.listaHermanosAV.some(av => av.hermano_id === h.id)
+            h.sexo === 'M' && !window.listaHermanosAV.some(av => Number(av.hermano_id) === Number(h.id))
         );
 
         html += `
@@ -168,6 +176,7 @@ window.renderizarMatrizAV = function() {
     (window.listaHermanosAV || []).forEach((h) => {
         const esMujer = h.sexo === 'M';
         const bgFila = esMujer ? 'bg-pink-50/60 hover:bg-pink-100/60' : 'hover:bg-slate-50';
+        const hId = Number(h.hermano_id);
 
         html += `<tr class="${bgFila} transition">`;
         html += `
@@ -187,12 +196,12 @@ window.renderizarMatrizAV = function() {
             html += `
                 <td class="px-2 py-1 text-center">
                     <input type="checkbox" ${checkedES} ${disabled}
-                           onchange="actualizarAptitudAVInmediata(${h.hermano_id}, '${campoES}', this.checked)"
+                           onchange="window.actualizarAptitudAVInmediata(${hId}, '${campoES}', this.checked)"
                            class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                 </td>
                 <td class="px-2 py-1 text-center">
                     <input type="checkbox" ${checkedFS} ${disabled}
-                           onchange="actualizarAptitudAVInmediata(${h.hermano_id}, '${campoFS}', this.checked)"
+                           onchange="window.actualizarAptitudAVInmediata(${hId}, '${campoFS}', this.checked)"
                            class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                 </td>
             `;
@@ -200,9 +209,10 @@ window.renderizarMatrizAV = function() {
 
         html += `
             <td class="px-2 py-1 text-center">
-                <button onclick="window.quitarHermanoDeMatrizAV(${h.hermano_id})" title="Quitar de la matriz" class="text-rose-500 hover:text-rose-700 font-bold p-1">
+                ${!esMensajero ? `
+                <button onclick="window.quitarHermanoDeMatrizAV(${hId})" title="Quitar de la matriz" class="text-rose-500 hover:text-rose-700 font-bold p-1">
                     <i class="fa-solid fa-trash-can"></i>
-                </button>
+                </button>` : ''}
             </td>
         </tr>`;
     });
@@ -217,25 +227,48 @@ window.renderizarMatrizAV = function() {
 };
 
 /**
- * Agrega una hermana excepcionalmente a la lista activa de la Matriz AV
+ * Agrega una hermana excepcionalmente a la lista activa de la Matriz AV y crea su fila en Supabase
  */
-window.agregarHermanaAMatrizAV = function() {
+window.agregarHermanaAMatrizAV = async function() {
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        return;
+    }
+
     const select = document.getElementById('selectAgregarHermanaAV');
     if (!select || !select.value) {
         alert("Por favor selecciona una hermana de la lista.");
         return;
     }
 
-    const hermanoId = parseInt(select.value, 10);
-    const hermana = (window.listaHermanosGeneral || []).find(h => h.id === hermanoId);
+    const hermanoId = Number(select.value);
+    const hermana = (window.listaHermanosGeneral || []).find(h => Number(h.id) === hermanoId);
 
     if (!hermana) return;
 
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    if (idCongre) {
+        const { error } = await db
+            .from('hermanos_av')
+            .upsert({
+                congregacion_id: idCongre,
+                hermano_id: hermanoId,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'congregacion_id,hermano_id' });
+
+        if (error) {
+            console.error("Error registrando hermana en hermanos_av:", error);
+        }
+    }
+
+    const celLimpio = (hermana.celular && hermana.celular !== 'Sin teléfono') ? String(hermana.celular).trim() : '';
+
     const nuevoObj = {
-        hermano_id: hermana.id,
+        hermano_id: hermanoId,
+        id: hermanoId,
         nombre: hermana.nombre,
         sexo: hermana.sexo,
-        telefono: hermana.celular || ''
+        telefono: celLimpio,
+        celular: celLimpio
     };
 
     window.puestosConfigAV.forEach(p => {
@@ -251,14 +284,28 @@ window.agregarHermanaAMatrizAV = function() {
  * Quita a un hermano/hermana de la matriz AV y elimina su registro en Supabase
  */
 window.quitarHermanoDeMatrizAV = async function(hermanoId) {
-    if (!confirm("¿Deseas quitar a esta persona de la matriz AV?")) return;
-
-    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
-    if (idCongre) {
-        await db.from('hermanos_av').delete().eq('congregacion_id', idCongre).eq('hermano_id', hermanoId);
+    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+        return;
     }
 
-    window.listaHermanosAV = window.listaHermanosAV.filter(h => h.hermano_id !== hermanoId);
+    if (!confirm("¿Deseas quitar a esta persona de la matriz AV?")) return;
+
+    const hId = Number(hermanoId);
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    
+    if (idCongre) {
+        const { error } = await db
+            .from('hermanos_av')
+            .delete()
+            .eq('congregacion_id', idCongre)
+            .eq('hermano_id', hId);
+
+        if (error) {
+            console.error("Error eliminando registro en hermanos_av:", error);
+        }
+    }
+
+    window.listaHermanosAV = window.listaHermanosAV.filter(h => Number(h.hermano_id) !== hId);
     window.renderizarMatrizAV();
 };
 
@@ -329,10 +376,12 @@ window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
     let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) return;
 
+    const hId = Number(hermanoId);
+
     const payload = {
         congregacion_id: idCongre,
-        hermano_id: hermanoId,
-        [campo]: valor,
+        hermano_id: hId,
+        [campo]: !!valor,
         updated_at: new Date().toISOString()
     };
 
@@ -342,8 +391,9 @@ window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
 
     if (error) {
         console.error("Error guardando aptitud AV:", error);
+        alert("Error al guardar cambio en Supabase: " + error.message);
     } else {
-        const item = window.listaHermanosAV.find(x => x.hermano_id === hermanoId);
-        if (item) item[campo] = valor;
+        const item = window.listaHermanosAV.find(x => Number(x.hermano_id) === hId);
+        if (item) item[campo] = !!valor;
     }
 };
