@@ -6,13 +6,13 @@ window.listaHermanosAV = [];
 window.listaHermanosGeneral = [];
 
 window.puestosConfigAV = [
-    { key: 'puerta', label: 'PUERTA', colorES: 'bg-emerald-900/40', colorFS: 'bg-emerald-800/40' },
-    { key: 'aud1', label: 'AUD 1', colorES: 'bg-blue-900/40', colorFS: 'bg-blue-800/40' },
-    { key: 'aud2', label: 'AUD 2', colorES: 'bg-teal-900/40', colorFS: 'bg-teal-800/40' },
-    { key: 'mic1', label: 'MIC 1', colorES: 'bg-indigo-900/40', colorFS: 'bg-indigo-800/40' },
-    { key: 'mic2', label: 'MIC 2', colorES: 'bg-purple-900/40', colorFS: 'bg-purple-800/40' },
-    { key: 'audio', label: 'AUDIO', colorES: 'bg-amber-900/40', colorFS: 'bg-amber-800/40' },
-    { key: 'video', label: 'VIDEO', colorES: 'bg-rose-900/40', colorFS: 'bg-rose-800/40' }
+    { key: 'puerta', label: 'PUERTA', colorES: 'bg-emerald-800 text-white', colorFS: 'bg-emerald-700 text-white' },
+    { key: 'aud1', label: 'AUD 1', colorES: 'bg-blue-800 text-white', colorFS: 'bg-blue-700 text-white' },
+    { key: 'aud2', label: 'AUD 2', colorES: 'bg-teal-800 text-white', colorFS: 'bg-teal-700 text-white' },
+    { key: 'mic1', label: 'MIC 1', colorES: 'bg-indigo-800 text-white', colorFS: 'bg-indigo-700 text-white' },
+    { key: 'mic2', label: 'MIC 2', colorES: 'bg-purple-800 text-white', colorFS: 'bg-purple-700 text-white' },
+    { key: 'audio', label: 'AUDIO', colorES: 'bg-amber-800 text-white', colorFS: 'bg-amber-700 text-white' },
+    { key: 'video', label: 'VIDEO', colorES: 'bg-rose-800 text-white', colorFS: 'bg-rose-700 text-white' }
 ];
 
 /**
@@ -142,10 +142,10 @@ window.renderizarMatrizAV = function() {
     html += `
         <div class="overflow-x-auto shadow-md rounded-lg border border-slate-200">
             <table class="w-full text-xs text-left text-slate-700 bg-white">
-                <thead class="text-[11px] uppercase bg-slate-800 text-white font-bold tracking-wider">
+                <thead class="text-[11px] uppercase bg-slate-800 !text-white font-bold tracking-wider">
                     <tr>
-                        <th class="px-3 py-2 border-b border-slate-700">Hermano / Hermana</th>
-                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12">Sexo</th>
+                        <th class="px-3 py-2 border-b border-slate-700 !text-white">Hermano / Hermana</th>
+                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12 !text-white">Sexo</th>
     `;
 
     // Renderizar cabeceras de columnas editables
@@ -153,12 +153,12 @@ window.renderizarMatrizAV = function() {
         const botonEliminar = !esMensajero ? `<button onclick="window.eliminarPuestoAV(${pIdx})" title="Eliminar puesto" class="ml-1 text-rose-300 hover:text-white font-bold px-1">✕</button>` : '';
 
         html += `
-            <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorES}">
-                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
+            <th class="px-2 py-2 text-center border-b border-slate-700 !text-white ${p.colorES}">
+                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
             </th>
-            <th class="px-2 py-2 text-center border-b border-slate-700 ${p.colorFS}">
+            <th class="px-2 py-2 text-center border-b border-slate-700 !text-white ${p.colorFS}">
                 <div class="flex items-center justify-center">
-                    <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
+                    <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
                     ${botonEliminar}
                 </div>
             </th>
@@ -166,7 +166,7 @@ window.renderizarMatrizAV = function() {
     });
 
     html += `
-                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12">Acción</th>
+                        <th class="px-2 py-2 border-b border-slate-700 text-center w-12 !text-white">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 font-medium">
@@ -325,9 +325,9 @@ window.agregarPuestoAV = function() {
     }
 
     const colores = [
-        { colorES: 'bg-cyan-900/40', colorFS: 'bg-cyan-800/40' },
-        { colorES: 'bg-fuchsia-900/40', colorFS: 'bg-fuchsia-800/40' },
-        { colorES: 'bg-lime-900/40', colorFS: 'bg-lime-800/40' }
+        { colorES: 'bg-cyan-800 text-white', colorFS: 'bg-cyan-700 text-white' },
+        { colorES: 'bg-fuchsia-800 text-white', colorFS: 'bg-fuchsia-700 text-white' },
+        { colorES: 'bg-lime-800 text-white', colorFS: 'bg-lime-700 text-white' }
     ];
 
     const colorElegido = colores[window.puestosConfigAV.length % colores.length];
