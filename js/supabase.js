@@ -118,6 +118,8 @@ async function cargarPerfilUsuario(user) {
 
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+    if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') await window.cargarElegiblesAVDesdeSupabase();
+    if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') await window.cargarPlanillaAVDesdeSupabase();
 }
 
 /**
@@ -245,6 +247,8 @@ window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
 
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
+    if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') await window.cargarElegiblesAVDesdeSupabase();
+    if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') await window.cargarPlanillaAVDesdeSupabase();
 };
 
 window.iniciarSesion = async function(email, password) {
