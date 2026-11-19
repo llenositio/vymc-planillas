@@ -218,15 +218,19 @@ window.renderizarTablaHistorial = async function() {
         { key: 'A', titulo: 'Ancianos' },
         { key: 'SM', titulo: 'Siervos Ministeriales' },
         { key: 'Pub', titulo: 'Publicadores' },
+        { key: 'PNB', titulo: 'Publicadores No Bautizados' },
+        { key: 'E', titulo: 'Estudiantes' },
         { key: 'Otro', titulo: 'Sin Categoría' }
     ];
 
-    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'Otro': [] };
+    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'PNB': [], 'E': [], 'Otro': [] };
     hermanos.forEach(h => {
         const cond = (h.condicion || '').trim();
         if (cond === 'A') grupos['A'].push(h);
         else if (cond === 'SM') grupos['SM'].push(h);
         else if (cond === 'Pub' || cond === 'Publicador') grupos['Pub'].push(h);
+        else if (cond === 'PNB') grupos['PNB'].push(h);
+        else if (cond === 'E' || cond === 'Estudio' || cond === 'Estudiante') grupos['E'].push(h);
         else grupos['Otro'].push(h);
     });
 
@@ -341,6 +345,7 @@ window.renderizarMatrizHermanos = function() {
     hermanos.forEach((h, idx) => {
         const disabledAttr = esMensajero ? 'disabled' : '';
         const editableAttr = esMensajero ? 'false' : 'true';
+        const condActual = (h.condicion || '').trim();
 
         html += `<tr class="hover:bg-slate-50 transition">`;
         html += `<td class="border border-slate-300 font-bold text-slate-500">${idx + 1}</td>`;
@@ -360,9 +365,11 @@ window.renderizarMatrizHermanos = function() {
         html += `
             <td class="border border-slate-300">
                 <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'condicion', this.value)" class="bg-transparent font-bold text-xs outline-none">
-                    <option value="Pub" ${(h.condicion === 'Pub' || h.condicion === 'Publicador') ? 'selected' : ''}>Pub</option>
-                    <option value="SM" ${h.condicion === 'SM' ? 'selected' : ''}>SM</option>
-                    <option value="A" ${h.condicion === 'A' ? 'selected' : ''}>A</option>
+                    <option value="Pub" ${(condActual === 'Pub' || condActual === 'Publicador') ? 'selected' : ''}>Pub</option>
+                    <option value="PNB" ${condActual === 'PNB' ? 'selected' : ''}>PNB</option>
+                    <option value="E" ${(condActual === 'E' || condActual === 'Estudio' || condActual === 'Estudiante') ? 'selected' : ''}>E</option>
+                    <option value="SM" ${condActual === 'SM' ? 'selected' : ''}>SM</option>
+                    <option value="A" ${condActual === 'A' ? 'selected' : ''}>A</option>
                 </select>
             </td>
         `;
