@@ -96,6 +96,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
     const numSalas = sem.numSalas || 1;
 
     sem.partes.forEach((parte, pIdx) => {
+        const esEstudioBiblico = (parte.seccion === 'vida' && (parte.tit || '').toLowerCase().includes('estudio bíblico'));
+
+        // En semana de Visita del Viajante se omite el Estudio Bíblico de la Congregación
+        if (sem.tipoSemana === 'viajante' && esEstudioBiblico) {
+            return;
+        }
+
         if (parte.seccion === 'tesoros' && !tesorosRenderizado) {
             filasHTML += `
                 <tr>
@@ -182,10 +189,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
         } else if (parte.seccion === 'maestros') {
             catSelect = 'smm';
         } else if (parte.seccion === 'vida') {
-            if (parte.tit.toLowerCase().includes('estudio bíblico')) catSelect = 'eb';
+            if (esEstudioBiblico) catSelect = 'eb';
         }
 
-        const esEstudioBiblico = (parte.seccion === 'vida' && parte.tit.toLowerCase().includes('estudio bíblico'));
         const llevaAyudante = (parte.seccion === 'maestros' && !parte.tit.toLowerCase().includes('discurso'));
 
         let celdasAsignacionHTML = '';
@@ -321,8 +327,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
         `;
     });
 
-    // 3. FILAS INFERIORES
+    // 3. FILAS INFERIORES + FIN DE SEMANA
     if (sem.tipoSemana === 'viajante') {
+        const tiempoViajanteSem = sem.tiempoViajanteEntreSemana || '30 min';
+        const temaViajanteSem = sem.temaViajanteEntreSemana || 'Discurso del superintendente de circuito';
+        const temaDiscPub = sem.temaDiscPub || 'Discurso público:';
+        const temaDiscFin = sem.temaDiscFin || 'Discurso final:';
+
         filasHTML += `
             <tr>
                 <td class="c-tiempo">3 min</td>
@@ -336,14 +347,16 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="text-center no-print"></td>
             </tr>
             <tr class="bg-blue-50/50">
-                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="c-tiempo font-bold text-blue-900">
+                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('tiempoViajanteEntreSemana', this.innerText)" class="editable-field">${tiempoViajanteSem}</span>
+                </td>
                 <td class="font-bold text-blue-900" colspan="2">
-                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${sem.temaViajanteEntreSemana}</span>
+                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${temaViajanteSem}</span>
                 </td>
                 <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE SUPERINTENDENTE" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', sem.temaViajanteEntreSemana)}
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', temaViajanteSem)}
                     </div>
                 </td>
                 <td class="text-center no-print"></td>
@@ -355,11 +368,89 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-amber-950 font-black uppercase text-xs" placeholder="ORACIÓN FINAL" value="${sem.oracionFin || ''}" onchange="actualizarCampoSemana('oracionFin', this.value)">
+                        <input type="text" class="input-inline w-full text-amber-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.oracionFin || ''}" onchange="actualizarCampoSemana('oracionFin', this.value)">
                         ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración final')}
                     </div>
                 </td>
                 <td class="text-center no-print"></td>
+            </tr>
+            <tr>
+                <th class="bg-blue-700 text-white c-tiempo py-1">
+                    <img src="Torre.png" class="w-4 h-4 mx-auto object-contain" alt="Torre">
+                </th>
+                <th colspan="9" class="bg-blue-700 text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Reunión de fin de semana</th>
+                <th class="bg-blue-700 text-white text-center no-print"></th>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="px-2 font-bold py-1.5" colspan="3">
+                    <div class="flex items-center flex-wrap gap-1">
+                        <span>Domingo, presidencia, canción N°</span>
+                        <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomIni || ''}" onchange="actualizarCampoSemana('cancionDomIni', this.value)">
+                        <span>y oración</span>
+                    </div>
+                </td>
+                <td class="px-2 font-bold py-1.5" colspan="7">
+                    <div class="flex items-center justify-center gap-1">
+                        ${crearSelectHTML('sel-domPresi', 'presPub', sem.domPresi)}
+                        ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia Reunión Pública (Domingo)')}
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="px-2 font-bold text-blue-900" colspan="2">
+                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${temaDiscPub}</span>
+                </td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', temaDiscPub)}
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">3 min</td>
+                <td class="px-2 font-medium" colspan="9">
+                    Canción N° <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomMid || ''}" onchange="actualizarCampoSemana('cancionDomMid', this.value)">
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">30 min</td>
+                <td class="px-2 font-medium" colspan="2">Estudio de la Biblia a través de la Revista La Atalaya</td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigConductorAtalaya || ''}" onchange="actualizarCampoSemana('asigConductorAtalaya', this.value)">
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="px-2 font-bold text-blue-900" colspan="2">
+                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${temaDiscFin}</span>
+                </td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', temaDiscFin)}
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">3 min</td>
+                <td class="px-2 font-medium" colspan="2">
+                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)"> y oración
+                </td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigOracionDomFin || ''}" onchange="actualizarCampoSemana('asigOracionDomFin', this.value)">
+                    </div>
+                </td>
+                <td class="no-print"></td>
             </tr>
         `;
     } else {
@@ -388,76 +479,22 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
                 <td class="text-center no-print"></td>
             </tr>
-        `;
-    }
-
-    // 4. SECCIÓN REUNIÓN DEL FIN DE SEMANA
-    filasHTML += `
-        <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-            <td class="px-2 font-bold py-1.5" colspan="3">
-                <div class="flex items-center gap-1">
-                    <span>Domingo, presidencia:</span>
-                    ${crearSelectHTML('sel-domPresi', 'presPub', sem.domPresi)}
-                    ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia Reunión Pública (Domingo)')}
-                </div>
-            </td>
-            <td class="px-2 font-bold py-1.5" colspan="7">
-                <div class="flex items-center justify-end gap-1">
-                    <span>Lector:</span>
-                    ${crearSelectHTML('sel-domLector', 'lectorW', sem.domLector)}
-                    ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya (Domingo)')}
-                </div>
-            </td>
-            <td class="text-center no-print"></td>
-        </tr>
-    `;
-
-    if (sem.tipoSemana === 'viajante') {
-        filasHTML += `
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo">5 min</td>
-                <td class="px-2 font-medium" colspan="2">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomIni || ''}" onchange="actualizarCampoSemana('cancionDomIni', this.value)">. Oración</td>
-                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Presidente</td>
-                <td class="no-print"></td>
-            </tr>
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo font-bold text-blue-900">30 min</td>
-                <td class="px-2 font-bold text-blue-900" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${sem.temaDiscPub}</span></td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
-                    <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="DISCURSANTE PÚBLICO" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', sem.temaDiscPub)}
+            <tr class="border-t-2 border-slate-900 bg-slate-50/50">
+                <td class="px-2 font-bold py-1.5" colspan="3">
+                    <div class="flex items-center gap-1">
+                        <span>Domingo, presidencia:</span>
+                        ${crearSelectHTML('sel-domPresi', 'presPub', sem.domPresi)}
+                        ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia Reunión Pública (Domingo)')}
                     </div>
                 </td>
-                <td class="no-print"></td>
-            </tr>
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo"></td>
-                <td class="px-2 font-medium" colspan="9">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomMid || ''}" onchange="actualizarCampoSemana('cancionDomMid', this.value)"></td>
-                <td class="no-print"></td>
-            </tr>
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo">30 min</td>
-                <td class="px-2 font-medium" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaAtalaya', this.innerText)" class="editable-field">${sem.temaAtalaya}</span></td>
-                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Conductor de La Atalaya</td>
-                <td class="no-print"></td>
-            </tr>
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo font-bold text-blue-900">30 min</td>
-                <td class="px-2 font-bold text-blue-900" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${sem.temaDiscFin}</span></td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
-                    <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="DISCURSO FINAL VIAJANTE" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', sem.temaDiscFin)}
+                <td class="px-2 font-bold py-1.5" colspan="7">
+                    <div class="flex items-center justify-end gap-1">
+                        <span>Lector:</span>
+                        ${crearSelectHTML('sel-domLector', 'lectorW', sem.domLector)}
+                        ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya (Domingo)')}
                     </div>
                 </td>
-                <td class="no-print"></td>
-            </tr>
-            <tr class="bg-blue-50/30">
-                <td class="c-tiempo">5 min</td>
-                <td class="px-2 font-medium" colspan="2">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)">. Oración</td>
-                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Superintendente de Circuito</td>
-                <td class="no-print"></td>
+                <td class="text-center no-print"></td>
             </tr>
         `;
     }
