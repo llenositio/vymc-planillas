@@ -1,1069 +1,587 @@
-// FUNCIONES DE COMPROBACIÓN DE ROL
-window.esRolMensajero = function() {
-    const rol = window.usuarioRol || window.rolUsuario || (window.perfilUsuario ? window.perfilUsuario.rol : null);
-    return rol === 'mensajero_vymc' || rol === 'mensajero_acomodador';
-};
-
-// FUNCIONES DE ESTRUCTURA BASE POR DEFECTO
-window.crearEstructuraSemanaEjemplo = function() {
-    return {
-        semana: "SEMANA 1",
-        lectura: "LECTURA",
-        tipoSemana: "normal",
-        numSalas: 1,
-        canciones: [1, 2, 3],
-        presidencia: "",
-        oracionIni: "",
-        oracionFin: "",
-        repaso: "",
-        domPresi: "",
-        domLector: "",
-        partes: [
-            { seccion: "tesoros", t: "10 min", tit: "1. Discurso Tesoros", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "10 min", tit: "2. Buscemos Perlas Escondidas", desc: "", participantes: 1, asig: "" },
-            { seccion: "tesoros", t: "4 min", tit: "3. Lectura de la Biblia", desc: "", participantes: 1, asig: "" },
-            { seccion: "maestros", t: "3 min", tit: "4. Primera Conversación", desc: "", participantes: 2, asig: "", asigAyudante: "" },
-            { seccion: "vida", t: "15 min", tit: "5. Parte de Nuestra Vida Cristiana", desc: "", participantes: 1, asig: "" },
-            { seccion: "vida", t: "30 min", tit: "6. Estudio bíblico de la congregación", desc: "", participantes: 2, asig: "", asigAyudante: "" }
-        ]
-    };
-};
-
-window.inicializarMesDefault = function(cantSemanas = 4) {
-    window.programaMes = [];
-    for (let i = 0; i < cantSemanas; i++) {
-        const sem = window.crearEstructuraSemanaEjemplo();
-        sem.semana = `SEMANA ${i + 1}`;
-        window.programaMes.push(sem);
-    }
-    window.semanaActivaIdx = 0;
-};
-
-window.onload = async function() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('vista') === 'publica') return; 
-
-    if (typeof cargarOpcionesAniosHistorial === 'function') cargarOpcionesAniosHistorial();
-
-    try {
-        if (typeof db !== 'undefined' && db) {
-            if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
-            if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
-        }
-    } catch (err) {
-        console.error("Error inicializando:", err);
-    }
-
-    renderizarMatrizHermanos();
-
-    if (!window.programaMes || window.programaMes.length === 0) {
-        inicializarMesDefault(4);
-    }
-
-    const inputMes = document.getElementById('inputNombreMes');
-    if (inputMes) {
-        if (window.nombreMesGlobal) {
-            inputMes.value = window.nombreMesGlobal;
-        }
-        actualizarTextoTituloMes(inputMes.value || window.nombreMesGlobal || '');
-        if (window.esRolMensajero()) {
-            inputMes.disabled = true;
-        }
-    }
-    
-    renderizarSelectorSemanas();
-    cargarSemanaEnPlanilla(0);
-};
-
-window.notificarYGuardarAutosave = async function() {
-    if (window.esRolMensajero()) return; // Bloqueo estricto para Mensajero
-
-    if (typeof guardarPlanillaEnSupabase === 'function') {
-        await guardarPlanillaEnSupabase();
-    }
-    if (typeof renderizarTablaHistorial === 'function') {
-        renderizarTablaHistorial();
-    }
-    const badge = document.getElementById('estadoGuardado');
-    if (badge) {
-        badge.classList.remove('opacity-0');
-        setTimeout(() => badge.classList.add('opacity-0'), 2000);
-    }
-};
-
+/* RENDERIZADO DE PLANILLA SEMANAL */
 window.renderizarSelectorSemanas = function() {
-    const cont = document.getElementById('selectorSemanas');
-    if (!cont) return;
-    cont.innerHTML = '';
-    window.programaMes.forEach((s, idx) => {
+    const contenedor = document.getElementById('selectorSemanas');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    window.programaMes.forEach((sem, idx) => {
         const btn = document.createElement('button');
+        const activa = idx === window.semanaActivaIdx;
+        btn.className = `px-3 py-1 rounded-md text-xs font-bold transition ${activa ? 'bg-amber-600 text-white shadow' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
+        btn.innerText = `Sem ${idx + 1}${sem.semana && sem.semana !== 'FECHA' ? ': ' + sem.semana : ''}`;
         btn.onclick = () => cargarSemanaEnPlanilla(idx);
-        btn.className = `px-2.5 py-1 text-xs font-bold rounded-md border transition ${idx === window.semanaActivaIdx ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'}`;
-        btn.innerText = `Sem ${idx + 1}: ${s.semana ? s.semana.split(' DE ')[0] : 'S/N'}`;
-        cont.appendChild(btn);
+        contenedor.appendChild(btn);
     });
-};
-
-window.filtrarHermanosPorCategoria = function(cat) {
-    if (!Array.isArray(window.listaHermanos)) return [];
-
-    const mapaColumnas = {
-        'pres': 'pres_vymc',
-        'presPub': 'pres_pub',
-        'orac': 'oracion',
-        'disc': 'disc_tesoros',
-        'perlas': 'perlas',
-        'lec': 'lec_biblia',
-        'smm': 'smm',
-        'nvc': 'nvc',
-        'eb': 'ebc',
-        'lectorL': 'lector_ebc',
-        'lectorW': 'lector_atalaya'
-    };
-
-    const campoBD = mapaColumnas[cat];
-    if (!campoBD) return window.listaHermanos;
-
-    return window.listaHermanos.filter(h => {
-        const val = h[campoBD];
-        return val === true || val === 'X' || val === 1;
-    });
-};
-
-function contarAsignacionesHermanoEnMes(nombre) {
-    if (!nombre || !Array.isArray(window.programaMes)) return 0;
-    let contador = 0;
-    
-    window.programaMes.forEach(sem => {
-        if (!sem) return;
-        if (sem.presidencia === nombre) contador++;
-        if (sem.oracionIni === nombre) contador++;
-        if (sem.oracionFin === nombre) contador++;
-        if (sem.repaso === nombre) contador++;
-        if (sem.domPresi === nombre) contador++;
-        if (sem.domLector === nombre) contador++;
-        if (sem.asigViajanteEntreSemana === nombre) contador++;
-        if (sem.asigViajanteDiscPub === nombre) contador++;
-        if (sem.asigViajanteDiscFin === nombre) contador++;
-
-        if (Array.isArray(sem.partes)) {
-            sem.partes.forEach(p => {
-                if (p.asig === nombre) contador++;
-                if (p.asigAyudante === nombre) contador++;
-                if (p.asigB === nombre) contador++;
-                if (p.asigBAyudante === nombre) contador++;
-                if (p.asigC === nombre) contador++;
-                if (p.asigCAyudante === nombre) contador++;
-            });
-        }
-    });
-
-    return contador;
-}
-
-function obtenerClaveCatSugerido(cat) {
-    if (cat === 'pres' || cat === 'presPub') return 'presi';
-    if (cat === 'orac') return 'oraciones';
-    if (cat === 'disc') return 'discurso';
-    if (cat === 'perlas') return 'perlas';
-    if (cat === 'lec' || cat === 'smm') return 'smm';
-    if (cat === 'nvc') return 'nvcOtro';
-    if (cat === 'eb') return 'estudioBiblico';
-    if (cat === 'lectorL') return 'lectorLibro';
-    if (cat === 'lectorW') return 'lectorAtalaya';
-    return '';
-}
-
-function crearSelectHTML(idSelect, cat, valorActual = '', placeholderDefault = 'ELEGIR') {
-    const esMensajero = window.esRolMensajero();
-    let candidatos = Array.isArray(window.listaHermanos) ? [...window.listaHermanos] : [];
-    
-    if (typeof filtrarHermanosPorCategoria === 'function' && cat) {
-        candidatos = filtrarHermanosPorCategoria(cat);
-    }
-
-    const claveCat = obtenerClaveCatSugerido(cat);
-
-    if (claveCat && typeof window.obtenerSugeridosPorRol === 'function') {
-        candidatos = window.obtenerSugeridosPorRol(claveCat, candidatos);
-    }
-
-    const sugeridoPrincipal = candidatos[0] ? candidatos[0].nombre : '';
-    const cantSugerido = sugeridoPrincipal ? contarAsignacionesHermanoEnMes(sugeridoPrincipal) : 0;
-
-    let htmlOptions = `<option value="" ${!valorActual ? 'selected' : ''} class="text-slate-400 font-normal">
-        -- ${placeholderDefault} -- ${(!valorActual && sugeridoPrincipal) ? `(Sugerido: ${sugeridoPrincipal} (${cantSugerido}))` : ''}
-    </option>`;
-
-    candidatos.forEach((h, index) => {
-        const esSeleccionado = h.nombre === valorActual;
-        const esPrimerSugerido = (index === 0 && !valorActual);
-        const vecesAsignado = contarAsignacionesHermanoEnMes(h.nombre);
-        
-        htmlOptions += `<option value="${h.nombre}" ${esSeleccionado ? 'selected' : ''}>
-            ${h.nombre} (${vecesAsignado})${esPrimerSugerido ? ' ★' : ''}
-        </option>`;
-    });
-
-    return `
-        <select id="${idSelect}" ${esMensajero ? 'disabled' : ''} onchange="guardarAsignacionSemana('${idSelect}')" class="w-full bg-white text-slate-900 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold outline-none focus:border-amber-500 cursor-pointer shadow-sm ${esMensajero ? 'opacity-80 pointer-events-none' : ''}">
-            ${htmlOptions}
-        </select>
-    `;
-}
-
-window.guardarCancionSemana = function(index, texto) {
-    if (window.esRolMensajero()) return;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (sem) {
-        if (!Array.isArray(sem.canciones)) sem.canciones = [];
-        sem.canciones[index] = texto.trim();
-        notificarYGuardarAutosave();
-    }
 };
 
 window.cargarSemanaEnPlanilla = function(idx) {
-    if (!window.programaMes || window.programaMes.length === 0) return;
+    if (!window.programaMes[idx]) return;
     window.semanaActivaIdx = idx;
-    renderizarSelectorSemanas();
     const sem = window.programaMes[idx];
-    const esViajante = sem.tipoSemana === 'viajante';
-    const numSalas = esViajante ? 1 : (sem.numSalas || 1);
-    const esMensajero = window.esRolMensajero();
-    const isEditableAttr = esMensajero ? 'contenteditable="false"' : 'contenteditable="true"';
-    
-    const selSalas = document.getElementById('selectNumSalas');
-    if (selSalas) {
-        selSalas.value = numSalas;
-        selSalas.disabled = esMensajero || esViajante || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion';
-    }
 
-    const cabecera = document.getElementById('cabeceraTablaPlanilla');
-    if (cabecera) {
-        cabecera.innerHTML = `
-            <tr>
-                <th colspan="11" class="py-2 px-3 bg-white text-center border-b-2 border-slate-900">
-                    <div class="flex justify-center items-center gap-1 font-black text-slate-900 text-base">
-                        <span>Semana del</span>
-                        <input type="text" ${esMensajero ? 'disabled' : ''} value="${sem.semana || ''}" onchange="actualizarEncabezadoSemana('semana', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[200px]" placeholder="FECHA">
-                        <span>,</span>
-                        <input type="text" ${esMensajero ? 'disabled' : ''} value="${sem.lectura || ''}" onchange="actualizarEncabezadoSemana('lectura', this.value)" onpaste="limpiarTextoPegado(event)" class="input-inline max-w-[180px]" placeholder="LECTURA">
-                    </div>
-                </th>
-            </tr>
-        `;
-    }
+    renderizarSelectorSemanas();
 
     const radios = document.getElementsByName('tipoSemana');
-    radios.forEach(r => {
-        r.checked = (r.value === sem.tipoSemana);
-        if (esMensajero) r.disabled = true;
-    });
+    radios.forEach(r => { r.checked = (r.value === sem.tipoSemana); });
+
+    const selSalas = document.getElementById('selectNumSalas');
+    if (selSalas) selSalas.value = sem.numSalas || 1;
 
     const banner = document.getElementById('bannerEventoEspecial');
     const tabla = document.getElementById('tablaPlanillaCompleta');
-
-    if (banner && tabla) {
+    
+    if (sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') {
+        banner.classList.remove('hidden');
+        tabla.classList.add('hidden');
         if (sem.tipoSemana === 'asamblea') {
-            banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-red-100 text-red-900 border border-red-300 block";
-            banner.innerHTML = `<i class="fa-solid fa-building-columns text-xl mb-1"></i><br>NO HAY REUNIÓN ENTRE SEMANA POR ASAMBLEA DE CIRCUITO / REGIONAL`;
-            tabla.classList.add('opacity-30', 'pointer-events-none');
-        } else if (sem.tipoSemana === 'conmemoracion') {
-            banner.className = "mb-4 p-4 rounded-lg text-center font-extrabold text-sm bg-purple-100 text-purple-900 border border-purple-300 block";
-            banner.innerHTML = `<i class="fa-solid fa-wine-glass text-xl mb-1"></i><br>CELEBRACIÓN DE LA CONMEMORACIÓN DE LA MUERTE DE CRISTO (NO HAY REUNIÓN VyMC ENTRE SEMANA)`;
-            tabla.classList.add('opacity-30', 'pointer-events-none');
+            banner.className = "mb-4 p-8 rounded-xl text-center font-black text-xl bg-red-100 text-red-900 border-2 border-red-300 uppercase tracking-wider";
+            banner.innerHTML = `<i class="fa-solid fa-building-columns text-3xl block mb-2"></i> Semana de Asamblea Regional o de Circuito<br><span class="text-sm font-semibold">No se celebran reuniones entre semana ni de fin de semana en el Salón del Reino.</span>`;
         } else {
-            banner.classList.add('hidden');
-            tabla.classList.remove('opacity-30', 'pointer-events-none');
+            banner.className = "mb-4 p-8 rounded-xl text-center font-black text-xl bg-purple-100 text-purple-900 border-2 border-purple-300 uppercase tracking-wider";
+            banner.innerHTML = `<i class="fa-solid fa-wine-glass text-3xl block mb-2"></i> Semana de la Conmemoración de la Muerte de Cristo<br><span class="text-sm font-semibold">Programa especial de la Conmemoración.</span>`;
         }
+        return;
+    } else {
+        banner.classList.add('hidden');
+        tabla.classList.remove('hidden');
     }
 
-    const partes = sem.partes || [];
-    const cuerpo = document.getElementById('cuerpoTablaPlanilla');
-    if (!cuerpo) return;
-    
-    const renderSalasMaestros = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        const cantP = item.participantes || 1;
+    const thead = document.getElementById('cabeceraTablaPlanilla');
+    const tbody = document.getElementById('cuerpoTablaPlanilla');
+    if (!thead || !tbody) return;
 
-        const renderSelectsGroup = (prefix, valTit, valAyu, nombreSala = "Sala Principal") => {
-            let res = `<div class="flex items-center justify-between w-full gap-1">`;
-            res += `<div class="flex-1">`;
-            res += crearSelectHTML(`${prefix}_titular`, cat, valTit, "ASIGNAR");
-            if (cantP === 2) {
-                res += `<div class="border-t border-dashed border-slate-300 my-0.5"></div>`;
-                res += crearSelectHTML(`${prefix}_ayudante`, cat, valAyu, "AYUDANTE");
-            }
-            res += `</div>`;
-            res += crearBotonWhatsAppHTML(valTit, valAyu, item.tit, nombreSala);
-            res += `</div>`;
-            return res;
-        };
-
-        let html = '';
-        const btnParticipantes = esMensajero ? '' : `<button onclick="toggleParticipantesParte(${pIndex})" class="no-print absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 bg-slate-200 hover:bg-slate-300 text-[9px] px-1 py-0.5 rounded font-bold transition z-10">${cantP === 1 ? '1 Asig' : '2 Asig'}</button>`;
-
-        if (numSalas === 1) {
-            html += `<td class="p-1 col-asig relative group" colspan="7">
-                ${btnParticipantes}
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>`;
-        } else if (numSalas === 2) {
-            html += `<td class="p-1 col-asig relative group" colspan="4">
-                ${btnParticipantes}
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>
-            <td class="p-1 col-asig" colspan="3">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>`;
-        } else if (numSalas === 3) {
-            html += `<td class="p-1 col-asig relative group" colspan="3">
-                ${btnParticipantes}
-                ${renderSelectsGroup(`asig_p${pIndex}_A`, item.asig, item.asigAyudante, "Sala Principal")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_B`, item.asigB, item.asigBAyudante, "Sala B")}
-            </td>
-            <td class="p-1 col-asig" colspan="2">
-                ${renderSelectsGroup(`asig_p${pIndex}_C`, item.asigC, item.asigCAyudante, "Sala C")}
-            </td>`;
-        }
-        return html;
-    };
-
-    const renderSalasLectura = (pIndex, cat) => {
-        const item = partes[pIndex] || {};
-        if (numSalas === 1) {
-            return `<td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>`;
-        } else if (numSalas === 2) {
-            return `<td class="px-1 py-1 col-asig" colspan="4">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="3">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
-                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
-                </div>
-            </td>`;
-        } else {
-            return `<td class="px-1 py-1 col-asig" colspan="3">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig, "Principal")}
-                    ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="2">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_B_titular`, cat, item.asigB, "Sala B")}
-                    ${crearBotonWhatsAppHTML(item.asigB, '', item.tit, 'Sala B')}
-                </div>
-            </td>
-            <td class="px-1 py-1 col-asig" colspan="2">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML(`asig_p${pIndex}_C_titular`, cat, item.asigC, "Sala C")}
-                    ${crearBotonWhatsAppHTML(item.asigC, '', item.tit, 'Sala C')}
-                </div>
-            </td>`;
-        }
-    };
-
-    const rawCancion0 = (Array.isArray(sem.canciones) && sem.canciones[0]) ? String(sem.canciones[0]) : '';
-    const numCancion0 = rawCancion0.replace(/[^0-9]/g, '');
-
-    const rawCancion2 = (Array.isArray(sem.canciones) && sem.canciones[2]) ? String(sem.canciones[2]) : '';
-    const numCancion2 = rawCancion2.replace(/[^0-9]/g, '');
-
-    let filasHTML = `
-        <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">1 min</td>
-            <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(0, this.innerText)">
-                Canción N° ${numCancion0 || '1'}. Presidencia: Palabras de introducción.
-            </td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_presi', 'pres', sem.presidencia)}
-                    ${crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia: Palabras de introducción', 'Sala Principal')}
-                </div>
-            </td>
-            <td class="no-print text-center w-8"></td>
-        </tr>
-        <tr class="h-6">
-            <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)"></td>
-            <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Oración</td>
-            <td class="px-2 col-asig" colspan="7">
-                <div class="flex items-center justify-between w-full gap-1">
-                    ${crearSelectHTML('asig_orac_ini', 'orac', sem.oracionIni)}
-                    ${crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración Inicial', 'Sala Principal')}
-                </div>
-            </td>
-            <td class="no-print text-center w-8"></td>
+    thead.innerHTML = `
+        <tr>
+            <th colspan="11" class="py-1.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-xs sm:text-sm text-slate-900">
+                Semana del <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('semana', this.innerText)" class="editable-field uppercase">${sem.semana}</span> , 
+                <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('lectura', this.innerText)" class="editable-field uppercase">${sem.lectura}</span>
+            </th>
         </tr>
     `;
 
-    let renderizoTesorosHeader = false, renderizoMaestrosHeader = false, renderizoVidaHeader = false;
+    let filasHTML = '';
 
-    partes.forEach((item, pIndex) => {
-        if (item.seccion === 'tesoros' && !renderizoTesorosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-tesoros text-white text-center c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
-                    <th colspan="10" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Tesoros de la Biblia</th>
-                </tr>
-            `;
-            renderizoTesorosHeader = true;
-        } else if (item.seccion === 'maestros' && !renderizoMaestrosHeader) {
-            filasHTML += `
-                <tr>
-                    <th class="bg-maestros text-white text-center c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
-                    <th colspan="10" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Seamos mejores maestros</th>
-                </tr>
-            `;
-            renderizoMaestrosHeader = true;
-        } else if (item.seccion === 'vida' && !renderizoVidaHeader) {
-            const rawCancion1 = (Array.isArray(sem.canciones) && sem.canciones[1]) ? String(sem.canciones[1]) : '';
-            const numCancion1 = rawCancion1.replace(/[^0-9]/g, '');
+    // 1. FILAS SUPERIORES: CANCIÓN 1 Y PRESIDENCIA / ORACIÓN INICIAL
+    filasHTML += `
+        <tr>
+            <td class="c-tiempo">1 min</td>
+            <td class="font-medium" colspan="2">
+                Canción N° <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[0] || ''}" onchange="actualizarCancion(0, this.value)">. Presidencia: Palabras de introducción.
+            </td>
+            <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                <div class="flex items-center justify-center gap-1">
+                    ${crearSelectHTML('sel-presidencia', 'pres', sem.presidencia)}
+                    ${crearBotonWhatsAppHTML(sem.presidencia, '', 'Presidencia de la reunión')}
+                </div>
+            </td>
+            <td class="text-center no-print"></td>
+        </tr>
+        <tr>
+            <td class="c-tiempo"></td>
+            <td class="font-medium" colspan="2">Oración</td>
+            <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                <div class="flex items-center justify-center gap-1">
+                    ${crearSelectHTML('sel-oracionIni', 'orac', sem.oracionIni)}
+                    ${crearBotonWhatsAppHTML(sem.oracionIni, '', 'Oración inicial')}
+                </div>
+            </td>
+            <td class="text-center no-print"></td>
+        </tr>
+    `;
 
+    let tesorosRenderizado = false;
+    let maestrosRenderizado = false;
+    let vidaRenderizado = false;
+
+    const numSalas = sem.numSalas || 1;
+
+    sem.partes.forEach((parte, pIdx) => {
+        if (parte.seccion === 'tesoros' && !tesorosRenderizado) {
             filasHTML += `
-                ${esMensajero ? '' : `<tr class="no-print bg-amber-50/50">
-                    <td colspan="11" class="p-1 text-center">
-                        <button onclick="agregarFilaMaestros()" class="text-xs font-bold text-amber-800 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded border border-amber-300 transition">
-                            <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Seamos Mejores Maestros
-                        </button>
-                    </td>
-                </tr>`}
                 <tr>
-                    <th class="bg-vida text-white text-center c-tiempo py-1">
-                        <img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja">
+                    <th class="bg-tesoros text-white c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
+                    <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Tesoros de la Biblia</th>
+                    <th class="bg-tesoros text-white text-center no-print">
+                        <button onclick="agregarParteSeccion('tesoros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
                     </th>
-                    <th colspan="10" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">Nuestra vida cristiana</th>
-                </tr>
-                <tr>
-                    <td class="px-2 font-bold editable-field" colspan="11" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(1, this.innerText)">
-                        Canción Nº: ${numCancion1 || ''}
-                    </td>
                 </tr>
             `;
-            renderizoVidaHeader = true;
+            tesorosRenderizado = true;
         }
 
-        let cat = 'smm';
-        if (item.seccion === 'tesoros') {
-            if (pIndex === 0) cat = 'disc';
-            else if (item.tit && item.tit.includes('perlas')) cat = 'perlas';
-            else if (item.tit && item.tit.includes('Lectura')) cat = 'lec';
-        } else if (item.seccion === 'vida') {
-            cat = 'nvc';
-        }
+        if (parte.seccion === 'maestros' && !maestrosRenderizado) {
+            let subcabeceraSalas = '';
+            if (numSalas === 1) {
+                subcabeceraSalas = `<th colspan="7" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Seamos mejores maestros</th>`;
+            } else if (numSalas === 2) {
+                subcabeceraSalas = `
+                    <th colspan="2" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Seamos mejores maestros</th>
+                    <th colspan="4" class="bg-amber-800 text-white py-1 text-center text-[10px] font-bold uppercase border-l border-amber-500">Sala Principal</th>
+                    <th colspan="3" class="bg-amber-900 text-white py-1 text-center text-[10px] font-bold uppercase border-l border-amber-500">Sala B</th>
+                `;
+            } else if (numSalas === 3) {
+                subcabeceraSalas = `
+                    <th colspan="2" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Seamos mejores maestros</th>
+                    <th colspan="3" class="bg-amber-800 text-white py-1 text-center text-[10px] font-bold uppercase border-l border-amber-500">Sala A</th>
+                    <th colspan="2" class="bg-amber-900 text-white py-1 text-center text-[10px] font-bold uppercase border-l border-amber-500">Sala B</th>
+                    <th colspan="2" class="bg-amber-950 text-white py-1 text-center text-[10px] font-bold uppercase border-l border-amber-500">Sala C</th>
+                `;
+            }
 
-        const btnEliminarFila = esMensajero ? '' : `<button onclick="eliminarFilaParte(${pIndex})" class="text-red-500 hover:text-red-700 text-sm" title="Eliminar fila"><i class="fa-solid fa-circle-minus"></i></button>`;
-
-        if (item.seccion === 'tesoros') {
-            if (item.tit && item.tit.includes('Lectura')) {
+            if (numSalas === 1) {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        ${renderSalasLectura(pIndex, cat)}
-                        <td class="no-print text-center w-8"></td>
+                        <th class="bg-maestros text-white c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                        <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Seamos mejores maestros</th>
+                        <th class="bg-maestros text-white text-center no-print">
+                            <button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                        </th>
                     </tr>
                 `;
             } else {
                 filasHTML += `
                     <tr>
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, cat, item.asig)}
-                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
-                            </div>
-                        </td>
-                        <td class="no-print text-center w-8"></td>
+                        <th class="bg-maestros text-white c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
+                        ${subcabeceraSalas}
+                        <th class="bg-maestros text-white text-center no-print">
+                            <button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                        </th>
                     </tr>
                 `;
             }
-        } 
-        else if (item.seccion === 'maestros') {
+            maestrosRenderizado = true;
+        }
+
+        if (parte.seccion === 'vida' && !vidaRenderizado) {
             filasHTML += `
-                <tr class="group">
-                    <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                    <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                    <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                    ${renderSalasMaestros(pIndex, cat)}
-                    <td class="no-print text-center w-8 align-middle">
-                        ${btnEliminarFila}
+                <tr>
+                    <th class="bg-vida text-white c-tiempo py-1">
+                        <img src="Oveja.png" class="w-4 h-4 mx-auto object-contain" alt="Oveja">
+                    </th>
+                    <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Nuestra vida cristiana</th>
+                    <th class="bg-vida text-white text-center no-print">
+                        <button onclick="agregarParteSeccion('vida')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                    </th>
+                </tr>
+                <tr>
+                    <td class="px-2 font-bold" colspan="10">
+                        Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[1] || ''}" onchange="actualizarCancion(1, this.value)">
                     </td>
+                    <td class="no-print"></td>
                 </tr>
             `;
+            vidaRenderizado = true;
         }
-        else if (item.seccion === 'vida') {
-            if (!item.tit || !item.tit.includes('Estudio bíblico')) {
-                filasHTML += `
-                    <tr class="group">
-                        <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 't', this.innerText)">${item.t}</td>
-                        <td class="px-2 col-titulo font-medium editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'tit', this.innerText)">${item.tit}</td>
-                        <td class="px-2 col-desc editable-field" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarTextoEditable(${pIndex}, 'desc', this.innerText)">${item.desc}</td>
-                        <td class="px-2 col-asig" colspan="7">
-                            <div class="flex items-center justify-between w-full gap-1">
-                                ${crearSelectHTML(`asig_p${pIndex}_A_titular`, 'nvc', item.asig)}
-                                ${crearBotonWhatsAppHTML(item.asig, '', item.tit, 'Sala Principal')}
+
+        // DETERMINAR CATEGORÍA AUTOMÁTICA
+        let catSelect = 'nvc';
+        if (parte.seccion === 'tesoros') {
+            if (parte.tit.startsWith('1.')) catSelect = 'disc';
+            else if (parte.tit.startsWith('2.')) catSelect = 'perlas';
+            else if (parte.tit.startsWith('3.') || parte.tit.toLowerCase().includes('lectura')) catSelect = 'lec';
+        } else if (parte.seccion === 'maestros') {
+            catSelect = 'smm';
+        } else if (parte.seccion === 'vida') {
+            if (parte.tit.toLowerCase().includes('estudio bíblico')) catSelect = 'eb';
+        }
+
+        const esEstudioBiblico = (parte.seccion === 'vida' && parte.tit.toLowerCase().includes('estudio bíblico'));
+        const llevaAyudante = (parte.seccion === 'maestros' && !parte.tit.toLowerCase().includes('discurso'));
+
+        let celdasAsignacionHTML = '';
+
+        if (esEstudioBiblico) {
+            celdasAsignacionHTML = `
+                <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
+                    <div class="flex items-center justify-center gap-1">
+                        ${crearSelectHTML(`sel-parte-${pIdx}`, 'eb', parte.asig, 'Conductor')} ${crearBotonWhatsAppHTML(parte.asig, '', 'Conductor Estudio Bíblico de la Congregación')} </div> </td> <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs"> <div class="flex items-center justify-center gap-1"> ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, 'lectorL', parte.asigAyudante, 'Lector')}
+                        ${crearBotonWhatsAppHTML(parte.asigAyudante, '', 'Lector Estudio Bíblico de la Congregación')}
+                    </div>
+                </td>
+            `;
+        } else if (parte.seccion === 'maestros' && numSalas > 1) {
+            if (numSalas === 2) {
+                celdasAsignacionHTML = `
+                    <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center justify-center gap-0.5">
+                                ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig, 'Titular A')}
+                                ${crearBotonWhatsAppHTML(parte.asig, parte.asigAyudante, parte.tit, 'Sala Principal')}
                             </div>
-                        </td>
-                        <td class="no-print text-center w-8 align-middle">
-                            ${btnEliminarFila}
-                        </td>
-                    </tr>
+                            ${llevaAyudante ? `
+                            <div class="flex items-center justify-center gap-0.5 border-t border-slate-200 pt-0.5">
+                                ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, catSelect, parte.asigAyudante, 'Ayud. A')}
+                                ${crearBotonWhatsAppHTML(parte.asigAyudante, parte.asig, 'Ayudante en: ' + parte.tit, 'Sala Principal')}
+                            </div>` : ''}
+                        </div>
+                    </td>
+                    <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center justify-center gap-0.5">
+                                ${crearSelectHTML(`sel-parteB-${pIdx}`, catSelect, parte.asigB, 'Titular B')}
+                                ${crearBotonWhatsAppHTML(parte.asigB, parte.asigBAyudante, parte.tit, 'Sala Auxiliar B')}
+                            </div>
+                            ${llevaAyudante ? `
+                            <div class="flex items-center justify-center gap-0.5 border-t border-slate-200 pt-0.5">
+                                ${crearSelectHTML(`sel-parteB-ayu-${pIdx}`, catSelect, parte.asigBAyudante, 'Ayud. B')}
+                                ${crearBotonWhatsAppHTML(parte.asigBAyudante, parte.asigB, 'Ayudante en: ' + parte.tit, 'Sala Auxiliar B')}
+                            </div>` : ''}
+                        </div>
+                    </td>
+                `;
+            } else if (numSalas === 3) {
+                celdasAsignacionHTML = `
+                    <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center justify-center gap-0.5">
+                                ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig, 'Tit. A')}
+                                ${crearBotonWhatsAppHTML(parte.asig, parte.asigAyudante, parte.tit, 'Sala Principal')}
+                            </div>
+                            ${llevaAyudante ? `
+                            <div class="flex items-center justify-center gap-0.5 border-t border-slate-200 pt-0.5">
+                                ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, catSelect, parte.asigAyudante, 'Ayu. A')}
+                                ${crearBotonWhatsAppHTML(parte.asigAyudante, parte.asig, 'Ayudante en: ' + parte.tit, 'Sala Principal')}
+                            </div>` : ''}
+                        </div>
+                    </td>
+                    <td colspan="2" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs border-r border-slate-300">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center justify-center gap-0.5">
+                                ${crearSelectHTML(`sel-parteB-${pIdx}`, catSelect, parte.asigB, 'Tit. B')}
+                                ${crearBotonWhatsAppHTML(parte.asigB, parte.asigBAyudante, parte.tit, 'Sala Auxiliar B')}
+                            </div>
+                            ${llevaAyudante ? `
+                            <div class="flex items-center justify-center gap-0.5 border-t border-slate-200 pt-0.5">
+                                ${crearSelectHTML(`sel-parteB-ayu-${pIdx}`, catSelect, parte.asigBAyudante, 'Ayu. B')}
+                                ${crearBotonWhatsAppHTML(parte.asigBAyudante, parte.asigB, 'Ayudante en: ' + parte.tit, 'Sala Auxiliar B')}
+                            </div>` : ''}
+                        </div>
+                    </td>
+                    <td colspan="2" class="font-black uppercase text-amber-950 bg-amber-200/50 text-center text-xs">
+                        <div class="flex flex-col gap-0.5">
+                            <div class="flex items-center justify-center gap-0.5">
+                                ${crearSelectHTML(`sel-parteC-${pIdx}`, catSelect, parte.asigC, 'Tit. C')}
+                                ${crearBotonWhatsAppHTML(parte.asigC, parte.asigCAyudante, parte.tit, 'Sala Auxiliar C')}
+                            </div>
+                            ${llevaAyudante ? `
+                            <div class="flex items-center justify-center gap-0.5 border-t border-slate-200 pt-0.5">
+                                ${crearSelectHTML(`sel-parteC-ayu-${pIdx}`, catSelect, parte.asigCAyudante, 'Ayu. C')}
+                                ${crearBotonWhatsAppHTML(parte.asigCAyudante, parte.asigC, 'Ayudante en: ' + parte.tit, 'Sala Auxiliar C')}
+                            </div>` : ''}
+                        </div>
+                    </td>
+                `;
+            }
+        } else {
+            if (llevaAyudante) {
+                celdasAsignacionHTML = `
+                    <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
+                        <div class="flex items-center justify-center gap-1">
+                            ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig, 'Estudiante')} ${crearBotonWhatsAppHTML(parte.asig, parte.asigAyudante, parte.tit, 'Sala Principal')} </div> </td> <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs"> <div class="flex items-center justify-center gap-1"> ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, catSelect, parte.asigAyudante, 'Ayudante')}
+                            ${crearBotonWhatsAppHTML(parte.asigAyudante, parte.asig, 'Ayudante en: ' + parte.tit, 'Sala Principal')}
+                        </div>
+                    </td>
+                `;
+            } else {
+                celdasAsignacionHTML = `
+                    <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                        <div class="flex items-center justify-center gap-1">
+                            ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig)}
+                            ${crearBotonWhatsAppHTML(parte.asig, '', parte.tit, 'Sala Principal')}
+                        </div>
+                    </td>
                 `;
             }
         }
+
+        filasHTML += `
+            <tr>
+                <td class="c-tiempo"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 't', this.innerText)" class="editable-field">${parte.t}</span></td>
+                <td class="font-medium"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'tit', this.innerText)" class="editable-field">${parte.tit}</span></td>
+                <td class="text-slate-600"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'desc', this.innerText)" class="editable-field">${parte.desc}</span></td>
+                ${celdasAsignacionHTML}
+                <td class="text-center no-print">
+                    <button onclick="eliminarParte(${pIdx})" class="text-slate-400 hover:text-red-600 transition text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            </tr>
+        `;
     });
 
-    if (!esMensajero) {
-        filasHTML += `
-            <tr class="no-print bg-slate-50">
-                <td colspan="11" class="p-1 text-center">
-                    <button onclick="agregarFilaVida()" class="text-xs font-bold text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded border border-red-200 transition">
-                        <i class="fa-solid fa-plus-circle mr-1"></i> Agregar parte a Nuestra Vida Cristiana
-                    </button>
-                </td>
-            </tr>
-        `;
-    }
-
-    if (esViajante) {
+    // 3. FILAS INFERIORES
+    if (sem.tipoSemana === 'viajante') {
         filasHTML += `
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
-                    Repaso de esta reunión y adelanto de la próxima.
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
-                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
+                <td class="c-tiempo">3 min</td>
+                <td class="font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        ${crearSelectHTML('sel-repaso', 'pres', sem.repaso)}
+                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso de la reunión')}
                     </div>
                 </td>
-                <td class="no-print text-center w-8"></td>
+                <td class="text-center no-print"></td>
             </tr>
-            <tr>
-                <td class="c-tiempo font-bold text-blue-900 bg-blue-50/50">30 min</td>
-                <td class="px-2 font-black text-blue-900 bg-blue-50/50 editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaViajanteEntreSemana', this.innerText)">
-                    ${sem.temaViajanteEntreSemana || 'Discurso del superintendente de circuito'}
+            <tr class="bg-blue-50/50">
+                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="font-bold text-blue-900" colspan="2">
+                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${sem.temaViajanteEntreSemana}</span>
                 </td>
-                <td class="px-2 col-asig bg-blue-50/50" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_viajante_entre_semana', '', sem.asigViajanteEntreSemana, "SUPERINTENDENTE DE CIRCUITO")}
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', 'Discurso del superintendente de circuito', 'Sala Principal')}
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE SUPERINTENDENTE" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', sem.temaViajanteEntreSemana)}
                     </div>
                 </td>
-                <td class="no-print text-center w-8"></td>
+                <td class="text-center no-print"></td>
             </tr>
             <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)"></td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
-                    Canción N° ${numCancion2 || '38'} y oración
+                <td class="c-tiempo"></td>
+                <td class="font-medium" colspan="2">
+                    Canción y oración: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)">
                 </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
-                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-amber-950 font-black uppercase text-xs" placeholder="ORACIÓN FINAL" value="${sem.oracionFin || ''}" onchange="actualizarCampoSemana('oracionFin', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración final')}
                     </div>
                 </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-        `;
-    } else {
-        const idxEB = partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
-        const itemEB = idxEB !== -1 ? partes[idxEB] : { t: '30 min', tit: 'Estudio bíblico de la congregación: wcg cap. 11.', asig: '', asigAyudante: '' };
-        
-        filasHTML += `
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 't', this.innerText)` : ''}">${itemEB.t || '30 min'}</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="${idxEB !== -1 ? `guardarTextoEditable(${idxEB}, 'tit', this.innerText)` : ''}">
-                    ${itemEB.tit}
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_titular` : 'asig_eb_conductor', 'eb', itemEB.asig)}
-                        ${crearBotonWhatsAppHTML(itemEB.asig, itemEB.asigAyudante, itemEB.tit, 'Sala Principal')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Lector:</td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML(idxEB !== -1 ? `asig_p${idxEB}_A_ayudante` : 'asig_eb_lector', 'lectorL', itemEB.asigAyudante)}
-                        ${crearBotonWhatsAppHTML(itemEB.asigAyudante, '', 'Lector del Estudio Bíblico', 'Sala Principal')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" rowspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">Repaso de esta reunión y adelanto de la próxima.</td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_repaso', 'pres', sem.repaso)}
-                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso y adelanto', 'Sala Principal')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarCancionSemana(2, this.innerText)">
-                    Canción N° ${numCancion2 || '38'} y oración
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_orac_fin', 'orac', sem.oracionFin)}
-                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración Final', 'Sala Principal')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-        `;
-    }
-
-    if (esViajante) {
-        filasHTML += `
-            <tr>
-                <th class="bg-[#7ca2d3] text-white text-center c-tiempo py-1">
-                    <img src="Torre.png" class="w-4 h-4 mx-auto object-contain" alt="Torre">
-                </th>
-                <th colspan="10" class="bg-[#7ca2d3] text-white py-1 text-center text-xs font-extrabold uppercase tracking-wide">
-                    Reunión de fin de semana
-                </th>
-            </tr>
-            <tr>
-                <td class="px-2 font-medium editable-field" colspan="3" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomIni', this.innerText)">
-                    Presidencia, canción Nº ${sem.cancionDomIni || ''} y oración
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
-                        ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscPub', this.innerText)">
-                    ${sem.temaDiscPub || 'Discurso público:'}
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_viajante_disc_pub', '', sem.asigViajanteDiscPub, "SUPERINTENDENTE DE CIRCUITO")}
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', 'Discurso público', 'Reunión Pública')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomMid', this.innerText)">
-                    Canción Nº ${sem.cancionDomMid || ''}
-                </td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaAtalaya', this.innerText)">
-                    ${sem.temaAtalaya || 'La Atalaya:'}
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector, "LECTOR")}
-                        ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">30 min</td>
-                <td class="px-2 font-medium editable-field" colspan="2" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('temaDiscFin', this.innerText)">
-                    ${sem.temaDiscFin || 'Discurso final:'}
-                </td>
-                <td class="px-2 col-asig" colspan="7">
-                    <div class="flex items-center justify-between w-full gap-1">
-                        ${crearSelectHTML('asig_viajante_disc_fin', '', sem.asigViajanteDiscFin, "SUPERINTENDENTE DE CIRCUITO")}
-                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', 'Discurso final', 'Reunión Pública')}
-                    </div>
-                </td>
-                <td class="no-print text-center w-8"></td>
-            </tr>
-            <tr>
-                <td class="c-tiempo editable-field text-slate-900 font-bold" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">3 min</td>
-                <td class="px-2 font-medium editable-field" colspan="10" ${isEditableAttr} onpaste="limpiarTextoPegado(event)" onblur="guardarEncabezadoSemana('cancionDomFin', this.innerText)">
-                    Canción Nº ${sem.cancionDomFin || ''} y oración
-                </td>
+                <td class="text-center no-print"></td>
             </tr>
         `;
     } else {
         filasHTML += `
-            <tr class="border-t-2 border-slate-900 bg-slate-50/50">
-                <td class="px-2 font-bold py-1.5 editable-field" colspan="3" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
-                    Domingo, presidencia: 
-                    <div class="inline-flex items-center ml-2 w-48 gap-1">
-                        ${crearSelectHTML('asig_dom_presi', 'presPub', sem.domPresi)}
-                        ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia del Domingo', 'Reunión Pública')}
+            <tr>
+                <td class="c-tiempo">3 min</td>
+                <td class="font-medium" colspan="2">Repaso de esta reunión y adelanto de la próxima.</td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        ${crearSelectHTML('sel-repaso', 'pres', sem.repaso)}
+                        ${crearBotonWhatsAppHTML(sem.repaso, '', 'Repaso de la reunión')}
                     </div>
                 </td>
-                <td class="px-2 font-bold py-1.5 text-right editable-field" colspan="8" ${isEditableAttr} onpaste="limpiarTextoPegado(event)">
-                    Lector: 
-                    <div class="inline-flex items-center ml-2 text-left w-48 gap-1">
-                        ${crearSelectHTML('asig_dom_lector', 'lectorW', sem.domLector)}
-                        ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya', 'Reunión Pública')}
+                <td class="text-center no-print"></td>
+            </tr>
+            <tr>
+                <td class="c-tiempo"></td>
+                <td class="font-medium" colspan="2">
+                    Canción y oración: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)">
+                </td>
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        ${crearSelectHTML('sel-oracionFin', 'orac', sem.oracionFin)}
+                        ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración final')}
                     </div>
                 </td>
+                <td class="text-center no-print"></td>
             </tr>
         `;
     }
 
-    cuerpo.innerHTML = filasHTML;
+    // 4. SECCIÓN REUNIÓN DEL FIN DE SEMANA
+    filasHTML += `
+        <tr class="border-t-2 border-slate-900 bg-slate-50/50">
+            <td class="px-2 font-bold py-1.5" colspan="3">
+                <div class="flex items-center gap-1">
+                    <span>Domingo, presidencia:</span>
+                    ${crearSelectHTML('sel-domPresi', 'presPub', sem.domPresi)}
+                    ${crearBotonWhatsAppHTML(sem.domPresi, '', 'Presidencia Reunión Pública (Domingo)')}
+                </div>
+            </td>
+            <td class="px-2 font-bold py-1.5" colspan="7">
+                <div class="flex items-center justify-end gap-1">
+                    <span>Lector:</span>
+                    ${crearSelectHTML('sel-domLector', 'lectorW', sem.domLector)}
+                    ${crearBotonWhatsAppHTML(sem.domLector, '', 'Lector de La Atalaya (Domingo)')}
+                </div>
+            </td>
+            <td class="text-center no-print"></td>
+        </tr>
+    `;
+
+    if (sem.tipoSemana === 'viajante') {
+        filasHTML += `
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">5 min</td>
+                <td class="px-2 font-medium" colspan="2">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomIni || ''}" onchange="actualizarCampoSemana('cancionDomIni', this.value)">. Oración</td>
+                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Presidente</td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="px-2 font-bold text-blue-900" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${sem.temaDiscPub}</span></td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="DISCURSANTE PÚBLICO" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', sem.temaDiscPub)}
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo"></td>
+                <td class="px-2 font-medium" colspan="9">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomMid || ''}" onchange="actualizarCampoSemana('cancionDomMid', this.value)"></td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">30 min</td>
+                <td class="px-2 font-medium" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaAtalaya', this.innerText)" class="editable-field">${sem.temaAtalaya}</span></td>
+                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Conductor de La Atalaya</td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo font-bold text-blue-900">30 min</td>
+                <td class="px-2 font-bold text-blue-900" colspan="2"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${sem.temaDiscFin}</span></td>
+                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="DISCURSO FINAL VIAJANTE" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
+                        ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', sem.temaDiscFin)}
+                    </div>
+                </td>
+                <td class="no-print"></td>
+            </tr>
+            <tr class="bg-blue-50/30">
+                <td class="c-tiempo">5 min</td>
+                <td class="px-2 font-medium" colspan="2">Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)">. Oración</td>
+                <td colspan="7" class="font-bold text-slate-600 text-center text-xs">Superintendente de Circuito</td>
+                <td class="no-print"></td>
+            </tr>
+        `;
+    }
+
+    tbody.innerHTML = filasHTML;
 };
 
-window.guardarTextoEditable = function(pIndex, campo, valor) {
-    if (window.esRolMensajero()) return;
+/* ACCIONES DE EDICIÓN */
+window.actualizarCampoSemana = function(campo, valor) {
+    window.programaMes[window.semanaActivaIdx][campo] = valor.trim();
+    if (campo === 'semana') renderizarSelectorSemanas();
+    notificarYGuardarAutosave();
+};
+
+window.actualizarCancion = function(idxCancion, valor) {
+    window.programaMes[window.semanaActivaIdx].canciones[idxCancion] = valor.trim();
+    notificarYGuardarAutosave();
+};
+
+window.actualizarCampoParte = function(idxParte, campo, valor) {
+    window.programaMes[window.semanaActivaIdx].partes[idxParte][campo] = valor.trim();
+    notificarYGuardarAutosave();
+};
+
+window.guardarAsignacionSemana = function(idSelect) {
+    const el = document.getElementById(idSelect);
+    if (!el) return;
+    const val = el.value;
     const sem = window.programaMes[window.semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes[pIndex][campo] = valor;
+
+    if (idSelect === 'sel-presidencia') sem.presidencia = val;
+    else if (idSelect === 'sel-oracionIni') sem.oracionIni = val;
+    else if (idSelect === 'sel-repaso') sem.repaso = val;
+    else if (idSelect === 'sel-oracionFin') sem.oracionFin = val;
+    else if (idSelect === 'sel-domPresi') sem.domPresi = val;
+    else if (idSelect === 'sel-domLector') sem.domLector = val;
+    else if (idSelect.startsWith('sel-parte-ayu-')) {
+        const idx = parseInt(idSelect.replace('sel-parte-ayu-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asigAyudante = val;
+    } else if (idSelect.startsWith('sel-parteB-ayu-')) {
+        const idx = parseInt(idSelect.replace('sel-parteB-ayu-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asigBAyudante = val;
+    } else if (idSelect.startsWith('sel-parteC-ayu-')) {
+        const idx = parseInt(idSelect.replace('sel-parteC-ayu-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asigCAyudante = val;
+    } else if (idSelect.startsWith('sel-parteB-')) {
+        const idx = parseInt(idSelect.replace('sel-parteB-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asigB = val;
+    } else if (idSelect.startsWith('sel-parteC-')) {
+        const idx = parseInt(idSelect.replace('sel-parteC-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asigC = val;
+    } else if (idSelect.startsWith('sel-parte-')) {
+        const idx = parseInt(idSelect.replace('sel-parte-', ''));
+        if (sem.partes[idx]) sem.partes[idx].asig = val;
+    }
+
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.actualizarTipoSemana = function(nuevoTipo) {
+    window.programaMes[window.semanaActivaIdx].tipoSemana = nuevoTipo;
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.cambiarNumSalasSemana = function(num) {
+    window.programaMes[window.semanaActivaIdx].numSalas = parseInt(num);
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.agregarParteSeccion = function(seccion) {
+    const nueva = {
+        seccion: seccion,
+        t: "5 min",
+        tit: "Nueva intervención",
+        desc: "Detalles",
+        participantes: seccion === 'maestros' ? 2 : 1,
+        asig: ""
+    };
+    window.programaMes[window.semanaActivaIdx].partes.push(nueva);
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.eliminarParte = function(idxParte) {
+    window.programaMes[window.semanaActivaIdx].partes.splice(idxParte, 1);
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.agregarNuevaSemana = function() {
+    window.programaMes.push(crearEstructuraSemanaEjemplo());
+    window.semanaActivaIdx = window.programaMes.length - 1;
+    cargarSemanaEnPlanilla(window.semanaActivaIdx);
+    notificarYGuardarAutosave();
+};
+
+window.eliminarSemanaActiva = function() {
+    if (window.programaMes.length <= 1) {
+        alert("Debe haber al menos una semana en el programa.");
+        return;
+    }
+    if (confirm("¿Eliminar esta semana del programa?")) {
+        window.programaMes.splice(window.semanaActivaIdx, 1);
+        window.semanaActivaIdx = 0;
+        cargarSemanaEnPlanilla(0);
         notificarYGuardarAutosave();
     }
 };
 
-window.guardarEncabezadoSemana = async function(campo, valor) {
-    if (window.esRolMensajero()) return;
-    if (window.programaMes[window.semanaActivaIdx]) {
-        window.programaMes[window.semanaActivaIdx][campo] = valor.trim();
-        await notificarYGuardarAutosave();
-    }
-};
-
-window.actualizarEncabezadoSemana = async function(campo, valor) {
-    if (window.esRolMensajero()) return;
-    if (window.programaMes[window.semanaActivaIdx]) {
-        window.programaMes[window.semanaActivaIdx][campo] = valor;
-        await notificarYGuardarAutosave();
-    }
-};
-
-window.guardarAsignacionSemana = async function(elemId) {
-    if (window.esRolMensajero()) return;
-    const el = document.getElementById(elemId);
-    if (!el) return;
-    const val = el.value;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (!sem) return;
-
-    if (elemId === 'asig_presi') sem.presidencia = val;
-    else if (elemId === 'asig_orac_ini') sem.oracionIni = val;
-    else if (elemId === 'asig_viajante_entre_semana') sem.asigViajanteEntreSemana = val;
-    else if (elemId === 'asig_viajante_disc_pub') sem.asigViajanteDiscPub = val;
-    else if (elemId === 'asig_viajante_disc_fin') sem.asigViajanteDiscFin = val;
-    else if (elemId.startsWith('asig_p')) {
-        const partesId = elemId.split('_');
-        const pIndex = parseInt(partesId[1].replace('p', ''));
-        const sala = partesId[2];
-        const rol = partesId[3];
-
-        if (sem.partes && sem.partes[pIndex]) {
-            if (sala === 'A') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigAyudante = val;
-                else sem.partes[pIndex].asig = val;
-            } else if (sala === 'B') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigBAyudante = val;
-                else sem.partes[pIndex].asigB = val;
-            } else if (sala === 'C') {
-                if (rol === 'ayudante') sem.partes[pIndex].asigCAyudante = val;
-                else sem.partes[pIndex].asigC = val;
-            }
-        }
-    }
-    else if (elemId === 'asig_repaso') sem.repaso = val;
-    else if (elemId === 'asig_orac_fin') sem.oracionFin = val;
-    else if (elemId === 'asig_dom_presi') sem.domPresi = val;
-    else if (elemId === 'asig_dom_lector') sem.domLector = val;
-
-    await notificarYGuardarAutosave();
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-};
-
-window.toggleParticipantesParte = async function(pIndex) {
-    if (window.esRolMensajero()) return;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes[pIndex].participantes = (sem.partes[pIndex].participantes === 2) ? 1 : 2;
-        cargarSemanaEnPlanilla(window.semanaActivaIdx);
-        await notificarYGuardarAutosave();
-    }
-};
-
-window.agregarNuevaSemana = async function() {
-    if (window.esRolMensajero()) return;
-    const numSem = window.programaMes.length + 1;
-    const nuevaSem = crearEstructuraSemanaEjemplo();
-    nuevaSem.semana = `NUEVA SEMANA ${numSem}`;
-    window.programaMes.push(nuevaSem);
-    window.semanaActivaIdx = window.programaMes.length - 1;
-    renderizarSelectorSemanas();
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.eliminarSemanaActiva = async function() {
-    if (window.esRolMensajero()) return;
-    if (!window.programaMes || window.programaMes.length === 0) return;
-    
-    if (confirm(`¿Estás seguro de que deseas eliminar la semana "${window.programaMes[window.semanaActivaIdx].semana}"?`)) {
-        window.programaMes.splice(window.semanaActivaIdx, 1);
-        if (window.semanaActivaIdx >= window.programaMes.length) {
-            window.semanaActivaIdx = Math.max(0, window.programaMes.length - 1);
-        }
-        if (window.programaMes.length === 0) {
-            window.programaMes = [crearEstructuraSemanaEjemplo()];
-            window.semanaActivaIdx = 0;
-        }
-        renderizarSelectorSemanas();
-        cargarSemanaEnPlanilla(window.semanaActivaIdx);
-        await notificarYGuardarAutosave();
-    }
-};
-
-window.cambiarNumSalasSemana = async function(cantidad) {
-    if (window.esRolMensajero()) return;
-    if (!window.programaMes[window.semanaActivaIdx]) return;
-    window.programaMes[window.semanaActivaIdx].numSalas = parseInt(cantidad);
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.actualizarTipoSemana = async function(tipo) {
-    if (window.esRolMensajero()) return;
-    if (!window.programaMes[window.semanaActivaIdx]) return;
-    window.programaMes[window.semanaActivaIdx].tipoSemana = tipo;
-    if (tipo === 'viajante' || tipo === 'asamblea' || tipo === 'conmemoracion') window.programaMes[window.semanaActivaIdx].numSalas = 1;
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.agregarFilaMaestros = async function() {
-    if (window.esRolMensajero()) return;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (!sem) return;
-    
-    let ultimoIdxMaestros = -1;
-    sem.partes.forEach((p, idx) => {
-        if (p.seccion === 'maestros') ultimoIdxMaestros = idx;
-    });
-
-    const nuevaParte = {
-        seccion: 'maestros',
-        t: '3 min',
-        tit: 'Nueva Asignación SMM',
-        desc: '',
-        participantes: 2,
-        asig: '',
-        asigAyudante: ''
-    };
-
-    if (ultimoIdxMaestros !== -1) {
-        sem.partes.splice(ultimoIdxMaestros + 1, 0, nuevaParte);
-    } else {
-        sem.partes.push(nuevaParte);
-    }
-
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.agregarFilaVida = async function() {
-    if (window.esRolMensajero()) return;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (!sem) return;
-    
-    const idxEBC = sem.partes.findIndex(p => p.tit && p.tit.includes('Estudio bíblico'));
-    const nuevaParte = {
-        seccion: 'vida',
-        t: '15 min',
-        tit: 'Nueva Parte NVC',
-        desc: '',
-        participantes: 1,
-        asig: ''
-    };
-
-    if (idxEBC !== -1) {
-        sem.partes.splice(idxEBC, 0, nuevaParte);
-    } else {
-        sem.partes.push(nuevaParte);
-    }
-
-    cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    await notificarYGuardarAutosave();
-};
-
-window.eliminarFilaParte = async function(pIndex) {
-    if (window.esRolMensajero()) return;
-    const sem = window.programaMes[window.semanaActivaIdx];
-    if (sem && sem.partes && sem.partes[pIndex]) {
-        sem.partes.splice(pIndex, 1);
-        cargarSemanaEnPlanilla(window.semanaActivaIdx);
-        await notificarYGuardarAutosave();
-    }
-};
-
-window.guardarMesManual = async function() {
-    if (window.esRolMensajero()) {
-        alert("Tu usuario es Mensajero (Solo Lectura) y no tiene permisos para guardar o editar.");
-        return;
-    }
-    await notificarYGuardarAutosave();
-    alert("¡Trabajo del mes guardado correctamente!");
-};
-
-window.resetearPlanillaMes = async function() {
-    if (window.esRolMensajero()) return;
-    if (confirm("¿Estás seguro de resetear la planilla para iniciar un NUEVO MES? Esto limpiará las semanas actuales.")) {
-        window.nombreMesGlobal = "";
-        const inputMes = document.getElementById('inputNombreMes');
-        if (inputMes) inputMes.value = "";
-        actualizarTextoTituloMes("");
-
+window.resetearPlanillaMes = function() {
+    if (confirm("¿Restaurar la planilla mensual a sus valores por defecto?")) {
         inicializarMesDefault(4);
         window.semanaActivaIdx = 0;
-        
-        renderizarSelectorSemanas();
         cargarSemanaEnPlanilla(0);
-        await notificarYGuardarAutosave();
+        notificarYGuardarAutosave();
     }
 };
 
-/* GESTIÓN MATRIZ HERMANOS */
-window.renderizarMatrizHermanos = function() {
-    const cuerpo = document.getElementById('cuerpoTablaHermanos');
-    if (!cuerpo) return;
-    cuerpo.innerHTML = '';
-
-    if (!Array.isArray(window.listaHermanos)) return;
-    const esMensajero = window.esRolMensajero();
-
-    window.listaHermanos.forEach((h, index) => {
-        const tr = document.createElement('tr');
-        tr.className = index % 2 === 0 ? 'bg-white text-xs' : 'bg-slate-50/50 text-xs';
-        
-        const colsBool = [
-            'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 
-            'lec_biblia', 'smm', 'nvc', 'ebc', 'lector_ebc', 
-            'pres_pub', 'lector_atalaya'
-        ];
-
-        const condicionActual = h.condicion || 'Pub';
-
-        tr.innerHTML = `
-            <td class="font-bold text-slate-400">${index + 1}</td>
-            <td class="text-left font-bold px-2">
-                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.nombre || ''}" onchange="actualizarHermano(${h.id}, 'nombre', this.value)" onpaste="limpiarTextoPegado(event)" class="w-full bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 font-semibold text-slate-800">
-            </td>
-            <td>
-                <select ${esMensajero ? 'disabled' : ''} onchange="actualizarHermano(${h.id}, 'sexo', this.value)" class="text-xs bg-transparent font-bold ${h.sexo === 'V' ? 'text-blue-600' : 'text-pink-600'}">
-                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
-                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
-                </select>
-            </td>
-            <td>
-                <select ${esMensajero ? 'disabled' : ''} onchange="actualizarHermano(${h.id}, 'condicion', this.value)" class="text-xs bg-transparent font-semibold text-slate-700 outline-none cursor-pointer">
-                    <option value="A" ${condicionActual === 'A' ? 'selected' : ''}>A</option>
-                    <option value="SM" ${condicionActual === 'SM' ? 'selected' : ''}>SM</option>
-                    <option value="Prec" ${condicionActual === 'Prec' ? 'selected' : ''}>Prec</option>
-                    <option value="Pub" ${condicionActual === 'Pub' ? 'selected' : ''}>Pub</option>
-                    <option value="PNB" ${condicionActual === 'PNB' ? 'selected' : ''}>PNB</option>
-                </select>
-            </td>
-            <td>
-                <input type="number" ${esMensajero ? 'disabled' : ''} value="${h.grupo || ''}" onchange="actualizarHermano(${h.id}, 'grupo', parseInt(this.value) || null)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
-            </td>
-            <td>
-                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.responsabilidades || ''}" onchange="actualizarHermano(${h.id}, 'responsabilidades', this.value)" class="w-full text-center bg-transparent border-b border-transparent hover:border-slate-300">
-            </td>
-            <td>
-                <input type="text" ${esMensajero ? 'disabled' : ''} value="${h.celular || ''}" onchange="actualizarHermano(${h.id}, 'celular', this.value)" placeholder="+54..." class="w-full text-center font-mono text-slate-700 bg-transparent border-b border-transparent hover:border-slate-300">
-            </td>
-
-            ${colsBool.map(col => `
-                <td>
-                    <input type="checkbox" ${esMensajero ? 'disabled' : ''} ${(h[col] === true || h[col] === 'X') ? 'checked' : ''} onchange="actualizarHermano(${h.id}, '${col}', this.checked)" class="rounded text-amber-600 cursor-pointer">
-                </td>
-            `).join('')}
-
-            <td class="no-print">
-                ${esMensajero ? '' : `<button onclick="eliminarHermano(${h.id})" class="text-red-500 hover:text-red-700 text-xs px-1 py-0.5" title="Eliminar"><i class="fa-solid fa-trash"></i></button>`}
-            </td>
-        `;
-        cuerpo.appendChild(tr);
-    });
+window.guardarMesManual = function() {
+    const input = document.getElementById('inputNombreMes');
+    if (input) window.nombreMesGlobal = input.value.trim().toUpperCase();
+    notificarYGuardarAutosave();
 };
 
-window.actualizarHermano = async function(id, campo, valor) {
-    if (window.esRolMensajero()) return;
-    if (typeof actualizarHermanoBD === 'function') await actualizarHermanoBD(id, campo, valor);
-    if (window.programaMes.length > 0) cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
-};
+/* GUARDADO SILENCIOSO EN SUPABASE (INCLUYE SNAPSHOT PÚBLICO) */
+let timeoutAutosave = null;
+window.notificarYGuardarAutosave = async function() {
+    if (timeoutAutosave) clearTimeout(timeoutAutosave);
 
-window.agregarNuevoHermano = async function() {
-    if (window.esRolMensajero()) return;
-    if (typeof agregarNuevoHermanoBD === 'function') await agregarNuevoHermanoBD();
-    renderizarMatrizHermanos();
-    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
-};
-
-window.eliminarHermano = async function(id) {
-    if (window.esRolMensajero()) return;
-    if (typeof eliminarHermanoBD === 'function') await eliminarHermanoBD(id);
-    renderizarMatrizHermanos();
-    if (window.programaMes.length > 0) cargarSemanaEnPlanilla(window.semanaActivaIdx);
-    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
-};
-
-window.cambiarPestaña = function(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById(`sec-${tab}`);
-    if (target) target.classList.remove('hidden');
-
-    document.querySelectorAll('nav button').forEach(btn => {
-        btn.className = "px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition";
-    });
-    const activeTab = document.getElementById(`tab-${tab}`);
-    if (activeTab) activeTab.className = "px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition";
-
-    if (tab === 'historial') {
-        if (typeof cargarOpcionesAniosHistorial === 'function') cargarOpcionesAniosHistorial();
-    }
-
-    if (tab === 'estadisticas' && typeof renderizarTablaHistorial === 'function') {
-        renderizarTablaHistorial();
-    }
-};
-
-window.actualizarTextoTituloMes = function(valor) {
-    window.nombreMesGlobal = valor;
-    
-    const spanMes = document.getElementById('txtNombreMes');
-    if (spanMes) {
-        spanMes.innerText = valor ? valor.toUpperCase() : '---';
-    }
-    
-    if (typeof window.actualizarLinkPublico === 'function') {
-        window.actualizarLinkPublico();
-    }
+    timeoutAutosave = setTimeout(async () => {
+        if (typeof window.guardarPlanillaEnSupabase === 'function') {
+            await window.guardarPlanillaEnSupabase();
+        }
+        if (typeof window.actualizarLinkPublico === 'function') {
+            window.actualizarLinkPublico();
+        }
+    }, 600);
 };
