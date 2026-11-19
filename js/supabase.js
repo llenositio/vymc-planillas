@@ -1,5 +1,5 @@
 /**
- * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Vista Pública
+ * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Vista Pública en Tiempo Real
  */
 
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
@@ -10,6 +10,7 @@ window.usuarioActual = null;
 window.congregacionIdActual = null;
 window.slugCongregacionActual = "";
 window.rolUsuarioActual = null;
+let canalRealtimePublico = null;
 
 // Verificar sesión o activar Vista Pública al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
@@ -17,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const congreSlugParam = urlParams.get('c');
     const mesParam = urlParams.get('m');
 
-    // MODO VISTA PÚBLICA (SOLO LECTURA MEDIANTE SNAPSHOT HTML DEL MES COMPLETO)
+    // MODO VISTA PÚBLICA (FOTO HTML DEL MES COMPLETO + ACTUALIZACIÓN EN TIEMPO REAL)
     if (congreSlugParam) {
         document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
@@ -35,8 +36,33 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * Carga la planilla en modo público leyendo la "foto HTML" del mes completo (100% seguro)
+ * Renderiza el snapshot HTML público y suscribe cambios en tiempo real
  */
+async function renderizarSnapshotPublicoDesdeBD(congreId, mesBuscado) {
+    const { data: planillaData, error: planillaError } = await db
+        .from('planillas')
+        .select('html_publico, mes_ano')
+        .eq('congregacion_id', congreId)
+        .eq('mes_ano', mesBuscado)
+        .maybeSingle();
+
+    if (planillaError) {
+        console.error("Error cargando planilla pública:", planillaError);
+        return;
+    }
+
+    const contenedor = document.querySelector('.print-area');
+    if (planillaData && planillaData.html_publico && contenedor) {
+        contenedor.innerHTML = planillaData.html_publico;
+    } else if (contenedor) {
+        contenedor.innerHTML = `
+            <div class="text-center py-12 text-slate-500 font-bold">
+                <p class="text-base">No hay un programa publicado aún para el mes de ${mesBuscado}.</p>
+            </div>
+        `;
+    }
+}
+
 async function cargarPlanillaVistaPublica(slug, mes) {
     const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
 
@@ -61,29 +87,32 @@ async function cargarPlanillaVistaPublica(slug, mes) {
 
     window.congregacionIdActual = congreEncontrada.id;
 
-    // Obtener la columna html_publico
-    const { data: planillaData, error: planillaError } = await db
-        .from('planillas')
-        .select('html_publico, mes_ano')
-        .eq('congregacion_id', congreEncontrada.id)
-        .eq('mes_ano', mesBuscado)
-        .maybeSingle();
+    // 1. Carga inicial de la foto HTML
+    await renderizarSnapshotPublicoDesdeBD(congreEncontrada.id, mesBuscado);
 
-    if (planillaError) {
-        console.error("Error cargando planilla pública:", planillaError);
-        return;
+    // 2. Suscripción en tiempo real para actualizar la foto si cambia la planilla
+    if (canalRealtimePublico) {
+        db.removeChannel(canalRealtimePublico);
     }
 
-    const contenedor = document.querySelector('.print-area');
-    if (planillaData && planillaData.html_publico && contenedor) {
-        contenedor.innerHTML = planillaData.html_publico;
-    } else if (contenedor) {
-        contenedor.innerHTML = `
-            <div class="text-center py-12 text-slate-500 font-bold">
-                <p class="text-base">No hay un programa publicado aún para el mes de ${mesBuscado}.</p>
-            </div>
-        `;
-    }
+    canalRealtimePublico = db
+        .channel(`publico-${congreEncontrada.id}-${mesBuscado}`)
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'planillas',
+                filter: `congregacion_id=eq.${congreEncontrada.id}`
+            },
+            (payload) => {
+                const registro = payload.new || payload.old;
+                if (registro && registro.mes_ano === mesBuscado) {
+                    renderizarSnapshotPublicoDesdeBD(congreEncontrada.id, mesBuscado);
+                }
+            }
+        )
+        .subscribe();
 }
 
 async function cargarPerfilUsuario(user) {
@@ -128,7 +157,6 @@ async function cargarPerfilUsuario(user) {
 function aplicarRestriccionesPorRol(rol) {
     const esMensajero = (typeof rol === 'string' && rol.startsWith('mensajero_'));
 
-    // Inyectar o remover estilos globales de bloqueo estricto para mensajero
     let estiloMensajero = document.getElementById('estilo-restriccion-mensajero');
     if (esMensajero) {
         if (!estiloMensajero) {
@@ -156,7 +184,6 @@ function aplicarRestriccionesPorRol(rol) {
         }
     }
 
-    // Ocultar botones de modificación de la interfaz
     const botonesEdicion = [
         document.querySelector("button[onclick='guardarMesManual()']"),
         document.querySelector("button[onclick='resetearPlanillaMes()']"),
@@ -170,7 +197,6 @@ function aplicarRestriccionesPorRol(rol) {
         if (btn) btn.style.display = esMensajero ? 'none' : '';
     });
 
-    // Deshabilitar inputs de encabezado y controles
     const inputMes = document.getElementById('inputNombreMes');
     if (inputMes) inputMes.disabled = esMensajero;
 
@@ -279,9 +305,7 @@ window.cerrarSesion = async function() {
     const contenedor = document.getElementById('selector-congregacion-container');
     if (contenedor) contenedor.innerHTML = '';
 
-    // Restablecer interfaz a estado editable por defecto para próximo login
     aplicarRestriccionesPorRol('editor_vymc');
-
     mostrarPantallaLogin(true);
 };
 
