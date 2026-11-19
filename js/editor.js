@@ -320,8 +320,10 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="font-medium"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'tit', this.innerText)" class="editable-field">${parte.tit}</span></td>
                 <td class="text-slate-600"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'desc', this.innerText)" class="editable-field">${parte.desc}</span></td>
                 ${celdasAsignacionHTML}
-                <td class="text-center no-print">
-                    <button onclick="eliminarParte(${pIdx})" class="text-slate-400 hover:text-red-600 transition text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                <td class="text-center no-print w-8">
+                    <button onclick="eliminarParte(${pIdx})" class="text-rose-500 hover:text-rose-700 transition p-1" title="Eliminar esta fila">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
                 </td>
             </tr>
         `;
@@ -330,9 +332,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
     // 3. FILAS INFERIORES + FIN DE SEMANA
     if (sem.tipoSemana === 'viajante') {
         const tiempoViajanteSem = sem.tiempoViajanteEntreSemana || '30 min';
-        const temaViajanteSem = sem.temaViajanteEntreSemana || 'Discurso del superintendente de circuito';
-        const temaDiscPub = sem.temaDiscPub || 'Discurso público:';
-        const temaDiscFin = sem.temaDiscFin || 'Discurso final:';
+        const temaViajanteSem = sem.temaViajanteEntreSemana || 'Título del discurso';
+        const temaDiscPub = sem.temaDiscPub || 'Título del discurso';
+        const temaDiscFin = sem.temaDiscFin || 'Discurso final: Título del discurso';
 
         filasHTML += `
             <tr>
@@ -353,9 +355,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="font-bold text-blue-900" colspan="2">
                     <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${temaViajanteSem}</span>
                 </td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
+                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', temaViajanteSem)}
                     </div>
                 </td>
@@ -368,7 +370,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-amber-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.oracionFin || ''}" onchange="actualizarCampoSemana('oracionFin', this.value)">
+                        ${crearSelectHTML('sel-oracionFin', 'pres', sem.oracionFin)}
                         ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración final')}
                     </div>
                 </td>
@@ -402,9 +404,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="px-2 font-bold text-blue-900" colspan="2">
                     <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${temaDiscPub}</span>
                 </td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
+                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', temaDiscPub)}
                     </div>
                 </td>
@@ -420,9 +422,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo">30 min</td>
                 <td class="px-2 font-medium" colspan="2">Estudio de la Biblia a través de la Revista La Atalaya</td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigConductorAtalaya || ''}" onchange="actualizarCampoSemana('asigConductorAtalaya', this.value)">
+                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigConductorAtalaya || ''}" onchange="actualizarCampoSemana('asigConductorAtalaya', this.value)">
                     </div>
                 </td>
                 <td class="no-print"></td>
@@ -432,9 +434,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="px-2 font-bold text-blue-900" colspan="2">
                     <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${temaDiscFin}</span>
                 </td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
+                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', temaDiscFin)}
                     </div>
                 </td>
@@ -445,9 +447,10 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="px-2 font-medium" colspan="2">
                     Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)"> y oración
                 </td>
-                <td colspan="7" class="font-black uppercase text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" class="input-inline w-full text-blue-950 font-black uppercase text-xs" placeholder="NOMBRE Y APELLIDO" value="${sem.asigOracionDomFin || ''}" onchange="actualizarCampoSemana('asigOracionDomFin', this.value)">
+                        ${crearSelectHTML('sel-oracionDomFin', 'pres', sem.asigOracionDomFin)}
+                        ${crearBotonWhatsAppHTML(sem.asigOracionDomFin, '', 'Oración final (Domingo)')}
                     </div>
                 </td>
                 <td class="no-print"></td>
@@ -531,6 +534,7 @@ window.guardarAsignacionSemana = function(idSelect) {
     else if (idSelect === 'sel-oracionFin') sem.oracionFin = val;
     else if (idSelect === 'sel-domPresi') sem.domPresi = val;
     else if (idSelect === 'sel-domLector') sem.domLector = val;
+    else if (idSelect === 'sel-oracionDomFin') sem.asigOracionDomFin = val;
     else if (idSelect.startsWith('sel-parte-ayu-')) {
         const idx = parseInt(idSelect.replace('sel-parte-ayu-', ''));
         if (sem.partes[idx]) sem.partes[idx].asigAyudante = val;
