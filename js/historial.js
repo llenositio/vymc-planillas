@@ -1,311 +1,412 @@
 /**
- * Módulo de Historial y Estadísticas Dinámicas de Asignaciones
- * Versión de Alta Legibilidad: Fuentes más grandes, mayor padding y columnas uniformes.
+ * Módulo de Historial, Estadísticas Acumuladas y Matriz de Hermanos
+ * Incluye algoritmo de sugerencia por rotación y antigüedad en cada rol.
  */
 
-const ORDEN_CONDICIONES = [
-    { clave: 'A', titulo: 'Ancianos' },
-    { clave: 'SM', titulo: 'Siervos Ministeriales' },
-    { clave: 'Prec', titulo: 'Precursores' },
-    { clave: 'Pub', titulo: 'Publicadores' },
-    { clave: 'PNB', titulo: 'Publicadores No Bautizados' }
-];
+window.historialAsignaciones = [];
+window.historialPorHermanoRol = {};
 
 /**
- * Busca una planilla en el historial y actualiza el visor del editor y el link público
+ * Carga todas las planillas guardadas de la congregación desde Supabase para calcular el historial real
+ */
+window.cargarHistorialDesdeSupabase = async function() {
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
+    if (!idCongre) return;
+
+    const { data, error } = await db
+        .from('planillas')
+        .select('mes_ano, datos, updated_at')
+        .eq('congregacion_id', idCongre)
+        .order('updated_at', { ascending: true });
+
+    if (error) {
+        console.error("Error cargando historial de planillas:", error);
+        return;
+    }
+
+    window.historialAsignaciones = data || [];
+    window.procesarHistorialAsignaciones();
+};
+
+/**
+ * Procesa las planillas históricas y construye un mapa por hermano y rol
+ */
+window.procesarHistorialAsignaciones = function() {
+    const mapa = {};
+
+    const registrar = (nombreRaw, rol, ordenTiempo, etiquetaMes) => {
+        if (!nombreRaw || typeof nombreRaw !== 'string') return;
+        const nombreLimpio = nombreRaw.split('(')[0].trim();
+        if (!nombreLimpio || nombreLimpio.startsWith('--')) return;
+
+        const key = nombreLimpio.toLowerCase();
+        if (!mapa[key]) mapa[key] = {};
+        if (!mapa[key][rol]) {
+            mapa[key][rol] = { count: 0, lastOrder: -1, lastMes: '' };
+        }
+
+        mapa[key][rol].count += 1;
+        if (ordenTiempo >= mapa[key][rol].lastOrder) {
+            mapa[key][rol].lastOrder = ordenTiempo;
+            mapa[key][rol].lastMes = etiquetaMes;
+        }
+    };
+
+    let ordenGlobal = 0;
+
+    (window.historialAsignaciones || []).forEach(planilla => {
+        const mesLabel = planilla.mes_ano || 'SIN MES';
+        const semanas = typeof planilla.datos === 'string' ? JSON.parse(planilla.datos) : (planilla.datos || []);
+
+        if (!Array.isArray(semanas)) return;
+
+        semanas.forEach(sem => {
+            if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
+            ordenGlobal++;
+
+            if (sem.presidencia) {
+                registrar(sem.presidencia, 'presi', ordenGlobal, mesLabel);
+                registrar(sem.presidencia, 'tesoros', ordenGlobal, mesLabel);
+            }
+            if (sem.oracionIni) registrar(sem.oracionIni, 'oraciones', ordenGlobal, mesLabel);
+            if (sem.repaso) {
+                registrar(sem.repaso, 'presi', ordenGlobal, mesLabel);
+                registrar(sem.repaso, 'nvc', ordenGlobal, mesLabel);
+            }
+            if (sem.oracionFin) registrar(sem.oracionFin, 'oraciones', ordenGlobal, mesLabel);
+            if (sem.domPresi) registrar(sem.domPresi, 'presiDom', ordenGlobal, mesLabel);
+            if (sem.domLector) registrar(sem.domLector, 'lectorAtalaya', ordenGlobal, mesLabel);
+
+            (sem.partes || []).forEach(p => {
+                const titLower = (p.tit || '').toLowerCase();
+
+                if (p.seccion === 'tesoros') {
+                    if (p.asig) registrar(p.asig, 'tesoros', ordenGlobal, mesLabel);
+                    if (p.tit.startsWith('1.') && p.asig) registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
+                    if (p.tit.startsWith('2.') && p.asig) registrar(p.asig, 'perlas', ordenGlobal, mesLabel);
+                    if ((p.tit.startsWith('3.') || titLower.includes('lectura')) && p.asig) {
+                        registrar(p.asig, 'smm', ordenGlobal, mesLabel);
+                    }
+                } else if (p.seccion === 'maestros') {
+                    [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(nom => {
+                        if (nom) registrar(nom, 'smm', ordenGlobal, mesLabel);
+                    });
+                } else if (p.seccion === 'vida') {
+                    if (p.asig) registrar(p.asig, 'nvc', ordenGlobal, mesLabel);
+                    if (titLower.includes('estudio bíblico')) {
+                        if (p.asig) registrar(p.asig, 'estudioBiblico', ordenGlobal, mesLabel);
+                        if (p.asigAyudante) registrar(p.asigAyudante, 'lectorLibro', ordenGlobal, mesLabel);
+                    } else {
+                        if (p.asig) registrar(p.asig, 'nvcOtro', ordenGlobal, mesLabel);
+                    }
+                }
+            });
+        });
+    });
+
+    window.historialPorHermanoRol = mapa;
+};
+
+/**
+ * Ordena una lista de hermanos aptos para un rol específico priorizando:
+ * 1. Quienes nunca han tenido ese rol o lo tuvieron hace más tiempo (menor lastOrder)
+ * 2. Menor cantidad de veces realizadas en ese rol
+ * 3. Orden alfabético
+ */
+window.obtenerSugeridosPorRol = function(rol, listaAptos) {
+    if (!Array.isArray(listaAptos)) return [];
+    const mapa = window.historialPorHermanoRol || {};
+
+    return [...listaAptos].sort((a, b) => {
+        const keyA = (a.nombre || '').trim().toLowerCase();
+        const keyB = (b.nombre || '').trim().toLowerCase();
+
+        const infoA = (mapa[keyA] && mapa[keyA][rol]) ? mapa[keyA][rol] : { count: 0, lastOrder: -1 };
+        const infoB = (mapa[keyB] && mapa[keyB][rol]) ? mapa[keyB][rol] : { count: 0, lastOrder: -1 };
+
+        if (infoA.lastOrder !== infoB.lastOrder) {
+            return infoA.lastOrder - infoB.lastOrder;
+        }
+        if (infoA.count !== infoB.count) {
+            return infoA.count - infoB.count;
+        }
+        return (a.nombre || '').localeCompare(b.nombre || '');
+    });
+};
+
+/**
+ * Busca y carga una planilla histórica por mes y año
  */
 window.buscarYCargarPlanillaHistorial = async function() {
-    const selectMes = document.getElementById('selectFiltroMes');
-    const selectAnio = document.getElementById('selectFiltroAnio');
-    
-    if (!selectMes || !selectAnio) return;
+    const selMes = document.getElementById('selectFiltroMes');
+    const selAnio = document.getElementById('selectFiltroAnio');
+    if (!selMes || !selAnio) return;
 
-    const mesBuscado = `${selectMes.value} ${selectAnio.value}`.toUpperCase();
+    const mesBuscado = `${selMes.value} ${selAnio.value}`.trim().toUpperCase();
+    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
 
-    // 1. Escribir el mes buscado en el input del editor
-    window.nombreMesGlobal = mesBuscado;
-    const inputMes = document.getElementById('inputNombreMes');
-    if (inputMes) inputMes.value = mesBuscado;
-
-    // 2. Consultar la planilla guardada en Supabase
-    if (!window.congregacionIdActual) {
-        alert("Atención: No hay una congregación activa seleccionada.");
+    if (!idCongre) {
+        alert("No hay congregación seleccionada.");
         return;
     }
 
     const { data, error } = await db
         .from('planillas')
         .select('*')
-        .eq('congregacion_id', window.congregacionIdActual)
+        .eq('congregacion_id', idCongre)
         .eq('mes_ano', mesBuscado)
         .maybeSingle();
 
     if (error) {
-        console.error("Error al buscar en el historial:", error);
-        alert("Ocurrió un error al consultar la planilla en la base de datos.");
+        console.error("Error buscando planilla en historial:", error);
+        alert("Ocurrió un error al buscar la planilla.");
         return;
     }
 
-    if (data) {
-        window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
-    } else {
-        window.programaMes = [];
-        alert(`No se encontró una planilla guardada para ${mesBuscado}. Se mostrará una planilla vacía.`);
+    if (!data || !data.datos) {
+        alert(`No se encontró ninguna planilla guardada para "${mesBuscado}".`);
+        return;
     }
 
-    // 3. Renderizar la planilla y cambiar a la pestaña 'planilla'
-    if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(mesBuscado);
-    if (typeof renderizarSelectorSemanas === 'function') renderizarSelectorSemanas();
-    if (typeof cargarSemanaEnPlanilla === 'function') cargarSemanaEnPlanilla(0);
-    if (typeof cambiarPestaña === 'function') cambiarPestaña('planilla');
+    window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+    window.nombreMesGlobal = data.mes_ano;
+    window.semanaActivaIdx = 0;
 
-    // 4. Actualizar la franja verde del link público
+    const inputMes = document.getElementById('inputNombreMes');
+    if (inputMes) inputMes.value = window.nombreMesGlobal;
+    if (typeof window.actualizarTextoTituloMes === 'function') {
+        window.actualizarTextoTituloMes(window.nombreMesGlobal);
+    }
+
+    if (typeof window.cambiarPestaña === 'function') {
+        window.cambiarPestaña('planilla');
+    }
+    if (typeof window.renderizarSelectorSemanas === 'function') {
+        window.renderizarSelectorSemanas();
+    }
+    if (typeof window.cargarSemanaEnPlanilla === 'function') {
+        window.cargarSemanaEnPlanilla(0);
+    }
     if (typeof window.actualizarLinkPublico === 'function') {
         window.actualizarLinkPublico();
     }
+    if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
+        await window.cargarPlanillaAVDesdeSupabase();
+    }
 };
 
-window.renderizarTablaHistorial = function() {
+/**
+ * Renderiza la tabla de Estadísticas Acumuladas en la pestaña "Estadísticas"
+ */
+window.renderizarTablaHistorial = async function() {
     const contenedor = document.getElementById('contenedorTablaHistorial');
     if (!contenedor) return;
 
-    if (!Array.isArray(listaHermanos) || listaHermanos.length === 0) {
-        contenedor.innerHTML = `<div class="p-8 text-center text-slate-500 font-semibold text-base">No hay hermanos cargados en la matriz.</div>`;
+    if (!window.historialAsignaciones || window.historialAsignaciones.length === 0) {
+        await window.cargarHistorialDesdeSupabase();
+    } else {
+        window.procesarHistorialAsignaciones();
+    }
+
+    const hermanos = window.listaHermanos || [];
+    if (hermanos.length === 0) {
+        contenedor.innerHTML = `<p class="text-center text-xs text-slate-500 py-6">No hay hermanos cargados en la congregación.</p>`;
         return;
     }
 
-    const conteos = calcularConteosCombinados();
+    const categorias = [
+        { key: 'A', titulo: 'Ancianos' },
+        { key: 'SM', titulo: 'Siervos Ministeriales' },
+        { key: 'Pub', titulo: 'Publicadores' },
+        { key: 'Otro', titulo: 'Sin Categoría' }
+    ];
 
-    const grupos = {};
-    ORDEN_CONDICIONES.forEach(c => grupos[c.clave] = []);
-    grupos['Otros'] = [];
+    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'Otro': [] };
+    hermanos.forEach(h => {
+        const cond = (h.condicion || '').trim();
+        if (cond === 'A') grupos['A'].push(h);
+        else if (cond === 'SM') grupos['SM'].push(h);
+        else if (cond === 'Pub' || cond === 'Publicador') grupos['Pub'].push(h);
+        else grupos['Otro'].push(h);
+    });
 
-    listaHermanos.forEach(h => {
-        const condNorm = (h.condicion || '').trim();
-        if (grupos[condNorm]) {
-            grupos[condNorm].push(h);
-        } else {
-            grupos['Otros'].push(h);
-        }
+    const conteoMesActivo = {};
+    const sumarActivo = (nom, cat) => {
+        if (!nom) return;
+        const k = nom.split('(')[0].trim().toLowerCase();
+        if (!conteoMesActivo[k]) conteoMesActivo[k] = { tesoros: 0, smm: 0, nvc: 0, presi: 0, oraciones: 0 };
+        conteoMesActivo[k][cat] = (conteoMesActivo[k][cat] || 0) + 1;
+    };
+
+    (window.programaMes || []).forEach(sem => {
+        if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
+        if (sem.presidencia) { sumarActivo(sem.presidencia, 'presi'); sumarActivo(sem.presidencia, 'tesoros'); }
+        if (sem.oracionIni) sumarActivo(sem.oracionIni, 'oraciones');
+        if (sem.repaso) { sumarActivo(sem.repaso, 'presi'); sumarActivo(sem.repaso, 'nvc'); }
+        if (sem.oracionFin) sumarActivo(sem.oracionFin, 'oraciones');
+
+        (sem.partes || []).forEach(p => {
+            if (p.seccion === 'tesoros') {
+                if (p.asig) sumarActivo(p.asig, 'tesoros');
+                if ((p.tit.startsWith('3.') || (p.tit || '').toLowerCase().includes('lectura')) && p.asig) {
+                    sumarActivo(p.asig, 'smm');
+                }
+            } else if (p.seccion === 'maestros') {
+                [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(n => sumarActivo(n, 'smm'));
+            } else if (p.seccion === 'vida') {
+                if (p.asig) sumarActivo(p.asig, 'nvc');
+            }
+        });
     });
 
     let html = `
-        <table class="w-full text-sm text-center border-collapse">
-            <colgroup>
-                <col class="w-60">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-24">
-                <col class="w-28">
-            </colgroup>
-            <thead>
-                <!-- PRIMERA FILA DE ENCABEZADOS (Fija arriba) -->
-                <tr class="bg-slate-900 text-white font-extrabold uppercase text-xs tracking-wider border-b border-slate-800">
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-3 text-left border-r border-slate-800" rowspan="2">HERMANO</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Pres.<br>Vid y Min</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Tesoros de la Biblia</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800" rowspan="2">SMM</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Nuestra vida cristiana</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-2 px-1 border-r border-slate-800" colspan="2">Lecturas</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">Estudio<br>Bíblico</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800" rowspan="2">Oraciones</th>
-                    <th class="sticky top-0 z-20 bg-slate-900 py-3 px-1 border-r border-slate-800 leading-snug" rowspan="2">P. Pública<br>+ Oración</th>
-                    <th class="sticky top-0 z-20 bg-amber-600 text-white py-3 px-1 font-black tracking-wider border-l border-amber-500" rowspan="2">PRESENCIA</th>
-                </tr>
-                <!-- SEGUNDA FILA DE ENCABEZADOS (Fija justo debajo de la primera) -->
-                <tr class="bg-slate-800 text-slate-200 font-bold text-[11px] uppercase border-b border-slate-700">
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Discurso</th>
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Busquemos<br>perlas</th>
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Necesidades<br>Locales</th>
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Otro</th>
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Libro</th>
-                    <th class="sticky top-[32px] z-20 bg-slate-800 py-2.5 px-1 border-r border-slate-700 leading-tight">Atalaya</th>
+        <table class="w-full text-xs text-left border-collapse">
+            <thead class="bg-slate-900 text-white uppercase text-[11px] font-extrabold sticky top-0 z-10">
+                <tr>
+                    <th class="px-3 py-2 border border-slate-700">Hermano / Hermana</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center w-14">Grupo</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-cyan-900">Tesoros</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-amber-800">Maestros</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-rose-900">Vida Crist.</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-slate-800">Presid.</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-slate-800">Oraciones</th>
+                    <th class="px-2 py-2 border border-slate-700 text-center bg-emerald-900">Total Hist.</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200 font-medium">
+            <tbody class="divide-y divide-slate-200">
     `;
 
-    ORDEN_CONDICIONES.concat([{ clave: 'Otros', titulo: 'Sin Categoría' }]).forEach(grupo => {
-        const hermanosGrupo = grupos[grupo.clave] || [];
-        if (hermanosGrupo.length === 0) return;
+    const mapaHist = window.historialPorHermanoRol || {};
+
+    categorias.forEach(cat => {
+        const lista = grupos[cat.key];
+        if (!lista || lista.length === 0) return;
 
         html += `
-            <tr class="bg-slate-200/90 border-y border-slate-300 font-black text-slate-900 text-left">
-                <td colspan="13" class="px-4 py-2.5 uppercase tracking-wide text-xs">
-                    ${grupo.titulo} (${hermanosGrupo.length})
-                </td>
+            <tr class="bg-slate-200 font-black text-slate-800 uppercase text-[11px]">
+                <td colspan="8" class="px-3 py-1.5 border border-slate-300">${cat.titulo} (${lista.length})</td>
             </tr>
         `;
 
-        hermanosGrupo.forEach(h => {
-            const data = conteos[h.nombre] || crearEstructuraVacia();
+        lista.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).forEach(h => {
+            const k = (h.nombre || '').trim().toLowerCase();
+            const hData = mapaHist[k] || {};
+
+            const cTesoros = hData.tesoros ? hData.tesoros.count : 0;
+            const cSmm = hData.smm ? hData.smm.count : 0;
+            const cNvc = hData.nvc ? hData.nvc.count : 0;
+            const cPresi = hData.presi ? hData.presi.count : 0;
+            const cOrac = hData.oraciones ? hData.oraciones.count : 0;
+            const totalHist = cTesoros + cSmm + cNvc + cOrac;
+
+            const mesT = hData.tesoros ? hData.tesoros.lastMes : '';
+            const mesS = hData.smm ? hData.smm.lastMes : '';
+            const mesN = hData.nvc ? hData.nvc.lastMes : '';
 
             html += `
-                <tr class="hover:bg-slate-50 transition text-sm">
-                    <td class="py-3 px-3 text-left font-bold text-slate-800 border-r border-slate-200 whitespace-nowrap">
-                        <div class="flex items-center justify-between gap-1">
-                            <span>${h.nombre}</span>
-                            ${data.totalActivo > 0 ? `<span class="shrink-0 px-1.5 py-0.5 rounded text-[11px] font-black bg-amber-200 text-amber-950 border border-amber-400">Planilla: ${data.totalActivo}</span>` : ''}
-                        </div>
-                    </td>
-                    ${renderCeldaConteo(data.hist.presi, data.act.presi)}
-                    ${renderCeldaConteo(data.hist.discurso, data.act.discurso)}
-                    ${renderCeldaConteo(data.hist.perlas, data.act.perlas)}
-                    ${renderCeldaConteo(data.hist.smm, data.act.smm)}
-                    ${renderCeldaConteo(data.hist.necLocales, data.act.necLocales)}
-                    ${renderCeldaConteo(data.hist.nvcOtro, data.act.nvcOtro)}
-                    ${renderCeldaConteo(data.hist.lectorLibro, data.act.lectorLibro)}
-                    ${renderCeldaConteo(data.hist.lectorAtalaya, data.act.lectorAtalaya)}
-                    ${renderCeldaConteo(data.hist.estudioBiblico, data.act.estudioBiblico)}
-                    ${renderCeldaConteo(data.hist.oraciones, data.act.oraciones)}
-                    ${renderCeldaConteo(data.hist.presiDom, data.act.presiDom)}
-                    <td class="py-3 px-2 font-black border-l-2 border-slate-300 text-center text-base ${data.hist.total > 0 ? 'bg-amber-100 text-amber-950' : 'bg-slate-50 text-slate-400'}">
-                        ${data.hist.total}
-                    </td>
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="px-3 py-1.5 font-bold text-slate-900 border border-slate-200">${h.nombre}</td>
+                    <td class="px-2 py-1.5 text-center text-slate-600 border border-slate-200">${h.grupo || '-'}</td>
+                    <td class="px-2 py-1.5 text-center font-bold text-cyan-900 border border-slate-200" title="Último: ${mesT}">${cTesoros}</td>
+                    <td class="px-2 py-1.5 text-center font-bold text-amber-900 border border-slate-200" title="Último: ${mesS}">${cSmm}</td>
+                    <td class="px-2 py-1.5 text-center font-bold text-rose-900 border border-slate-200" title="Último: ${mesN}">${cNvc}</td>
+                    <td class="px-2 py-1.5 text-center font-semibold text-slate-700 border border-slate-200">${cPresi}</td>
+                    <td class="px-2 py-1.5 text-center font-semibold text-slate-700 border border-slate-200">${cOrac}</td>
+                    <td class="px-2 py-1.5 text-center font-black text-emerald-900 bg-emerald-50/50 border border-slate-200">${totalHist}</td>
                 </tr>
             `;
         });
     });
 
-    html += `
-            </tbody>
-        </table>
-    `;
-
+    html += `</tbody></table>`;
     contenedor.innerHTML = html;
 };
 
-function renderCeldaConteo(valorHist, valorAct) {
-    if (valorAct > 0) {
-        return `<td class="py-3 px-2 font-black border-r border-slate-200 bg-amber-200 text-amber-950 border-2 border-amber-400 text-sm">
-            ${valorHist} <span class="text-[11px] text-amber-900 font-extrabold block leading-none mt-0.5">(+${valorAct} act)</span>
-        </td>`;
-    }
-    if (valorHist > 0) {
-        return `<td class="py-3 px-2 font-bold border-r border-slate-200 bg-red-100 text-red-900 text-sm">${valorHist}</td>`;
-    }
-    return `<td class="py-3 px-2 border-r border-slate-200 text-slate-300 text-sm">0</td>`;
-}
-
-function crearEstructuraVacia() {
-    return {
-        hist: { presi:0, discurso:0, perlas:0, smm:0, necLocales:0, nvcOtro:0, lectorLibro:0, lectorAtalaya:0, estudioBiblico:0, oraciones:0, presiDom:0, total:0 },
-        act:  { presi:0, discurso:0, perlas:0, smm:0, necLocales:0, nvcOtro:0, lectorLibro:0, lectorAtalaya:0, estudioBiblico:0, oraciones:0, presiDom:0, total:0 },
-        totalActivo: 0
-    };
-}
-
-function calcularConteosCombinados() {
-    const res = {};
-
-    if (Array.isArray(listaHermanos)) {
-        listaHermanos.forEach(h => res[h.nombre] = crearEstructuraVacia());
-    }
-
-    const sumar = (nombre, cat, esActivo = false) => {
-        if (!nombre || !res[nombre]) return;
-        if (esActivo) {
-            res[nombre].act[cat] = (res[nombre].act[cat] || 0) + 1;
-            res[nombre].act.total = (res[nombre].act.total || 0) + 1;
-            res[nombre].totalActivo = (res[nombre].totalActivo || 0) + 1;
-        }
-        res[nombre].hist[cat] = (res[nombre].hist[cat] || 0) + 1;
-        res[nombre].hist.total = (res[nombre].hist.total || 0) + 1;
-    };
-
-    if (!Array.isArray(programaMes)) return res;
-
-    programaMes.forEach(sem => {
-        if (!sem) return;
-        const esAct = true;
-
-        sumar(sem.presidencia, 'presi', esAct);
-        sumar(sem.oracionIni, 'oraciones', esAct);
-        sumar(sem.repaso, 'presi', esAct);
-        sumar(sem.oracionFin, 'oraciones', esAct);
-        sumar(sem.domPresi, 'presiDom', esAct);
-        sumar(sem.domLector, 'lectorAtalaya', esAct);
-
-        const partes = sem.partes || [];
-        partes.forEach(p => {
-            if (p.seccion === 'tesoros') {
-                if (p.tit && p.tit.toLowerCase().includes('perlas')) {
-                    sumar(p.asig, 'perlas', esAct);
-                } else if (p.tit && p.tit.toLowerCase().includes('lectura')) {
-                    sumar(p.asig, 'smm', esAct);
-                    sumar(p.asigB, 'smm', esAct);
-                    sumar(p.asigC, 'smm', esAct);
-                } else {
-                    sumar(p.asig, 'discurso', esAct);
-                }
-            } else if (p.seccion === 'maestros') {
-                sumar(p.asig, 'smm', esAct);
-                sumar(p.asigAyudante, 'smm', esAct);
-                sumar(p.asigB, 'smm', esAct);
-                sumar(p.asigBAyudante, 'smm', esAct);
-                sumar(p.asigC, 'smm', esAct);
-                sumar(p.asigCAyudante, 'smm', esAct);
-            } else if (p.seccion === 'vida') {
-                if (p.tit && p.tit.toLowerCase().includes('estudio bíblico')) {
-                    sumar(p.asig, 'estudioBiblico', esAct);
-                    sumar(p.asigAyudante, 'lectorLibro', esAct);
-                } else if (p.tit && p.tit.toLowerCase().includes('necesidades locales')) {
-                    sumar(p.asig, 'necLocales', esAct);
-                } else {
-                    sumar(p.asig, 'nvcOtro', esAct);
-                }
-            }
-        });
-    });
-
-    return res;
-}
-
 /**
- * FASE 1: Motor de Cálculo de Sugeridos para Roles Individuales
- * @param {string} tipoAsignacion - Tipo de parte (ej: 'presi', 'oraciones', 'discurso', 'perlas')
- * @param {Array} candidatos - Lista de hermanos filtrados por condición o matriz
- * @returns {Array} Candidatos ordenados de MAYOR prioridad a MENOR
+ * Renderiza la Matriz de Hermanos VyMC en la pestaña "Matriz VyMC"
  */
-window.obtenerSugeridosPorRol = function(tipoAsignacion, candidatos) {
-    if (!candidatos || candidatos.length === 0) return [];
-    
-    // Si no se puede calcular conteos, devuelve el orden por defecto
-    const conteos = calcularConteosCombinados();
-    const claveCat = (tipoAsignacion || '').toLowerCase().trim();
+window.renderizarMatrizHermanos = function() {
+    const tbody = document.getElementById('cuerpoTablaHermanos');
+    if (!tbody) return;
 
-    // Mapeamos candidatos con sus métricas
-    const candidatosConMetricas = candidatos.map(hermano => {
-        const stats = conteos[hermano.nombre] || crearEstructuraVacia();
-        
-        // Cantidad de veces que hizo esta categoría en el historial + activo
-        const totalCategoria = stats.hist[claveCat] || 0;
-        // Total general de asignaciones que tiene el hermano
-        const totalGeneral = stats.hist.total || 0;
+    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
+    const hermanos = window.listaHermanos || [];
 
-        return {
-            hermano: hermano,
-            totalCategoria: totalCategoria,
-            totalGeneral: totalGeneral
-        };
+    let html = '';
+    const camposBool = [
+        'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 'lec_biblia',
+        'smm', 'nvc', 'ebc', 'lector_ebc', 'pres_pub', 'lector_atalaya'
+    ];
+
+    hermanos.forEach((h, idx) => {
+        const disabledAttr = esMensajero ? 'disabled' : '';
+        const editableAttr = esMensajero ? 'false' : 'true';
+
+        html += `<tr class="hover:bg-slate-50 transition">`;
+        html += `<td class="border border-slate-300 font-bold text-slate-500">${idx + 1}</td>`;
+        html += `
+            <td class="border border-slate-300 text-left px-2 font-bold text-slate-900">
+                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'nombre', this.innerText.trim())" class="editable-field block">${h.nombre || ''}</span>
+            </td>
+        `;
+        html += `
+            <td class="border border-slate-300">
+                <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'sexo', this.value)" class="bg-transparent font-bold text-xs outline-none">
+                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
+                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
+                </select>
+            </td>
+        `;
+        html += `
+            <td class="border border-slate-300">
+                <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'condicion', this.value)" class="bg-transparent font-bold text-xs outline-none">
+                    <option value="Pub" ${(h.condicion === 'Pub' || h.condicion === 'Publicador') ? 'selected' : ''}>Pub</option>
+                    <option value="SM" ${h.condicion === 'SM' ? 'selected' : ''}>SM</option>
+                    <option value="A" ${h.condicion === 'A' ? 'selected' : ''}>A</option>
+                </select>
+            </td>
+        `;
+        html += `
+            <td class="border border-slate-300">
+                <input type="number" ${disabledAttr} value="${h.grupo || 1}" onchange="actualizarHermanoBD(${h.id}, 'grupo', parseInt(this.value) || 1)" class="w-10 text-center bg-transparent font-bold outline-none">
+            </td>
+        `;
+        html += `
+            <td class="border border-slate-300">
+                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'responsabilidades', this.innerText.trim())" class="editable-field text-xs">${h.responsabilidades || ''}</span>
+            </td>
+        `;
+        html += `
+            <td class="border border-slate-300 font-mono text-xs">
+                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'celular', this.innerText.trim())" class="editable-field">${h.celular || ''}</span>
+            </td>
+        `;
+
+        camposBool.forEach(campo => {
+            const checked = (h[campo] === true || h[campo] === 'X') ? 'checked' : '';
+            html += `
+                <td class="border border-slate-300 text-center">
+                    <input type="checkbox" ${checked} ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, '${campo}', this.checked)" class="w-4 h-4 rounded text-amber-600 cursor-pointer">
+                </td>
+            `;
+        });
+
+        html += `
+            <td class="border border-slate-300 text-center no-print">
+                ${!esMensajero ? `
+                <button onclick="if(confirm('¿Eliminar a ${h.nombre}?')) eliminarHermanoBD(${h.id})" class="text-rose-500 hover:text-rose-700 p-1">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>` : ''}
+            </td>
+        `;
+        html += `</tr>`;
     });
 
-    // Ordenamos: Primero los que menos veces hicieron esta categoría específica;
-    // a igualdad, los que menos asignaciones totales tengan acumuladas.
-    candidatosConMetricas.sort((a, b) => {
-        if (a.totalCategoria !== b.totalCategoria) {
-            return a.totalCategoria - b.totalCategoria;
-        }
-        return a.totalGeneral - b.totalGeneral;
-    });
+    tbody.innerHTML = html;
+};
 
-    return candidatosConMetricas.map(c => c.hermano);
+window.agregarNuevoHermano = function() {
+    if (typeof window.agregarNuevoHermanoBD === 'function') {
+        window.agregarNuevoHermanoBD();
+    }
 };
