@@ -1,3 +1,7 @@
+/**
+ * Helpers de Interfaz de Usuario (Selects con prioridad inteligente y botones WhatsApp)
+ */
+
 window.fNom = function(str) {
     if (!str || str.includes('--') || str.includes('ELEGIR') || str.includes('ASIGNAR')) return '';
     return str.split('(')[0].trim();
@@ -23,7 +27,28 @@ window.obtenerOpcionesHermanos = function(cat) {
 };
 
 window.crearSelectHTML = function(id, cat, valorActual = "", placeholder = "ELEGIR") {
-    const aptos = obtenerOpcionesHermanos(cat);
+    let aptos = window.obtenerOpcionesHermanos(cat);
+
+    // Mapeo de categoría del select a clave del motor de historial
+    const mapCatHistorial = {
+        'pres': 'presi',
+        'orac': 'oraciones',
+        'disc': 'discurso',
+        'perlas': 'perlas',
+        'lec': 'smm',
+        'smm': 'smm',
+        'nvc': 'nvcOtro',
+        'eb': 'estudioBiblico',
+        'lectorL': 'lectorLibro',
+        'presPub': 'presiDom',
+        'lectorW': 'lectorAtalaya'
+    };
+
+    const claveMotor = mapCatHistorial[cat] || cat;
+    if (typeof window.obtenerSugeridosPorRol === 'function') {
+        aptos = window.obtenerSugeridosPorRol(claveMotor, aptos);
+    }
+
     let options = `<option value="">-- ${placeholder} --</option>`;
     
     const conteoActivo = {};
@@ -45,7 +70,7 @@ window.crearSelectHTML = function(id, cat, valorActual = "", placeholder = "ELEG
     aptos.forEach(h => {
         const sel = h.nombre === valorActual ? 'selected' : '';
         const cantMes = conteoActivo[h.nombre] || 0;
-        const badge = cantMes > 0 ? ` (⚠️ ${cantMes} asig. activa)` : '';
+        const badge = cantMes > 0 ? ` (⚠️ ${cantMes} asig.)` : '';
         options += `<option value="${h.nombre}" ${sel}>${h.nombre}${badge}</option>`;
     });
 
