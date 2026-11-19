@@ -332,9 +332,9 @@ window.cargarSemanaEnPlanilla = function(idx) {
     // 3. FILAS INFERIORES + FIN DE SEMANA
     if (sem.tipoSemana === 'viajante') {
         const tiempoViajanteSem = sem.tiempoViajanteEntreSemana || '30 min';
-        const temaViajanteSem = sem.temaViajanteEntreSemana || 'Título del discurso';
-        const temaDiscPub = sem.temaDiscPub || 'Título del discurso';
-        const temaDiscFin = sem.temaDiscFin || 'Discurso final: Título del discurso';
+        const temaViajanteSem = (!sem.temaViajanteEntreSemana || sem.temaViajanteEntreSemana === 'undefined') ? 'Título del discurso' : sem.temaViajanteEntreSemana;
+        const temaDiscPub = (!sem.temaDiscPub || sem.temaDiscPub === 'undefined') ? 'Título del discurso' : sem.temaDiscPub;
+        const temaDiscFin = (!sem.temaDiscFin || sem.temaDiscFin === 'undefined') ? 'Discurso final: Título del discurso' : sem.temaDiscFin;
 
         filasHTML += `
             <tr>
@@ -370,7 +370,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        ${crearSelectHTML('sel-oracionFin', 'pres', sem.oracionFin)}
+                        ${crearSelectHTML('sel-oracionFin', 'orac', sem.oracionFin)}
                         ${crearBotonWhatsAppHTML(sem.oracionFin, '', 'Oración final')}
                     </div>
                 </td>
@@ -422,9 +422,10 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo">30 min</td>
                 <td class="px-2 font-medium" colspan="2">Estudio de la Biblia a través de la Revista La Atalaya</td>
-                <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
+                <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigConductorAtalaya || ''}" onchange="actualizarCampoSemana('asigConductorAtalaya', this.value)">
+                        ${crearSelectHTML('sel-conductorAtalaya', 'pres', sem.asigConductorAtalaya)}
+                        ${crearBotonWhatsAppHTML(sem.asigConductorAtalaya, '', 'Conductor de La Atalaya')}
                     </div>
                 </td>
                 <td class="no-print"></td>
@@ -449,7 +450,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        ${crearSelectHTML('sel-oracionDomFin', 'pres', sem.asigOracionDomFin)}
+                        ${crearSelectHTML('sel-oracionDomFin', 'orac', sem.asigOracionDomFin)}
+                        <input type="text" style="text-transform: none;" class="input-inline w-40 border-b border-slate-400 text-blue-950 font-bold text-xs" placeholder="O escribir nombre..." value="${sem.asigOracionDomFin || ''}" onchange="actualizarCampoSemana('asigOracionDomFin', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigOracionDomFin, '', 'Oración final (Domingo)')}
                     </div>
                 </td>
@@ -534,6 +536,7 @@ window.guardarAsignacionSemana = function(idSelect) {
     else if (idSelect === 'sel-oracionFin') sem.oracionFin = val;
     else if (idSelect === 'sel-domPresi') sem.domPresi = val;
     else if (idSelect === 'sel-domLector') sem.domLector = val;
+    else if (idSelect === 'sel-conductorAtalaya') sem.asigConductorAtalaya = val;
     else if (idSelect === 'sel-oracionDomFin') sem.asigOracionDomFin = val;
     else if (idSelect.startsWith('sel-parte-ayu-')) {
         const idx = parseInt(idSelect.replace('sel-parte-ayu-', ''));
