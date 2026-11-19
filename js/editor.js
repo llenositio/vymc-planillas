@@ -539,7 +539,34 @@ window.agregarParteSeccion = function(seccion) {
         participantes: seccion === 'maestros' ? 2 : 1,
         asig: ""
     };
-    window.programaMes[window.semanaActivaIdx].partes.push(nueva);
+
+    const partes = window.programaMes[window.semanaActivaIdx].partes;
+
+    if (seccion === 'vida') {
+        const idxEstudio = partes.findIndex(p =>
+            p.seccion === 'vida' && (p.tit || '').toLowerCase().includes('estudio bíblico')
+        );
+        if (idxEstudio !== -1) {
+            partes.splice(idxEstudio, 0, nueva);
+            cargarSemanaEnPlanilla(window.semanaActivaIdx);
+            notificarYGuardarAutosave();
+            return;
+        }
+    }
+
+    let ultimoIdxSeccion = -1;
+    partes.forEach((p, idx) => {
+        if (p.seccion === seccion) {
+            ultimoIdxSeccion = idx;
+        }
+    });
+
+    if (ultimoIdxSeccion !== -1) {
+        partes.splice(ultimoIdxSeccion + 1, 0, nueva);
+    } else {
+        partes.push(nueva);
+    }
+
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
     notificarYGuardarAutosave();
 };
