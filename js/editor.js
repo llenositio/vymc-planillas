@@ -193,8 +193,16 @@ window.cargarSemanaEnPlanilla = function(idx) {
         if (esEstudioBiblico) {
             celdasAsignacionHTML = `
                 <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
-                    <div class="flex items-center justify-center gap-1">
-                        ${crearSelectHTML(`sel-parte-${pIdx}`, 'eb', parte.asig, 'Conductor')} ${crearBotonWhatsAppHTML(parte.asig, '', 'Conductor Estudio Bíblico de la Congregación')} </div> </td> <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs"> <div class="flex items-center justify-center gap-1"> ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, 'lectorL', parte.asigAyudante, 'Lector')}
+                    <div class="flex items-center justify-center gap-1 px-1">
+                        <span class="font-bold text-slate-700 normal-case shrink-0">Conductor:</span>
+                        ${crearSelectHTML(`sel-parte-${pIdx}`, 'eb', parte.asig, 'Conductor')}
+                        ${crearBotonWhatsAppHTML(parte.asig, '', 'Conductor Estudio Bíblico de la Congregación')}
+                    </div>
+                </td>
+                <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs">
+                    <div class="flex items-center justify-center gap-1 px-1">
+                        <span class="font-bold text-slate-700 normal-case shrink-0">Lector:</span>
+                        ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, 'lectorL', parte.asigAyudante, 'Lector')}
                         ${crearBotonWhatsAppHTML(parte.asigAyudante, '', 'Lector Estudio Bíblico de la Congregación')}
                     </div>
                 </td>
@@ -277,7 +285,13 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 celdasAsignacionHTML = `
                     <td colspan="4" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs border-r border-slate-300">
                         <div class="flex items-center justify-center gap-1">
-                            ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig, 'Estudiante')} ${crearBotonWhatsAppHTML(parte.asig, parte.asigAyudante, parte.tit, 'Sala Principal')} </div> </td> <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs"> <div class="flex items-center justify-center gap-1"> ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, catSelect, parte.asigAyudante, 'Ayudante')}
+                            ${crearSelectHTML(`sel-parte-${pIdx}`, catSelect, parte.asig, 'Estudiante')}
+                            ${crearBotonWhatsAppHTML(parte.asig, parte.asigAyudante, parte.tit, 'Sala Principal')}
+                        </div>
+                    </td>
+                    <td colspan="3" class="font-black uppercase text-amber-950 bg-amber-100/50 text-center text-xs">
+                        <div class="flex items-center justify-center gap-1">
+                            ${crearSelectHTML(`sel-parte-ayu-${pIdx}`, catSelect, parte.asigAyudante, 'Ayudante')}
                             ${crearBotonWhatsAppHTML(parte.asigAyudante, parte.asig, 'Ayudante en: ' + parte.tit, 'Sala Principal')}
                         </div>
                     </td>
@@ -337,7 +351,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr>
                 <td class="c-tiempo"></td>
                 <td class="font-medium" colspan="2">
-                    Canción y oración: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)">
+                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
@@ -364,7 +378,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr>
                 <td class="c-tiempo"></td>
                 <td class="font-medium" colspan="2">
-                    Canción y oración: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)">
+                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
