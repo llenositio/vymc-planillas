@@ -1,12 +1,20 @@
 /**
- * Módulo de Integración con Supabase + Autenticación Multi-Inquilino + Vista Pública en Tiempo Real
+ * Módulo de Integración con Supabase + Autenticación Multi-Inquilino (Google OAuth) + Vista Pública en Tiempo Real
  */
 
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ycK_RSR1KXlpwFtMb9Skgg_d01qRpM-";
 
-window.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+    }
+});
+
 window.usuarioActual = null;
+window.perfilActual = null;
 window.congregacionIdActual = null;
 window.slugCongregacionActual = "";
 window.rolUsuarioActual = null;
@@ -26,13 +34,21 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // MODO ADMINISTRACIÓN (REQUIERE AUTENTICACIÓN)
+    // MODO ADMINISTRACIÓN (REQUIERE AUTENTICACIÓN CON GOOGLE)
     const { data: { session } } = await db.auth.getSession();
     if (session) {
         await cargarPerfilUsuario(session.user);
     } else {
+        mostrarVistaLoginGoogle();
         mostrarPantallaLogin(true);
     }
+
+    // Escuchar cambios de sesión OAuth al volver de Google
+    db.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session && !window.usuarioActual) {
+            await cargarPerfilUsuario(session.user);
+        }
+    });
 });
 
 /**
@@ -115,28 +131,137 @@ async function cargarPlanillaVistaPublica(slug, mes) {
         .subscribe();
 }
 
+function mostrarVistaLoginGoogle() {
+    const vGoogle = document.getElementById('loginVistaGoogle');
+    const vPendiente = document.getElementById('loginVistaPendiente');
+    if (vGoogle) vGoogle.classList.remove('hidden');
+    if (vPendiente) vPendiente.classList.add('hidden');
+}
+
+async function mostrarVistaSolicitudPendiente(perfil) {
+    const vGoogle = document.getElementById('loginVistaGoogle');
+    const vPendiente = document.getElementById('loginVistaPendiente');
+    if (vGoogle) vGoogle.classList.add('hidden');
+    if (vPendiente) vPendiente.classList.remove('hidden');
+
+    const saludo = document.getElementById('txtPendienteSaludo');
+    const detalle = document.getElementById('txtPendienteDetalle');
+    const bloqueSelect = document.getElementById('bloqueSeleccionCongreInicial');
+
+    const nombre = perfil?.full_name || window.usuarioActual?.user_metadata?.full_name || window.usuarioActual?.email || 'Hermano/a';
+    if (saludo) saludo.textContent = `¡Hola, ${nombre}! Tu cuenta está pendiente de aprobación.`;
+
+    if (perfil?.status === 'blocked') {
+        if (detalle) detalle.textContent = 'Tu acceso se encuentra bloqueado. Comunicate con el administrador de tu congregación.';
+        if (bloqueSelect) bloqueSelect.classList.add('hidden');
+        return;
+    }
+
+    if (perfil?.congregacion_id) {
+        if (detalle) detalle.textContent = 'Ya enviaste tu solicitud para tu congregación. Cuando un administrador la apruebe, podrás ingresar.';
+        if (bloqueSelect) bloqueSelect.classList.add('hidden');
+        return;
+    }
+
+    if (bloqueSelect) bloqueSelect.classList.remove('hidden');
+    const select = document.getElementById('selectCongregacionSolicitud');
+    if (select) {
+        const { data: congregaciones } = await db
+            .from('congregaciones')
+            .select('id, nombre, ciudad')
+            .order('nombre', { ascending: true });
+
+        if (congregaciones && congregaciones.length > 0) {
+            select.innerHTML = `<option value="">-- Seleccioná tu congregación --</option>` +
+                congregaciones.map(c => `<option value="${c.id}">${c.nombre}${c.ciudad ? ' (' + c.ciudad + ')' : ''}</option>`).join('');
+        } else {
+            select.innerHTML = `<option value="">No hay congregaciones disponibles aún</option>`;
+        }
+    }
+}
+
+window.enviarSolicitudCongregacion = async function() {
+    const select = document.getElementById('selectCongregacionSolicitud');
+    const btn = document.getElementById('btnEnviarSolicitudCongre');
+    const congreId = select ? select.value : '';
+
+    if (!congreId) {
+        alert("Por favor seleccioná tu congregación.");
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+
+    const { error } = await db
+        .from('perfiles')
+        .update({ congregacion_id: congreId })
+        .eq('id', window.usuarioActual.id);
+
+    if (btn) btn.disabled = false;
+
+    if (error) {
+        alert("Error al enviar la solicitud: " + error.message);
+        return;
+    }
+
+    await cargarPerfilUsuario(window.usuarioActual);
+};
+
 async function cargarPerfilUsuario(user) {
     window.usuarioActual = user;
-    
-    const { data, error } = await db
+
+    let { data, error } = await db
         .from('perfiles')
-        .select('congregacion_id, rol')
+        .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+
+    // Si por alguna razón el perfil aún no se creó, crearlo en estado pending
+    if (!data && !error) {
+        const esSuper = user.email === 'claudiollenolio@gmail.com';
+        const nuevoPerfil = {
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+            role: esSuper ? 'super_admin' : 'publicador',
+            status: esSuper ? 'approved' : 'pending',
+            congregacion_id: null
+        };
+        const resInsert = await db.from('perfiles').upsert(nuevoPerfil).select().single();
+        data = resInsert.data;
+        error = resInsert.error;
+    }
 
     if (error || !data) {
-        alert("Tu usuario no tiene una congregación asignada. Contacta al administrador.");
-        await db.auth.signOut();
+        console.error("Error cargando perfil:", error);
+        mostrarVistaLoginGoogle();
         mostrarPantallaLogin(true);
         return;
     }
 
+    window.perfilActual = data;
+    const rolEfectivo = data.role || data.rol || 'publicador';
+    const estadoEfectivo = data.status || 'approved';
+
+    // Si no está aprobado (y no es super_admin), mostrar pantalla de solicitud/espera
+    if (rolEfectivo !== 'super_admin' && estadoEfectivo !== 'approved') {
+        mostrarPantallaLogin(true);
+        await mostrarVistaSolicitudPendiente(data);
+        return;
+    }
+
     window.congregacionIdActual = data.congregacion_id;
-    window.rolUsuarioActual = data.rol || 'mensajero_vymc';
+    window.rolUsuarioActual = rolEfectivo;
+
+    // Actualizar subtítulo del header con nombre y rol
+    const subtituloHeader = document.getElementById('subtituloUsuarioHeader');
+    if (subtituloHeader) {
+        subtituloHeader.textContent = `${data.full_name || user.email} · ${formatearNombreRol(rolEfectivo)}`;
+    }
 
     mostrarPantallaLogin(false);
 
-    if (data.rol === 'super_admin') {
+    if (rolEfectivo === 'super_admin') {
         await renderizarSelectorSuperAdmin();
     } else {
         await obtenerSlugCongregacion(window.congregacionIdActual);
@@ -151,40 +276,91 @@ async function cargarPerfilUsuario(user) {
     if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') await window.cargarPlanillaAVDesdeSupabase();
 }
 
+function formatearNombreRol(rol) {
+    const nombres = {
+        super_admin: 'Super Admin',
+        admin_congregacion: 'Admin Congregación',
+        editor_vymc: 'Editor VyMC',
+        mensajero_vymc: 'Mensajero VyMC',
+        editor_av: 'Editor Acomodadores/AV',
+        mensajero_acomodador: 'Mensajero Acomodador',
+        editor_territorios: 'Editor Territorios',
+        mensajero_territorios: 'Mensajero Territorios',
+        conductor: 'Conductor',
+        publicador: 'Publicador'
+    };
+    return nombres[rol] || rol;
+}
+
 /**
- * Controla la visibilidad y edición de elementos de la interfaz según el rol
+ * Controla la visibilidad y edición de elementos de la interfaz según los 10 roles
  */
 function aplicarRestriccionesPorRol(rol) {
-    const esMensajero = (typeof rol === 'string' && rol.startsWith('mensajero_'));
+    const puedeEditarVyMC = ['super_admin', 'admin_congregacion', 'editor_vymc'].includes(rol);
+    const puedeEditarAV = ['super_admin', 'admin_congregacion', 'editor_av'].includes(rol);
+    const puedeGestionarUsuarios = ['super_admin', 'admin_congregacion', 'editor_vymc', 'editor_av'].includes(rol);
 
-    let estiloMensajero = document.getElementById('estilo-restriccion-mensajero');
-    if (esMensajero) {
-        if (!estiloMensajero) {
-            estiloMensajero = document.createElement('style');
-            estiloMensajero.id = 'estilo-restriccion-mensajero';
-            estiloMensajero.innerHTML = `
-                .select-asig, select, input, [contenteditable="true"] {
+    // Mostrar u ocultar pestaña de Usuarios y bloque de Super Admin
+    const tabUsuarios = document.getElementById('tab-usuarios');
+    if (tabUsuarios) {
+        if (puedeGestionarUsuarios) tabUsuarios.classList.remove('hidden');
+        else tabUsuarios.classList.add('hidden');
+    }
+
+    const bloqueNuevaCongre = document.getElementById('bloqueNuevaCongregacion');
+    if (bloqueNuevaCongre) {
+        if (rol === 'super_admin') bloqueNuevaCongre.classList.remove('hidden');
+        else bloqueNuevaCongre.classList.add('hidden');
+    }
+
+    // Bloqueo selectivo por sección (VyMC vs AV) manteniendo intactos botones de WhatsApp, Imprimir y Navegación
+    let estiloRestriccion = document.getElementById('estilo-restriccion-mensajero');
+    if (!puedeEditarVyMC || !puedeEditarAV) {
+        if (!estiloRestriccion) {
+            estiloRestriccion = document.createElement('style');
+            estiloRestriccion.id = 'estilo-restriccion-mensajero';
+            document.head.appendChild(estiloRestriccion);
+        }
+        let css = '';
+        if (!puedeEditarVyMC) {
+            css += `
+                #sec-planilla .select-asig,
+                #sec-planilla [contenteditable="true"],
+                #sec-hermanos input,
+                #sec-hermanos select {
                     pointer-events: none !important;
                 }
-                .select-asig, select {
+                #sec-planilla .select-asig,
+                #sec-hermanos select {
                     background: transparent !important;
                     border: none !important;
                     appearance: none !important;
                     -webkit-appearance: none !important;
                 }
-                [contenteditable="true"] {
-                    outline: none !important;
+            `;
+        }
+        if (!puedeEditarAV) {
+            css += `
+                #sec-av_planilla select,
+                #sec-av_planilla #inputTelGrupoAV,
+                #sec-av_matriz input,
+                #sec-av_matriz select {
+                    pointer-events: none !important;
+                }
+                #sec-av_planilla select {
+                    background: transparent !important;
+                    border: none !important;
+                    appearance: none !important;
+                    -webkit-appearance: none !important;
                 }
             `;
-            document.head.appendChild(estiloMensajero);
         }
-    } else {
-        if (estiloMensajero) {
-            estiloMensajero.remove();
-        }
+        estiloRestriccion.innerHTML = css;
+    } else if (estiloRestriccion) {
+        estiloRestriccion.remove();
     }
 
-    const botonesEdicion = [
+    const botonesEdicionVyMC = [
         document.querySelector("button[onclick='guardarMesManual()']"),
         document.querySelector("button[onclick='resetearPlanillaMes()']"),
         document.querySelector("button[onclick='agregarNuevaSemana()']"),
@@ -193,24 +369,28 @@ function aplicarRestriccionesPorRol(rol) {
         document.querySelector("button[onclick='agregarNuevoHermano()']")
     ];
 
-    botonesEdicion.forEach(btn => {
-        if (btn) btn.style.display = esMensajero ? 'none' : '';
+    botonesEdicionVyMC.forEach(btn => {
+        if (btn) btn.style.display = puedeEditarVyMC ? '' : 'none';
     });
 
+    const btnGuardarAV = document.querySelector("button[onclick*='guardarPlanillaAVEnSupabase']");
+    if (btnGuardarAV) btnGuardarAV.style.display = puedeEditarAV ? '' : 'none';
+
     const inputMes = document.getElementById('inputNombreMes');
-    if (inputMes) inputMes.disabled = esMensajero;
+    if (inputMes) inputMes.disabled = !puedeEditarVyMC;
 
     const radiosTipoSemana = document.querySelectorAll("input[name='tipoSemana']");
-    radiosTipoSemana.forEach(r => r.disabled = esMensajero);
+    radiosTipoSemana.forEach(r => r.disabled = !puedeEditarVyMC);
 
     const selectSalas = document.getElementById('selectNumSalas');
-    if (selectSalas) selectSalas.disabled = esMensajero;
+    if (selectSalas) selectSalas.disabled = !puedeEditarVyMC;
 }
 
 /**
  * Obtiene el slug de la congregación
  */
 async function obtenerSlugCongregacion(id) {
+    if (!id) return;
     const { data } = await db
         .from('congregaciones')
         .select('nombre')
@@ -236,7 +416,10 @@ async function renderizarSelectorSuperAdmin() {
         .select('id, nombre')
         .order('nombre', { ascending: true });
 
-    if (error || !congregaciones || congregaciones.length === 0) return;
+    if (error || !congregaciones || congregaciones.length === 0) {
+        contenedor.innerHTML = `<span class="text-xs text-amber-300 font-bold">Sin congregaciones aún</span>`;
+        return;
+    }
 
     if (!window.congregacionIdActual && congregaciones.length > 0) {
         window.congregacionIdActual = congregaciones[0].id;
@@ -275,27 +458,32 @@ window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
     if (typeof cargarPlanillaDesdeSupabase === 'function') await cargarPlanillaDesdeSupabase();
     if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') await window.cargarElegiblesAVDesdeSupabase();
     if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') await window.cargarPlanillaAVDesdeSupabase();
+    if (typeof window.cargarGestionUsuarios === 'function' && !document.getElementById('sec-usuarios')?.classList.contains('hidden')) {
+        await window.cargarGestionUsuarios();
+    }
 };
 
-window.iniciarSesion = async function(email, password) {
-    const btn = document.getElementById('btnLogin');
+window.iniciarSesionConGoogle = async function() {
+    const btn = document.getElementById('btnLoginGoogle');
     if (btn) btn.disabled = true;
 
-    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    const { error } = await db.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin + window.location.pathname
+        }
+    });
 
     if (error) {
-        alert("Error al iniciar sesión: " + error.message);
+        alert("Error al iniciar sesión con Google: " + error.message);
         if (btn) btn.disabled = false;
-        return;
     }
-
-    await cargarPerfilUsuario(data.user);
-    if (btn) btn.disabled = false;
 };
 
 window.cerrarSesion = async function() {
     await db.auth.signOut();
     window.usuarioActual = null;
+    window.perfilActual = null;
     window.congregacionIdActual = null;
     window.slugCongregacionActual = "";
     window.rolUsuarioActual = null;
@@ -305,7 +493,8 @@ window.cerrarSesion = async function() {
     const contenedor = document.getElementById('selector-congregacion-container');
     if (contenedor) contenedor.innerHTML = '';
 
-    aplicarRestriccionesPorRol('editor_vymc');
+    aplicarRestriccionesPorRol('super_admin');
+    mostrarVistaLoginGoogle();
     mostrarPantallaLogin(true);
 };
 
@@ -319,6 +508,202 @@ function mostrarPantallaLogin(mostrar) {
         }
     }
 }
+
+/* ============================================================================
+   GESTIÓN JERÁRQUICA DE USUARIOS Y CONGREGACIONES (3 NIVELES)
+   ============================================================================ */
+
+window.crearCongregacionSuperAdmin = async function() {
+    if (window.rolUsuarioActual !== 'super_admin') return;
+
+    const inputNombre = document.getElementById('inputNuevaCongreNombre');
+    const inputCiudad = document.getElementById('inputNuevaCongreCiudad');
+    const nombre = inputNombre ? inputNombre.value.trim() : '';
+    const ciudad = inputCiudad ? inputCiudad.value.trim() : 'Mar del Plata';
+
+    if (!nombre) {
+        alert("Ingresá el nombre de la congregación.");
+        return;
+    }
+
+    const slug = nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-');
+
+    const { data, error } = await db
+        .from('congregaciones')
+        .insert([{ nombre, ciudad, slug, activa: true }])
+        .select()
+        .single();
+
+    if (error) {
+        alert("Error creando congregación: " + error.message);
+        return;
+    }
+
+    if (inputNombre) inputNombre.value = '';
+    window.congregacionIdActual = data.id;
+    await renderizarSelectorSuperAdmin();
+    await window.cargarGestionUsuarios();
+};
+
+function obtenerRolesAsignablesSegunMiRol(miRol) {
+    if (miRol === 'super_admin' || miRol === 'admin_congregacion') {
+        return [
+            { value: 'admin_congregacion', label: 'Admin Congregación' },
+            { value: 'editor_vymc', label: 'Editor VyMC' },
+            { value: 'mensajero_vymc', label: 'Mensajero VyMC' },
+            { value: 'editor_av', label: 'Editor Acomodadores/AV' },
+            { value: 'mensajero_acomodador', label: 'Mensajero Acomodador' },
+            { value: 'editor_territorios', label: 'Editor Territorios' },
+            { value: 'mensajero_territorios', label: 'Mensajero Territorios' },
+            { value: 'conductor', label: 'Conductor' },
+            { value: 'publicador', label: 'Publicador' }
+        ];
+    }
+    if (miRol === 'editor_vymc') {
+        return [{ value: 'mensajero_vymc', label: 'Mensajero VyMC' }];
+    }
+    if (miRol === 'editor_av') {
+        return [{ value: 'mensajero_acomodador', label: 'Mensajero Acomodador' }];
+    }
+    return [];
+}
+
+window.cargarGestionUsuarios = async function() {
+    const contenedor = document.getElementById('contenedorGestionUsuarios');
+    if (!contenedor) return;
+
+    const miRol = window.rolUsuarioActual;
+    const rolesAsignables = obtenerRolesAsignablesSegunMiRol(miRol);
+    if (rolesAsignables.length === 0) {
+        contenedor.innerHTML = `<p class="p-4 text-xs text-slate-500">No tenés permisos para gestionar usuarios.</p>`;
+        return;
+    }
+
+    let query = db
+        .from('perfiles')
+        .select('id, email, full_name, role, status, congregacion_id, created_at')
+        .order('status', { ascending: false })
+        .order('full_name', { ascending: true });
+
+    if (miRol !== 'super_admin') {
+        query = query.eq('congregacion_id', window.congregacionIdActual);
+    }
+
+    const [{ data: usuarios, error }, { data: congregaciones }] = await Promise.all([
+        query,
+        db.from('congregaciones').select('id, nombre').order('nombre', { ascending: true })
+    ]);
+
+    if (error) {
+        contenedor.innerHTML = `<p class="p-4 text-xs text-rose-600 font-bold">Error cargando usuarios: ${error.message}</p>`;
+        return;
+    }
+
+    const listaCongres = congregaciones || [];
+    const mapaCongres = Object.fromEntries(listaCongres.map(c => [c.id, c.nombre]));
+
+    const filas = (usuarios || []).filter(u => u.role !== 'super_admin').map(u => {
+        const estadoBadge = u.status === 'approved'
+            ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Aprobado</span>`
+            : u.status === 'blocked'
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Bloqueado</span>`
+                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Pendiente</span>`;
+
+        const puedeEditarEsteUsuario = (miRol === 'super_admin' || miRol === 'admin_congregacion') ||
+            (u.status === 'pending') ||
+            rolesAsignables.some(r => r.value === u.role);
+
+        const opcionesRol = rolesAsignables.map(r =>
+            `<option value="${r.value}" ${u.role === r.value ? 'selected' : ''}>${r.label}</option>`
+        ).join('');
+
+        const selectorRolHtml = puedeEditarEsteUsuario
+            ? `<select id="rol-user-${u.id}" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white">
+                ${!rolesAsignables.some(r => r.value === u.role) ? `<option value="${u.role}" selected>${formatearNombreRol(u.role)}</option>` : ''}
+                ${opcionesRol}
+               </select>`
+            : `<span class="text-xs font-bold text-slate-700">${formatearNombreRol(u.role)}</span>`;
+
+        const selectorCongreHtml = miRol === 'super_admin'
+            ? `<select id="congre-user-${u.id}" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white">
+                <option value="">-- Sin asignar --</option>
+                ${listaCongres.map(c => `<option value="${c.id}" ${u.congregacion_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
+               </select>`
+            : `<span class="text-xs text-slate-600">${mapaCongres[u.congregacion_id] || 'Sin asignar'}</span>`;
+
+        const accionesHtml = puedeEditarEsteUsuario
+            ? `<div class="flex items-center justify-center gap-1.5">
+                <button type="button" onclick="window.guardarEstadoYRolUsuario('${u.id}', 'approved')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition">
+                    Aprobar / Guardar
+                </button>
+                <button type="button" onclick="window.guardarEstadoYRolUsuario('${u.id}', 'blocked')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold px-2 py-1 rounded transition">
+                    Bloquear
+                </button>
+               </div>`
+            : `<span class="text-[11px] text-slate-400">Solo lectura</span>`;
+
+        return `
+            <tr class="border-b border-slate-200 hover:bg-slate-50">
+                <td class="p-2.5 text-left">
+                    <div class="font-bold text-xs text-slate-900">${u.full_name || 'Sin nombre'}</div>
+                    <div class="text-[11px] text-slate-500">${u.email || ''}</div>
+                </td>
+                <td class="p-2.5 text-center">${selectorCongreHtml}</td>
+                <td class="p-2.5 text-center">${selectorRolHtml}</td>
+                <td class="p-2.5 text-center">${estadoBadge}</td>
+                <td class="p-2.5 text-center">${accionesHtml}</td>
+            </tr>
+        `;
+    }).join('');
+
+    contenedor.innerHTML = `
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-100 text-slate-700 text-[11px] uppercase font-extrabold border-b border-slate-300">
+                <tr>
+                    <th class="p-2.5">Hermano / Gmail</th>
+                    <th class="p-2.5 text-center">Congregación</th>
+                    <th class="p-2.5 text-center">Rol Asignado</th>
+                    <th class="p-2.5 text-center">Estado</th>
+                    <th class="p-2.5 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filas || `<tr><td colspan="5" class="p-6 text-center text-xs text-slate-500">No hay usuarios registrados en esta congregación.</td></tr>`}
+            </tbody>
+        </table>
+    `;
+};
+
+window.guardarEstadoYRolUsuario = async function(userId, nuevoStatus) {
+    const selRol = document.getElementById(`rol-user-${userId}`);
+    const selCongre = document.getElementById(`congre-user-${userId}`);
+
+    const nuevoRol = selRol ? selRol.value : undefined;
+    const nuevaCongre = selCongre ? (selCongre.value || null) : window.congregacionIdActual;
+
+    if (nuevoStatus === 'approved' && !nuevaCongre) {
+        alert("Debés asignar una congregación antes de aprobar al usuario.");
+        return;
+    }
+
+    const payload = {
+        status: nuevoStatus,
+        congregacion_id: nuevaCongre
+    };
+    if (nuevoRol) payload.role = nuevoRol;
+
+    const { error } = await db
+        .from('perfiles')
+        .update(payload)
+        .eq('id', userId);
+
+    if (error) {
+        alert("No se pudo actualizar el usuario (verificá tus permisos): " + error.message);
+        return;
+    }
+
+    await window.cargarGestionUsuarios();
+};
 
 /* GENERADOR Y COPIADOR DE LINK PÚBLICO */
 window.actualizarLinkPublico = function() {
@@ -372,7 +757,7 @@ window.cargarHermanosDesdeSupabase = async function() {
 };
 
 window.actualizarHermanoBD = async function(id, campo, valor) {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+    if (!['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual)) {
         return;
     }
 
@@ -385,7 +770,7 @@ window.actualizarHermanoBD = async function(id, campo, valor) {
 };
 
 window.agregarNuevoHermanoBD = async function() {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+    if (!['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual)) {
         alert("Tu usuario no tiene permisos para agregar hermanos.");
         return;
     }
@@ -415,7 +800,7 @@ window.agregarNuevoHermanoBD = async function() {
 };
 
 window.eliminarHermanoBD = async function(id) {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
+    if (!['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual)) {
         alert("Tu usuario no tiene permisos para eliminar hermanos.");
         return;
     }
@@ -544,8 +929,8 @@ function generarSnapshotHTMLPublico() {
 
 /* GUARDAR EN SUPABASE (GENERA PAYLOAD + SNAPSHOT DEL MES COMPLETO) */
 window.guardarPlanillaEnSupabase = async function() {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        alert("Tu usuario tiene rol de Mensajero (Solo Lectura) y no puede modificar la planilla.");
+    if (!['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual)) {
+        alert("Tu usuario no tiene permisos para modificar la planilla VyMC.");
         return;
     }
 
