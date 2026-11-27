@@ -29,7 +29,7 @@ window.cargarHistorialDesdeSupabase = async function() {
 };
 
 /**
- * Procesa las planillas históricas y construye un mapa por hermano y rol
+ * Procesa las planillas históricas y construye un mapa exacto por hermano y rol
  */
 window.procesarHistorialAsignaciones = function() {
     const mapa = {};
@@ -65,40 +65,73 @@ window.procesarHistorialAsignaciones = function() {
             if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
             ordenGlobal++;
 
+            // a) Presidencia ES (Canción N° . Presidencia: Palabras de introducción)
             if (sem.presidencia) {
                 registrar(sem.presidencia, 'presi', ordenGlobal, mesLabel);
-                registrar(sem.presidencia, 'tesoros', ordenGlobal, mesLabel);
             }
+
+            // b) y j) Oración inicial y final unificadas
             if (sem.oracionIni) registrar(sem.oracionIni, 'oraciones', ordenGlobal, mesLabel);
-            if (sem.repaso) {
-                registrar(sem.repaso, 'presi', ordenGlobal, mesLabel);
-                registrar(sem.repaso, 'nvc', ordenGlobal, mesLabel);
-            }
             if (sem.oracionFin) registrar(sem.oracionFin, 'oraciones', ordenGlobal, mesLabel);
+
+            // k) Presidencia FS (Domingo / Fin de semana)
             if (sem.domPresi) registrar(sem.domPresi, 'presiDom', ordenGlobal, mesLabel);
+
+            // l) Lector W (Lector de La Atalaya)
             if (sem.domLector) registrar(sem.domLector, 'lectorAtalaya', ordenGlobal, mesLabel);
 
             (sem.partes || []).forEach(p => {
                 const titLower = (p.tit || '').toLowerCase();
+                const descLower = (p.desc || p.tipo || p.detalle || '').toLowerCase();
+                const textoCompleto = `${titLower} ${descLower}`;
 
                 if (p.seccion === 'tesoros') {
-                    if (p.asig) registrar(p.asig, 'tesoros', ordenGlobal, mesLabel);
-                    if (p.tit.startsWith('1.') && p.asig) registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
-                    if (p.tit.startsWith('2.') && p.asig) registrar(p.asig, 'perlas', ordenGlobal, mesLabel);
-                    if ((p.tit.startsWith('3.') || titLower.includes('lectura')) && p.asig) {
-                        registrar(p.asig, 'smm', ordenGlobal, mesLabel);
+                    // c) Discurso de Tesoros (10 min)
+                    if (p.tit && p.tit.trim().startsWith('1.') && p.asig) {
+                        registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
+                    }
+                    // d) Busquemos perlas escondidas
+                    else if ((p.tit && p.tit.trim().startsWith('2.')) || textoCompleto.includes('perlas escondidas')) {
+                        if (p.asig) registrar(p.asig, 'perlas', ordenGlobal, mesLabel);
+                    }
+                    // e) Lectura de la Biblia
+                    else if ((p.tit && p.tit.trim().startsWith('3.')) || textoCompleto.includes('lectura de la biblia')) {
+                        if (p.asig) registrar(p.asig, 'lectura', ordenGlobal, mesLabel);
                     }
                 } else if (p.seccion === 'maestros') {
-                    [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(nom => {
-                        if (nom) registrar(nom, 'smm', ordenGlobal, mesLabel);
+                    // f) Seamos Mejores Maestros: separados en Estudiante (E) y Ayudante (A)
+                    [p.asig, p.asigB, p.asigC].forEach(nom => {
+                        if (nom) {
+                            registrar(nom, 'smmE', ordenGlobal, mesLabel);
+                            registrar(nom, 'smm', ordenGlobal, mesLabel);
+                        }
+                    });
+                    [p.asigAyudante, p.asigBAyudante, p.asigCAyudante].forEach(nom => {
+                        if (nom) {
+                            registrar(nom, 'smmA', ordenGlobal, mesLabel);
+                            registrar(nom, 'smm', ordenGlobal, mesLabel);
+                        }
                     });
                 } else if (p.seccion === 'vida') {
-                    if (p.asig) registrar(p.asig, 'nvc', ordenGlobal, mesLabel);
-                    if (titLower.includes('estudio bíblico')) {
+                    // h) Estudio Bíblico (EB) e i) Lector L
+                    if (textoCompleto.includes('estudio bíblico') || textoCompleto.includes('estudio biblico')) {
                         if (p.asig) registrar(p.asig, 'estudioBiblico', ordenGlobal, mesLabel);
                         if (p.asigAyudante) registrar(p.asigAyudante, 'lectorLibro', ordenGlobal, mesLabel);
                     } else {
-                        if (p.asig) registrar(p.asig, 'nvcOtro', ordenGlobal, mesLabel);
+                        // g) Nuestra Vida Cristiana: solo temas de NVC separados en Común (C) o Necesidades Locales (NL)
+                        const esNecLoc = textoCompleto.includes('necesidades locales') ||
+                                         textoCompleto.includes('necesidades lucales') ||
+                                         textoCompleto.includes('nec loc') ||
+                                         textoCompleto.includes('nec. loc');
+
+                        if (p.asig) {
+                            if (esNecLoc) {
+                                registrar(p.asig, 'nvcNL', ordenGlobal, mesLabel);
+                            } else {
+                                registrar(p.asig, 'nvcC', ordenGlobal, mesLabel);
+                            }
+                            registrar(p.asig, 'nvc', ordenGlobal, mesLabel);
+                        }
                     }
                 }
             });
@@ -118,12 +151,24 @@ window.obtenerSugeridosPorRol = function(rol, listaAptos) {
     if (!Array.isArray(listaAptos)) return [];
     const mapa = window.historialPorHermanoRol || {};
 
+    const aliasRol = {
+        'tesoros': 'discurso',
+        'lec_biblia': 'lectura',
+        'smm': 'smmE',
+        'nvc': 'nvcC',
+        'ebc': 'estudioBiblico',
+        'lector_ebc': 'lectorLibro',
+        'pres_pub': 'presiDom',
+        'lector_atalaya': 'lectorAtalaya'
+    };
+    const rolBuscado = aliasRol[rol] || rol;
+
     return [...listaAptos].sort((a, b) => {
         const keyA = (a.nombre || '').trim().toLowerCase();
         const keyB = (b.nombre || '').trim().toLowerCase();
 
-        const infoA = (mapa[keyA] && mapa[keyA][rol]) ? mapa[keyA][rol] : { count: 0, lastOrder: -1 };
-        const infoB = (mapa[keyB] && mapa[keyB][rol]) ? mapa[keyB][rol] : { count: 0, lastOrder: -1 };
+        const infoA = (mapa[keyA] && mapa[keyA][rolBuscado]) ? mapa[keyA][rolBuscado] : { count: 0, lastOrder: -1 };
+        const infoB = (mapa[keyB] && mapa[keyB][rolBuscado]) ? mapa[keyB][rolBuscado] : { count: 0, lastOrder: -1 };
 
         if (infoA.lastOrder !== infoB.lastOrder) {
             return infoA.lastOrder - infoB.lastOrder;
@@ -232,46 +277,26 @@ window.renderizarTablaHistorial = async function() {
         else grupos['Otro'].push(h);
     });
 
-    const conteoMesActivo = {};
-    const sumarActivo = (nom, cat) => {
-        if (!nom) return;
-        const k = nom.split('(')[0].trim().toLowerCase();
-        if (!conteoMesActivo[k]) conteoMesActivo[k] = { tesoros: 0, smm: 0, nvc: 0, presi: 0, oraciones: 0 };
-        conteoMesActivo[k][cat] = (conteoMesActivo[k][cat] || 0) + 1;
-    };
-
-    (window.programaMes || []).forEach(sem => {
-        if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
-        if (sem.presidencia) { sumarActivo(sem.presidencia, 'presi'); sumarActivo(sem.presidencia, 'tesoros'); }
-        if (sem.oracionIni) sumarActivo(sem.oracionIni, 'oraciones');
-        if (sem.repaso) { sumarActivo(sem.repaso, 'presi'); sumarActivo(sem.repaso, 'nvc'); }
-        if (sem.oracionFin) sumarActivo(sem.oracionFin, 'oraciones');
-
-        (sem.partes || []).forEach(p => {
-            if (p.seccion === 'tesoros') {
-                if (p.asig) sumarActivo(p.asig, 'tesoros');
-                if ((p.tit.startsWith('3.') || (p.tit || '').toLowerCase().includes('lectura')) && p.asig) {
-                    sumarActivo(p.asig, 'smm');
-                }
-            } else if (p.seccion === 'maestros') {
-                [p.asig, p.asigAyudante, p.asigB, p.asigBAyudante, p.asigC, p.asigCAyudante].forEach(n => sumarActivo(n, 'smm'));
-            } else if (p.seccion === 'vida') {
-                if (p.asig) sumarActivo(p.asig, 'nvc');
-            }
-        });
-    });
-
     let html = `
-        <table class="w-full text-xs text-left border-collapse">
-            <thead class="bg-slate-900 text-white uppercase text-[11px] font-extrabold sticky top-0 z-10">
+        <div class="overflow-x-auto">
+        <table class="w-full text-[11px] text-left border-collapse">
+            <thead class="bg-slate-900 text-white uppercase text-[10px] font-extrabold sticky top-0 z-10">
                 <tr>
-                    <th class="px-3 py-2 border border-slate-700">Hermano / Hermana</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center w-14">Grupo</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-cyan-900">Tesoros</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-amber-800">Maestros</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-rose-900">Vida Crist.</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-slate-800">Presid.</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-slate-800">Oraciones</th>
+                    <th class="px-2.5 py-2 border border-slate-700 sticky left-0 bg-slate-900 z-20 min-w-[170px]">Hermano / Hermana</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center w-10">Grp</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-slate-800" title="Presidencia Entre Semana">Presid. ES</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-slate-800" title="Oración Inicial y Final">Oración</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-900" title="Discurso Tesoros de la Biblia">Tesoros</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-800" title="Busquemos Perlas Escondidas">Perlas</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-700" title="Lectura de la Biblia">Lectura</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-amber-800" title="Seamos Mejores Maestros - Estudiante">SMM (E)</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-amber-700" title="Seamos Mejores Maestros - Ayudante">SMM (A)</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-900" title="Nuestra Vida Cristiana - Tema Común">NVC (C)</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-800" title="Nuestra Vida Cristiana - Necesidades Locales">NVC (NL)</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-950" title="Conductor Estudio Bíblico de Congregación">EB</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-950" title="Lector Estudio Bíblico de Congregación">Lector L</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-indigo-900" title="Presidencia Fin de Semana">Presid. FS</th>
+                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-indigo-800" title="Lector de La Atalaya">Lector W</th>
                     <th class="px-2 py-2 border border-slate-700 text-center bg-emerald-900">Total Hist.</th>
                 </tr>
             </thead>
@@ -280,13 +305,20 @@ window.renderizarTablaHistorial = async function() {
 
     const mapaHist = window.historialPorHermanoRol || {};
 
+    const celda = (objRol, colorClass) => {
+        const cant = objRol ? objRol.count : 0;
+        const ult = objRol && objRol.lastMes ? ` title="Último: ${objRol.lastMes}"` : '';
+        const estiloCero = cant === 0 ? 'text-slate-300 font-normal' : `font-bold ${colorClass}`;
+        return `<td class="px-1.5 py-1.5 text-center border border-slate-200 ${estiloCero}"${ult}>${cant}</td>`;
+    };
+
     categorias.forEach(cat => {
         const lista = grupos[cat.key];
         if (!lista || lista.length === 0) return;
 
         html += `
-            <tr class="bg-slate-200 font-black text-slate-800 uppercase text-[11px]">
-                <td colspan="8" class="px-3 py-1.5 border border-slate-300">${cat.titulo} (${lista.length})</td>
+            <tr class="bg-slate-200 font-black text-slate-800 uppercase text-[10px]">
+                <td colspan="16" class="px-2.5 py-1.5 border border-slate-300">${cat.titulo} (${lista.length})</td>
             </tr>
         `;
 
@@ -294,33 +326,48 @@ window.renderizarTablaHistorial = async function() {
             const k = (h.nombre || '').trim().toLowerCase();
             const hData = mapaHist[k] || {};
 
-            const cTesoros = hData.tesoros ? hData.tesoros.count : 0;
-            const cSmm = hData.smm ? hData.smm.count : 0;
-            const cNvc = hData.nvc ? hData.nvc.count : 0;
-            const cPresi = hData.presi ? hData.presi.count : 0;
+            const cPresiES = hData.presi ? hData.presi.count : 0;
             const cOrac = hData.oraciones ? hData.oraciones.count : 0;
-            const totalHist = cTesoros + cSmm + cNvc + cOrac;
+            const cDiscurso = hData.discurso ? hData.discurso.count : 0;
+            const cPerlas = hData.perlas ? hData.perlas.count : 0;
+            const cLectura = hData.lectura ? hData.lectura.count : 0;
+            const cSmmE = hData.smmE ? hData.smmE.count : 0;
+            const cSmmA = hData.smmA ? hData.smmA.count : 0;
+            const cNvcC = hData.nvcC ? hData.nvcC.count : 0;
+            const cNvcNL = hData.nvcNL ? hData.nvcNL.count : 0;
+            const cEB = hData.estudioBiblico ? hData.estudioBiblico.count : 0;
+            const cLectorL = hData.lectorLibro ? hData.lectorLibro.count : 0;
+            const cPresiFS = hData.presiDom ? hData.presiDom.count : 0;
+            const cLectorW = hData.lectorAtalaya ? hData.lectorAtalaya.count : 0;
 
-            const mesT = hData.tesoros ? hData.tesoros.lastMes : '';
-            const mesS = hData.smm ? hData.smm.lastMes : '';
-            const mesN = hData.nvc ? hData.nvc.lastMes : '';
+            const totalHist = cPresiES + cOrac + cDiscurso + cPerlas + cLectura +
+                              cSmmE + cSmmA + cNvcC + cNvcNL + cEB + cLectorL +
+                              cPresiFS + cLectorW;
 
             html += `
                 <tr class="hover:bg-slate-50 transition">
-                    <td class="px-3 py-1.5 font-bold text-slate-900 border border-slate-200">${h.nombre}</td>
-                    <td class="px-2 py-1.5 text-center text-slate-600 border border-slate-200">${h.grupo || '-'}</td>
-                    <td class="px-2 py-1.5 text-center font-bold text-cyan-900 border border-slate-200" title="Último: ${mesT}">${cTesoros}</td>
-                    <td class="px-2 py-1.5 text-center font-bold text-amber-900 border border-slate-200" title="Último: ${mesS}">${cSmm}</td>
-                    <td class="px-2 py-1.5 text-center font-bold text-rose-900 border border-slate-200" title="Último: ${mesN}">${cNvc}</td>
-                    <td class="px-2 py-1.5 text-center font-semibold text-slate-700 border border-slate-200">${cPresi}</td>
-                    <td class="px-2 py-1.5 text-center font-semibold text-slate-700 border border-slate-200">${cOrac}</td>
-                    <td class="px-2 py-1.5 text-center font-black text-emerald-900 bg-emerald-50/50 border border-slate-200">${totalHist}</td>
+                    <td class="px-2.5 py-1.5 font-bold text-slate-900 border border-slate-200 sticky left-0 bg-white">${h.nombre}</td>
+                    <td class="px-1.5 py-1.5 text-center text-slate-600 border border-slate-200">${h.grupo || '-'}</td>
+                    ${celda(hData.presi, 'text-slate-800')}
+                    ${celda(hData.oraciones, 'text-slate-800')}
+                    ${celda(hData.discurso, 'text-cyan-900')}
+                    ${celda(hData.perlas, 'text-cyan-800')}
+                    ${celda(hData.lectura, 'text-cyan-700')}
+                    ${celda(hData.smmE, 'text-amber-900')}
+                    ${celda(hData.smmA, 'text-amber-700')}
+                    ${celda(hData.nvcC, 'text-rose-900')}
+                    ${celda(hData.nvcNL, 'text-rose-700')}
+                    ${celda(hData.estudioBiblico, 'text-rose-950')}
+                    ${celda(hData.lectorLibro, 'text-rose-950')}
+                    ${celda(hData.presiDom, 'text-indigo-900')}
+                    ${celda(hData.lectorAtalaya, 'text-indigo-700')}
+                    <td class="px-2 py-1.5 text-center font-black text-emerald-900 bg-emerald-50/60 border border-slate-200">${totalHist}</td>
                 </tr>
             `;
         });
     });
 
-    html += `</tbody></table>`;
+    html += `</tbody></table></div>`;
     contenedor.innerHTML = html;
 };
 
