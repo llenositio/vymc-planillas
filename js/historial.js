@@ -56,7 +56,8 @@ window.procesarHistorialAsignaciones = function() {
 
     (window.historialAsignaciones || []).forEach(planilla => {
         const mesLabel = planilla.mes_ano || 'SIN MES';
-        const semanas = typeof planilla.datos === 'string' ? JSON.parse(planilla.datos) : (planilla.datos || []);
+        const rawDatos = typeof planilla.datos === 'string' ? JSON.parse(planilla.datos) : (planilla.datos || []);
+        const semanas = Array.isArray(rawDatos) ? rawDatos : (rawDatos.semanas || rawDatos.programa || []);
 
         if (!Array.isArray(semanas)) return;
 
@@ -168,7 +169,8 @@ window.buscarYCargarPlanillaHistorial = async function() {
         return;
     }
 
-    window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+    const rawDatos = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
+    window.programaMes = Array.isArray(rawDatos) ? rawDatos : (rawDatos.semanas || rawDatos.programa || []);
     window.nombreMesGlobal = data.mes_ano;
     window.semanaActivaIdx = 0;
 
@@ -202,11 +204,7 @@ window.renderizarTablaHistorial = async function() {
     const contenedor = document.getElementById('contenedorTablaHistorial');
     if (!contenedor) return;
 
-    if (!window.historialAsignaciones || window.historialAsignaciones.length === 0) {
-        await window.cargarHistorialDesdeSupabase();
-    } else {
-        window.procesarHistorialAsignaciones();
-    }
+    await window.cargarHistorialDesdeSupabase();
 
     const hermanos = window.listaHermanos || [];
     if (hermanos.length === 0) {
