@@ -1,5 +1,5 @@
 /**
- * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla/Individual AV por WhatsApp
+ * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla/Individual/Planilla Completa AV por WhatsApp
  */
 
 /**
@@ -188,6 +188,57 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
     texto += `- *Semana:* ${semana.fecha}\n\n`;
     texto += `Por favor, mandame un OK como respuesta`;
 
-    const url = `https://wa.me/${numeroLimpio}&text=${encodeURIComponent(texto)}`.replace('&text=', '?text=');
+    const url = `https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+};
+
+/**
+ * Genera el enlace público de solo lectura ("modo foto") de la Planilla Mensual AV
+ */
+window.generarLinkPublicoAV = function() {
+    const slug = window.slugCongregacionActual || window.congregacionIdActual || 'default';
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesRaw = (inputMes && inputMes.value.trim())
+        ? inputMes.value.trim().toUpperCase()
+        : (window.nombreMesGlobal || 'ACTUAL');
+
+    const mesSlug = mesRaw.replace(/\s+/g, '-');
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}?c=${encodeURIComponent(slug)}&m=${encodeURIComponent(mesSlug)}&v=av`;
+};
+
+/**
+ * Guarda la Planilla AV en Supabase y envía el enlace "modo foto" al teléfono configurado en Tel. Grupo
+ */
+window.enviarPlanillaCompletaAVAlGrupo = async function() {
+    const inputTel = document.getElementById('inputTelGrupoAV');
+    const telRaw = inputTel ? inputTel.value : '';
+    const numeroGrupo = formatearNumeroWhatsApp(telRaw);
+
+    if (!numeroGrupo) {
+        alert("Ingresa un número de celular/grupo válido en el campo 'Tel. Grupo' arriba a la derecha.");
+        if (inputTel) inputTel.focus();
+        return;
+    }
+
+    // Guardar automáticamente antes de enviar para que la foto esté 100% actualizada
+    if (typeof window.guardarPlanillaAVEnSupabase === 'function') {
+        await window.guardarPlanillaAVEnSupabase(true);
+    }
+
+    const inputMes = document.getElementById('inputNombreMes');
+    const mesLabel = (inputMes && inputMes.value.trim())
+        ? inputMes.value.trim().toUpperCase()
+        : (window.nombreMesGlobal || 'MES ACTUAL');
+
+    const linkFotoAV = window.generarLinkPublicoAV();
+
+    let mensaje = `*PLANILLA MENSUAL - ACOMODADORES Y AUDIO / VIDEO*\n`;
+    mensaje += `*Mes:* ${mesLabel}\n\n`;
+    mensaje += `Comparto el programa completo del mes (solo lectura, se actualiza automáticamente ante cualquier cambio):\n`;
+    mensaje += `${linkFotoAV}\n\n`;
+    mensaje += `_Por favor, si alguno no puede cumplir con su asignación, avise con anticipación para coordinar el reemplazo._`;
+
+    const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
     window.open(url, '_blank');
 };
