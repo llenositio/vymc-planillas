@@ -1,13 +1,46 @@
 /**
  * Módulo de Historial, Estadísticas Acumuladas y Matriz de Hermanos
- * Incluye algoritmo de sugerencia por rotación y antigüedad en cada rol.
+ * Incluye algoritmo de sugerencia por rotación y antigüedad en cada rol,
+ * filtro por rango de fechas (Desde / Hasta) y feedback visual al actualizar.
  */
 
 window.historialAsignaciones = [];
 window.historialPorHermanoRol = {};
 
 /**
- * Carga todas las planillas guardadas de la congregación desde Supabase para calcular el historial real
+ * Convierte "NOVIEMBRE 2026" (o "11/2026") a un entero YYYYMM comparable (ej: 202611)
+ */
+window.parsearMesAnoANumero = function(mesAnoStr) {
+    if (!mesAnoStr || typeof mesAnoStr !== 'string') return null;
+    const limpio = mesAnoStr.trim().toUpperCase();
+
+    const meses = {
+        'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+        'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+        'SEPTIEMBRE': 9, 'SETIEMBRE': 9, 'OCTUBRE': 10,
+        'NOVIEMBRE': 11, 'DICIEMBRE': 12
+    };
+
+    const matchAnio = limpio.match(/(20\d{2})/);
+    if (!matchAnio) return null;
+    const anio = parseInt(matchAnio[1], 10);
+
+    for (const [nombreMes, numMes] of Object.entries(meses)) {
+        if (limpio.includes(nombreMes)) {
+            return anio * 100 + numMes;
+        }
+    }
+
+    const matchMesNum = limpio.match(/\b(0?[1-9]|1[0-2])\b/);
+    if (matchMesNum) {
+        return anio * 100 + parseInt(matchMesNum[1], 10);
+    }
+
+    return null;
+};
+
+/**
+ * Carga todas las planillas guardadas de la congregación desde Supabase
  */
 window.cargarHistorialDesdeSupabase = async function() {
     let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
@@ -29,9 +62,10 @@ window.cargarHistorialDesdeSupabase = async function() {
 };
 
 /**
- * Procesa las planillas históricas y construye un mapa exacto por hermano y rol
+ * Procesa las planillas históricas (opcionalmente filtradas por rango YYYYMM)
+ * y construye un mapa exacto por hermano y rol
  */
-window.procesarHistorialAsignaciones = function() {
+window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null) {
     const mapa = {};
 
     const registrar = (nombreRaw, rol, ordenTiempo, etiquetaMes) => {
@@ -54,8 +88,21 @@ window.procesarHistorialAsignaciones = function() {
 
     let ordenGlobal = 0;
 
-    (window.historialAsignaciones || []).forEach(planilla => {
+    // Ordenar cronológicamente las planillas según mes_ano antes de procesar
+    const planillasOrdenadas = [...(window.historialAsignaciones || [])].sort((a, b) => {
+        const numA = window.parsearMesAnoANumero(a.mes_ano) || 0;
+        const numB = window.parsearMesAnoANumero(b.mes_ano) || 0;
+        return numA - numB;
+    });
+
+    planillasOrdenadas.forEach(planilla => {
         const mesLabel = planilla.mes_ano || 'SIN MES';
+        const mesNum = window.parsearMesAnoANumero(mesLabel);
+
+        // Aplicar filtro de fechas si está configurado
+        if (desdeNum !== null && (mesNum === null || mesNum < desdeNum)) return;
+        if (hastaNum !== null && (mesNum === null || mesNum > hastaNum)) return;
+
         const rawDatos = typeof planilla.datos === 'string' ? JSON.parse(planilla.datos) : (planilla.datos || []);
         const semanas = Array.isArray(rawDatos) ? rawDatos : (rawDatos.semanas || rawDatos.programa || []);
 
@@ -65,7 +112,7 @@ window.procesarHistorialAsignaciones = function() {
             if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
             ordenGlobal++;
 
-            // a) Presidencia ES (Canción N° . Presidencia: Palabras de introducción)
+            // a) Presidencia ES
             if (sem.presidencia) {
                 registrar(sem.presidencia, 'presi', ordenGlobal, mesLabel);
             }
@@ -74,10 +121,10 @@ window.procesarHistorialAsignaciones = function() {
             if (sem.oracionIni) registrar(sem.oracionIni, 'oraciones', ordenGlobal, mesLabel);
             if (sem.oracionFin) registrar(sem.oracionFin, 'oraciones', ordenGlobal, mesLabel);
 
-            // k) Presidencia FS (Domingo / Fin de semana)
+            // k) Presidencia FS
             if (sem.domPresi) registrar(sem.domPresi, 'presiDom', ordenGlobal, mesLabel);
 
-            // l) Lector W (Lector de La Atalaya)
+            // l) Lector W
             if (sem.domLector) registrar(sem.domLector, 'lectorAtalaya', ordenGlobal, mesLabel);
 
             (sem.partes || []).forEach(p => {
@@ -86,7 +133,7 @@ window.procesarHistorialAsignaciones = function() {
                 const textoCompleto = `${titLower} ${descLower}`;
 
                 if (p.seccion === 'tesoros') {
-                    // c) Discurso de Tesoros (10 min)
+                    // c) Discurso de Tesoros
                     if (p.tit && p.tit.trim().startsWith('1.') && p.asig) {
                         registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
                     }
@@ -99,7 +146,7 @@ window.procesarHistorialAsignaciones = function() {
                         if (p.asig) registrar(p.asig, 'lectura', ordenGlobal, mesLabel);
                     }
                 } else if (p.seccion === 'maestros') {
-                    // f) Seamos Mejores Maestros: separados en Estudiante (E) y Ayudante (A)
+                    // f) Seamos Mejores Maestros: Estudiante (E) y Ayudante (A)
                     [p.asig, p.asigB, p.asigC].forEach(nom => {
                         if (nom) {
                             registrar(nom, 'smmE', ordenGlobal, mesLabel);
@@ -118,7 +165,7 @@ window.procesarHistorialAsignaciones = function() {
                         if (p.asig) registrar(p.asig, 'estudioBiblico', ordenGlobal, mesLabel);
                         if (p.asigAyudante) registrar(p.asigAyudante, 'lectorLibro', ordenGlobal, mesLabel);
                     } else {
-                        // g) Nuestra Vida Cristiana: solo temas de NVC separados en Común (C) o Necesidades Locales (NL)
+                        // g) Nuestra Vida Cristiana: Común (C) o Necesidades Locales (NL)
                         const esNecLoc = textoCompleto.includes('necesidades locales') ||
                                          textoCompleto.includes('necesidades lucales') ||
                                          textoCompleto.includes('nec loc') ||
@@ -243,17 +290,142 @@ window.buscarYCargarPlanillaHistorial = async function() {
 };
 
 /**
+ * Inyecta (si no existe) la barra de filtro Desde / Hasta arriba de Estadísticas
+ */
+window.asegurarBarraFiltroEstadisticas = function(contenedor) {
+    if (document.getElementById('barraFiltroRangoEstadisticas')) return;
+
+    const mesesLista = [
+        { val: '01', txt: 'Enero' }, { val: '02', txt: 'Febrero' },
+        { val: '03', txt: 'Marzo' }, { val: '04', txt: 'Abril' },
+        { val: '05', txt: 'Mayo' }, { val: '06', txt: 'Junio' },
+        { val: '07', txt: 'Julio' }, { val: '08', txt: 'Agosto' },
+        { val: '09', txt: 'Septiembre' }, { val: '10', txt: 'Octubre' },
+        { val: '11', txt: 'Noviembre' }, { val: '12', txt: 'Diciembre' }
+    ];
+
+    const anioActual = new Date().getFullYear();
+    const aniosLista = [];
+    for (let y = anioActual - 2; y <= anioActual + 2; y++) {
+        aniosLista.push(y);
+    }
+
+    const optMeses = `<option value="">-- Mes --</option>` + mesesLista.map(m => `<option value="${m.val}">${m.txt}</option>`).join('');
+    const optAnios = `<option value="">-- Año --</option>` + aniosLista.map(y => `<option value="${y}">${y}</option>`).join('');
+
+    const barra = document.createElement('div');
+    barra.id = 'barraFiltroRangoEstadisticas';
+    barra.className = 'flex flex-wrap items-center gap-2 mb-3 p-2.5 bg-slate-100 border border-slate-200 rounded-lg text-xs';
+    barra.innerHTML = `
+        <span class="font-bold text-slate-700">Filtrar período:</span>
+        <div class="flex items-center gap-1">
+            <label class="text-slate-600 font-semibold">Desde:</label>
+            <select id="estDesdeMes" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optMeses}</select>
+            <select id="estDesdeAnio" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optAnios}</select>
+        </div>
+        <div class="flex items-center gap-1">
+            <label class="text-slate-600 font-semibold">Hasta:</label>
+            <select id="estHastaMes" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optMeses}</select>
+            <select id="estHastaAnio" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optAnios}</select>
+        </div>
+        <button type="button" onclick="window.limpiarFiltroRangoEstadisticas()" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded transition">
+            Todo el historial
+        </button>
+        <span id="estInfoRangoActivo" class="text-[11px] font-semibold text-emerald-700 ml-auto">Mostrando: Todo el historial</span>
+    `;
+
+    contenedor.parentNode.insertBefore(barra, contenedor);
+};
+
+window.obtenerRangoEstadisticasSeleccionado = function() {
+    const dMes = document.getElementById('estDesdeMes')?.value || '';
+    const dAnio = document.getElementById('estDesdeAnio')?.value || '';
+    const hMes = document.getElementById('estHastaMes')?.value || '';
+    const hAnio = document.getElementById('estHastaAnio')?.value || '';
+
+    const desdeNum = (dMes && dAnio) ? parseInt(`${dAnio}${dMes}`, 10) : null;
+    const hastaNum = (hMes && hAnio) ? parseInt(`${hAnio}${hMes}`, 10) : null;
+
+    const infoSpan = document.getElementById('estInfoRangoActivo');
+    if (infoSpan) {
+        if (desdeNum === null && hastaNum === null) {
+            infoSpan.textContent = 'Mostrando: Todo el historial';
+        } else {
+            const txtDesde = desdeNum ? `${dMes}/${dAnio}` : 'Inicio';
+            const txtHasta = hastaNum ? `${hMes}/${hAnio}` : 'Actualidad';
+            infoSpan.textContent = `Período filtrado: ${txtDesde} → ${txtHasta}`;
+        }
+    }
+
+    return { desdeNum, hastaNum };
+};
+
+window.aplicarFiltroRangoEstadisticas = function() {
+    window.renderizarTablaHistorial(false);
+};
+
+window.limpiarFiltroRangoEstadisticas = function() {
+    ['estDesdeMes', 'estDesdeAnio', 'estHastaMes', 'estHastaAnio'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    window.renderizarTablaHistorial(false);
+};
+
+/**
+ * Feedback visual en el botón "Actualizar Conteo"
+ */
+window.mostrarFeedbackBotonConteo = function(estado) {
+    const botones = Array.from(document.querySelectorAll('button')).filter(b =>
+        b.textContent.includes('Actualizar Conteo') || b.dataset.esBotonConteo === '1'
+    );
+
+    botones.forEach(btn => {
+        btn.dataset.esBotonConteo = '1';
+        if (!btn.dataset.htmlOriginal) {
+            btn.dataset.htmlOriginal = btn.innerHTML;
+        }
+
+        if (estado === 'cargando') {
+            btn.disabled = true;
+            btn.classList.add('opacity-75');
+            btn.innerHTML = `<i class="fa-solid fa-rotate fa-spin mr-1"></i> Actualizando...`;
+        } else if (estado === 'ok') {
+            btn.disabled = false;
+            btn.classList.remove('opacity-75');
+            btn.innerHTML = `<i class="fa-solid fa-check mr-1 text-emerald-400"></i> Actualizado ✓`;
+            setTimeout(() => {
+                btn.innerHTML = btn.dataset.htmlOriginal;
+            }, 1600);
+        }
+    });
+};
+
+/**
  * Renderiza la tabla de Estadísticas Acumuladas en la pestaña "Estadísticas"
  */
-window.renderizarTablaHistorial = async function() {
+window.renderizarTablaHistorial = async function(recargarBD = true) {
     const contenedor = document.getElementById('contenedorTablaHistorial');
     if (!contenedor) return;
 
-    await window.cargarHistorialDesdeSupabase();
+    if (recargarBD) {
+        window.mostrarFeedbackBotonConteo('cargando');
+    }
+
+    window.asegurarBarraFiltroEstadisticas(contenedor);
+    const { desdeNum, hastaNum } = window.obtenerRangoEstadisticasSeleccionado();
+
+    if (recargarBD || !window.historialAsignaciones || window.historialAsignaciones.length === 0) {
+        await window.cargarHistorialDesdeSupabase();
+    }
+
+    // Procesar con el filtro de fechas seleccionado (si ambos son null, procesa todo)
+    window.procesarHistorialAsignaciones(desdeNum, hastaNum);
 
     const hermanos = window.listaHermanos || [];
     if (hermanos.length === 0) {
         contenedor.innerHTML = `<p class="text-center text-xs text-slate-500 py-6">No hay hermanos cargados en la congregación.</p>`;
+        if (recargarBD) window.mostrarFeedbackBotonConteo('ok');
         return;
     }
 
@@ -369,6 +541,10 @@ window.renderizarTablaHistorial = async function() {
 
     html += `</tbody></table></div>`;
     contenedor.innerHTML = html;
+
+    if (recargarBD) {
+        window.mostrarFeedbackBotonConteo('ok');
+    }
 };
 
 /**
