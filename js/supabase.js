@@ -831,14 +831,14 @@ window.cargarGestionUsuarios = async function() {
         ).join('');
 
         const selectorRolHtml = puedeEditarEsteUsuario
-            ? `<select id="rol-user-${u.id}" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white">
+            ? `<select id="rol-user-${u.id}" data-status-actual="${u.status || 'approved'}" onchange="window.guardarEstadoYRolUsuario('${u.id}', this.dataset.statusActual)" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white cursor-pointer">
                 ${!rolesAsignables.some(r => r.value === u.role) ? `<option value="${u.role}" selected>${formatearNombreRol(u.role)}</option>` : ''}
                 ${opcionesRol}
                </select>`
             : `<span class="text-xs font-bold text-slate-700">${formatearNombreRol(u.role)}</span>`;
 
         const selectorCongreHtml = miRol === 'super_admin'
-            ? `<select id="congre-user-${u.id}" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white">
+            ? `<select id="congre-user-${u.id}" data-status-actual="${u.status || 'approved'}" onchange="window.guardarEstadoYRolUsuario('${u.id}', this.dataset.statusActual)" class="border border-slate-300 rounded px-2 py-1 text-xs font-semibold bg-white cursor-pointer">
                 <option value="">-- Sin asignar --</option>
                 ${listaCongres.map(c => `<option value="${c.id}" ${u.congregacion_id === c.id ? 'selected' : ''}>${c.nombre}</option>`).join('')}
                </select>`
@@ -911,18 +911,26 @@ window.guardarEstadoYRolUsuario = async function(userId, nuevoStatus) {
     }
 
     const payload = {
-        status: nuevoStatus,
+        status: nuevoStatus || 'approved',
         congregacion_id: nuevaCongre
     };
     if (nuevoRol) payload.role = nuevoRol;
 
-    const { error } = await db
+    const { data, error } = await db
         .from('perfiles')
         .update(payload)
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
 
     if (error) {
-        alert("No se pudo actualizar el usuario (verificá tus permisos): " + error.message);
+        alert("Error al actualizar el usuario: " + error.message);
+        await window.cargarGestionUsuarios();
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        alert("Supabase bloqueó el cambio por permisos RLS en la tabla 'perfiles'. Ejecutá la política SQL de UPDATE para administradores en Supabase.");
+        await window.cargarGestionUsuarios();
         return;
     }
 
