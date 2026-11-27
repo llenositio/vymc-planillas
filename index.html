@@ -492,7 +492,7 @@
                         <p class="text-xs text-slate-500">Programación mensual con filtrado inteligente según el día de la reunión</p>
                     </div>
                     
-                    <!-- CONTENEDOR DE TELÉFONO DE GRUPO Y BOTÓN GUARDAR -->
+                    <!-- CONTENEDOR DE TELÉFONO DE GRUPO, ENVÍO MODO FOTO Y BOTÓN GUARDAR -->
                     <div class="flex items-center gap-2 flex-wrap">
                         <div class="flex items-center gap-1 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-sm">
                             <i class="fa-brands fa-whatsapp text-emerald-600 font-bold"></i>
@@ -502,6 +502,9 @@
                                    placeholder="Ej: 5491122334455" 
                                    class="bg-white border border-emerald-300 text-xs px-2 py-1 rounded w-36 sm:w-44 text-slate-700 font-mono outline-none focus:ring-1 focus:ring-emerald-500">
                         </div>
+                        <button type="button" onclick="if(typeof window.enviarPlanillaCompletaAVAlGrupo === 'function') window.enviarPlanillaCompletaAVAlGrupo();" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-brands fa-whatsapp"></i> Enviar Planilla al Grupo
+                        </button>
                         <button onclick="if(typeof guardarPlanillaAVEnSupabase === 'function') guardarPlanillaAVEnSupabase();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-floppy-disk"></i> Guardar Planilla AV
                         </button>
@@ -709,8 +712,7 @@
             const secciones = ['planilla', 'historial', 'estadisticas', 'hermanos', 'av_planilla', 'av_matriz', 'usuarios'];
             
             secciones.forEach(sec => {
-                const elSec = document.getElementById(`sec-${sec}`);
-                const elTab = document.getElementById(`tab-${sec}`);
+                const elSec = document.getElementById(`sec-${sec}`); const elTab = document.getElementById(`tab-${sec}`);
                 
                 if (elSec) elSec.classList.add('hidden');
                 if (elTab) {
@@ -719,8 +721,7 @@
                 }
             });
 
-            const secActiva = document.getElementById(`sec-${pestaña}`);
-            const tabActivo = document.getElementById(`tab-${pestaña}`);
+            const secActiva = document.getElementById(`sec-${pestaña}`); const tabActivo = document.getElementById(`tab-${pestaña}`);
 
             if (secActiva) secActiva.classList.remove('hidden');
             if (tabActivo) {
