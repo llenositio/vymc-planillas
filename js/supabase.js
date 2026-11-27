@@ -1,5 +1,5 @@
 /**
- * Módulo de Integración con Supabase + Autenticación Multi-Inquilino (Google OAuth) + Vista Pública en Tiempo Real
+ * Módulo de Integración con Supabase + Autenticación Multi-Inquilino (Google OAuth) + Vista Pública en Tiempo Real (VyMC y AV)
  */
 
 const SUPABASE_URL = "https://logscbqojxfyrewfoqas.supabase.co";
@@ -25,12 +25,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const congreSlugParam = urlParams.get('c');
     const mesParam = urlParams.get('m');
+    const vistaParam = (urlParams.get('v') || urlParams.get('vista') || '').toLowerCase();
 
     // MODO VISTA PÚBLICA (FOTO HTML DEL MES COMPLETO + ACTUALIZACIÓN EN TIEMPO REAL)
     if (congreSlugParam) {
         document.body.classList.add('modo-publico');
         mostrarPantallaLogin(false);
-        await cargarPlanillaVistaPublica(congreSlugParam, mesParam);
+        if (vistaParam === 'av') {
+            await cargarPlanillaAVVistaPublica(congreSlugParam, mesParam);
+        } else {
+            await cargarPlanillaVistaPublica(congreSlugParam, mesParam);
+        }
         return;
     }
 
@@ -52,7 +57,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
- * Renderiza el snapshot HTML público y suscribe cambios en tiempo real
+ * Renderiza el snapshot HTML público de VyMC y suscribe cambios en tiempo real
  */
 async function renderizarSnapshotPublicoDesdeBD(congreId, mesBuscado) {
     const { data: planillaData, error: planillaError } = await db
@@ -129,6 +134,168 @@ async function cargarPlanillaVistaPublica(slug, mes) {
             }
         )
         .subscribe();
+}
+
+/**
+ * Renderiza la vista pública ("modo foto" de solo lectura) de la Planilla Mensual AV
+ */
+async function renderizarSnapshotPublicoAVDesdeBD(congreId, nombreCongre, mesBuscado) {
+    const { data: avData, error: avError } = await db
+        .from('planillas_av')
+        .select('datos, mes_ano, updated_at')
+        .eq('congregacion_id', congreId)
+        .eq('mes_ano', mesBuscado)
+        .maybeSingle();
+
+    const contenedor = document.querySelector('.print-area');
+    if (!contenedor) return;
+
+    if (avError || !avData || !avData.datos) {
+        contenedor.innerHTML = `
+            <div class="text-center py-12 text-slate-500 font-bold">
+                <p class="text-base">No hay una Planilla de Acomodadores y Audio/Video publicada aún para ${mesBuscado}.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const semanasAV = typeof avData.datos === 'string' ? JSON.parse(avData.datos) : (avData.datos || []);
+    const puestos = (Array.isArray(window.puestosConfigAV) && window.puestosConfigAV.length > 0)
+        ? window.puestosConfigAV
+        : [
+            { key: 'puerta', label: 'PUERTA' },
+            { key: 'aud1', label: 'AUD 1' },
+            { key: 'aud2', label: 'AUD 2' },
+            { key: 'mic1', label: 'MIC 1' },
+            { key: 'mic2', label: 'MIC 2' },
+            { key: 'audio', label: 'AUDIO' },
+            { key: 'video', label: 'VIDEO' }
+        ];
+
+    let html = `
+        <div class="text-center mb-4 border-b-2 border-slate-900 pb-2">
+            <p class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Congregación ${nombreCongre}</p>
+            <h2 class="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-wide">
+                ACOMODADORES Y AUDIO / VIDEO — ${mesBuscado}
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs border-collapse border-2 border-slate-900 bg-white">
+                <thead>
+                    <tr class="bg-slate-900 text-white uppercase text-[11px] font-extrabold">
+                        <th class="border border-slate-600 px-2 py-2 text-center">Semana</th>
+                        <th class="border border-slate-600 px-2 py-2 text-center">Reunión</th>
+    `;
+
+    puestos.forEach(p => {
+        html += `<th class="border border-slate-600 px-2 py-2 text-center">${p.label}</th>`;
+    });
+
+    html += `</tr></thead><tbody>`;
+
+    semanasAV.forEach((sem, sIdx) => {
+        const filasDia = [
+            { etiqueta: 'Entre Semana', badge: 'bg-sky-100 text-sky-900 border-sky-300', campo: 'puestosES' },
+            { etiqueta: 'Fin de Semana', badge: 'bg-amber-100 text-amber-900 border-amber-300', campo: 'puestosFS' }
+        ];
+
+        filasDia.forEach((dia, dIdx) => {
+            const asignados = sem[dia.campo] || {};
+            const bgFila = (sIdx % 2 === 0) ? 'bg-white' : 'bg-slate-50';
+            html += `<tr class="${bgFila}">`;
+
+            if (dIdx === 0) {
+                html += `
+                    <td rowspan="2" class="border border-slate-400 px-2 py-2 font-black text-slate-900 text-center align-middle bg-slate-100 uppercase">
+                        ${sem.fecha || ''}
+                    </td>
+                `;
+            }
+
+            html += `
+                <td class="border border-slate-400 px-1.5 py-1.5 text-center align-middle">
+                    <span class="inline-block px-1.5 py-0.5 rounded border text-[10px] font-extrabold ${dia.badge}">
+                        ${dia.etiqueta}
+                    </span>
+                </td>
+            `;
+
+            puestos.forEach(p => {
+                const nom = (asignados[p.key] || '').trim();
+                html += `
+                    <td class="border border-slate-400 px-2 py-1.5 text-center align-middle font-bold uppercase ${nom ? 'text-slate-900' : 'text-slate-300'}">
+                        ${nom || '—'}
+                    </td>
+                `;
+            });
+
+            html += `</tr>`;
+        });
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <p class="text-[11px] text-slate-400 text-right mt-2">
+            Vista de solo lectura · Actualizada automáticamente en tiempo real
+        </p>
+    `;
+
+    contenedor.innerHTML = html;
+}
+
+async function cargarPlanillaAVVistaPublica(slug, mes) {
+    const mesBuscado = mes ? decodeURIComponent(mes).replace(/-/g, ' ').toUpperCase() : 'ACTUAL';
+
+    const { data: congregaciones, error: congreError } = await db
+        .from('congregaciones')
+        .select('id, nombre');
+
+    if (congreError || !congregaciones || congregaciones.length === 0) return;
+
+    const slugLimpio = slug.toLowerCase().replace(/\s+/g, '');
+    const congreEncontrada = congregaciones.find(c =>
+        c.nombre.toLowerCase().replace(/\s+/g, '') === slugLimpio || c.id === slug
+    );
+
+    if (!congreEncontrada) return;
+
+    window.congregacionIdActual = congreEncontrada.id;
+
+    // 1. Carga inicial
+    await renderizarSnapshotPublicoAVDesdeBD(congreEncontrada.id, congreEncontrada.nombre, mesBuscado);
+
+    // 2. Suscripción Realtime en Supabase
+    if (canalRealtimePublico) {
+        db.removeChannel(canalRealtimePublico);
+    }
+
+    canalRealtimePublico = db
+        .channel(`publico-av-${congreEncontrada.id}-${mesBuscado}`)
+        .on(
+            'postgres_changes',
+            {
+                event: '*',
+                schema: 'public',
+                table: 'planillas_av',
+                filter: `congregacion_id=eq.${congreEncontrada.id}`
+            },
+            (payload) => {
+                const registro = payload.new || payload.old;
+                if (registro && registro.mes_ano === mesBuscado) {
+                    renderizarSnapshotPublicoAVDesdeBD(congreEncontrada.id, congreEncontrada.nombre, mesBuscado);
+                }
+            }
+        )
+        .subscribe();
+
+    // 3. Refresco automático al volver a abrir la pestaña en el celular
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            renderizarSnapshotPublicoAVDesdeBD(congreEncontrada.id, congreEncontrada.nombre, mesBuscado);
+        }
+    });
 }
 
 function mostrarVistaLoginGoogle() {
@@ -636,7 +803,7 @@ window.cargarGestionUsuarios = async function() {
                 <button type="button" onclick="window.guardarEstadoYRolUsuario('${u.id}', 'approved')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2.5 py-1 rounded transition">
                     Aprobar / Guardar
                 </button>
-                <button type="button" onclick="window.guardarEstadoYRolUsuario('${u.id}', 'blocked')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold px-2 py-1 rounded transition">
+                <button type="button" onclick="window.guardarEstadoYRolUsuario('${u.id}', 'blocked')" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-[11px] font-bold px-2.5 py-1 rounded transition">
                     Bloquear
                 </button>
                </div>`
