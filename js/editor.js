@@ -1,3 +1,8 @@
+/* HELPER DE PERMISOS DE EDICIÓN VyMC */
+function puedeEditarPlanillaVyMC() {
+    return ['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual);
+}
+
 /* RENDERIZADO DE PLANILLA SEMANAL */
 window.renderizarSelectorSemanas = function() {
     const contenedor = document.getElementById('selectorSemanas');
@@ -18,14 +23,23 @@ window.cargarSemanaEnPlanilla = function(idx) {
     if (!window.programaMes[idx]) return;
     window.semanaActivaIdx = idx;
     const sem = window.programaMes[idx];
+    const puedeEditar = puedeEditarPlanillaVyMC();
+    const ceAttr = puedeEditar ? 'true' : 'false';
+    const disAttr = puedeEditar ? '' : 'disabled';
 
     renderizarSelectorSemanas();
 
     const radios = document.getElementsByName('tipoSemana');
-    radios.forEach(r => { r.checked = (r.value === sem.tipoSemana); });
+    radios.forEach(r => {
+        r.checked = (r.value === sem.tipoSemana);
+        r.disabled = !puedeEditar;
+    });
 
     const selSalas = document.getElementById('selectNumSalas');
-    if (selSalas) selSalas.value = sem.numSalas || 1;
+    if (selSalas) {
+        selSalas.value = sem.numSalas || 1;
+        selSalas.disabled = !puedeEditar;
+    }
 
     const banner = document.getElementById('bannerEventoEspecial');
     const tabla = document.getElementById('tablaPlanillaCompleta');
@@ -53,8 +67,8 @@ window.cargarSemanaEnPlanilla = function(idx) {
     thead.innerHTML = `
         <tr>
             <th colspan="11" class="py-1.5 text-center bg-slate-100 border-b-2 border-slate-900 font-black text-xs sm:text-sm text-slate-900">
-                Semana del <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('semana', this.innerText)" class="editable-field uppercase">${sem.semana}</span> , 
-                <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('lectura', this.innerText)" class="editable-field uppercase">${sem.lectura}</span>
+                Semana del <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('semana', this.innerText)" class="editable-field uppercase">${sem.semana}</span> , 
+                <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('lectura', this.innerText)" class="editable-field uppercase">${sem.lectura}</span>
             </th>
         </tr>
     `;
@@ -66,7 +80,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
         <tr>
             <td class="c-tiempo">1 min</td>
             <td class="font-medium" colspan="2">
-                Canción N° <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[0] || ''}" onchange="actualizarCancion(0, this.value)">. Presidencia: Palabras de introducción.
+                Canción N° <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[0] || ''}" onchange="actualizarCancion(0, this.value)">. Presidencia: Palabras de introducción.
             </td>
             <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                 <div class="flex items-center justify-center gap-1">
@@ -109,7 +123,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     <th class="bg-tesoros text-white c-tiempo"><i class="fa-solid fa-gem text-xs"></i></th>
                     <th colspan="9" class="bg-tesoros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Tesoros de la Biblia</th>
                     <th class="bg-tesoros text-white text-center no-print">
-                        <button onclick="agregarParteSeccion('tesoros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                        ${puedeEditar ? `<button onclick="agregarParteSeccion('tesoros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>` : ''}
                     </th>
                 </tr>
             `;
@@ -141,7 +155,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         <th class="bg-maestros text-white c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
                         <th colspan="9" class="bg-maestros text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Seamos mejores maestros</th>
                         <th class="bg-maestros text-white text-center no-print">
-                            <button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                            ${puedeEditar ? `<button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>` : ''}
                         </th>
                     </tr>
                 `;
@@ -151,7 +165,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                         <th class="bg-maestros text-white c-tiempo"><i class="fa-solid fa-wheat-awn text-xs"></i></th>
                         ${subcabeceraSalas}
                         <th class="bg-maestros text-white text-center no-print">
-                            <button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                            ${puedeEditar ? `<button onclick="agregarParteSeccion('maestros')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>` : ''}
                         </th>
                     </tr>
                 `;
@@ -167,12 +181,12 @@ window.cargarSemanaEnPlanilla = function(idx) {
                     </th>
                     <th colspan="9" class="bg-vida text-white py-1 text-center text-xs font-extrabold uppercase tracking-wider">Nuestra vida cristiana</th>
                     <th class="bg-vida text-white text-center no-print">
-                        <button onclick="agregarParteSeccion('vida')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>
+                        ${puedeEditar ? `<button onclick="agregarParteSeccion('vida')" class="text-white hover:text-amber-300 text-xs" title="Agregar parte"><i class="fa-solid fa-plus"></i></button>` : ''}
                     </th>
                 </tr>
                 <tr>
                     <td class="px-2 font-bold" colspan="10">
-                        Canción Nº: <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[1] || ''}" onchange="actualizarCancion(1, this.value)">
+                        Canción Nº: <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[1] || ''}" onchange="actualizarCancion(1, this.value)">
                     </td>
                     <td class="no-print"></td>
                 </tr>
@@ -316,14 +330,15 @@ window.cargarSemanaEnPlanilla = function(idx) {
 
         filasHTML += `
             <tr>
-                <td class="c-tiempo"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 't', this.innerText)" class="editable-field">${parte.t}</span></td>
-                <td class="font-medium"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'tit', this.innerText)" class="editable-field">${parte.tit}</span></td>
-                <td class="text-slate-600"><span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'desc', this.innerText)" class="editable-field">${parte.desc}</span></td>
+                <td class="c-tiempo"><span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 't', this.innerText)" class="editable-field">${parte.t}</span></td>
+                <td class="font-medium"><span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'tit', this.innerText)" class="editable-field">${parte.tit}</span></td>
+                <td class="text-slate-600"><span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoParte(${pIdx}, 'desc', this.innerText)" class="editable-field">${parte.desc}</span></td>
                 ${celdasAsignacionHTML}
                 <td class="text-center no-print w-8">
+                    ${puedeEditar ? `
                     <button onclick="eliminarParte(${pIdx})" class="text-rose-500 hover:text-rose-700 transition p-1" title="Eliminar esta fila">
                         <i class="fa-solid fa-trash-can"></i>
-                    </button>
+                    </button>` : ''}
                 </td>
             </tr>
         `;
@@ -350,14 +365,14 @@ window.cargarSemanaEnPlanilla = function(idx) {
             </tr>
             <tr class="bg-blue-50/50">
                 <td class="c-tiempo font-bold text-blue-900">
-                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('tiempoViajanteEntreSemana', this.innerText)" class="editable-field">${tiempoViajanteSem}</span>
+                    <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('tiempoViajanteEntreSemana', this.innerText)" class="editable-field">${tiempoViajanteSem}</span>
                 </td>
                 <td class="font-bold text-blue-900" colspan="2">
-                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${temaViajanteSem}</span>
+                    <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaViajanteEntreSemana', this.innerText)" class="editable-field">${temaViajanteSem}</span>
                 </td>
                 <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
+                        <input type="text" ${disAttr} style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteEntreSemana || ''}" onchange="actualizarCampoSemana('asigViajanteEntreSemana', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteEntreSemana, '', temaViajanteSem)}
                     </div>
                 </td>
@@ -366,7 +381,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr>
                 <td class="c-tiempo"></td>
                 <td class="font-medium" colspan="2">
-                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
+                    Canción Nº <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
@@ -387,7 +402,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
                 <td class="px-2 font-bold py-1.5" colspan="3">
                     <div class="flex items-center flex-wrap gap-1">
                         <span>Domingo, presidencia, canción N°</span>
-                        <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomIni || ''}" onchange="actualizarCampoSemana('cancionDomIni', this.value)">
+                        <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomIni || ''}" onchange="actualizarCampoSemana('cancionDomIni', this.value)">
                         <span>y oración</span>
                     </div>
                 </td>
@@ -402,11 +417,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo font-bold text-blue-900">30 min</td>
                 <td class="px-2 font-bold text-blue-900" colspan="2">
-                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${temaDiscPub}</span>
+                    <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscPub', this.innerText)" class="editable-field">${temaDiscPub}</span>
                 </td>
                 <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
+                        <input type="text" ${disAttr} style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscPub || ''}" onchange="actualizarCampoSemana('asigViajanteDiscPub', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscPub, '', temaDiscPub)}
                     </div>
                 </td>
@@ -415,7 +430,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo">3 min</td>
                 <td class="px-2 font-medium" colspan="9">
-                    Canción N° <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomMid || ''}" onchange="actualizarCampoSemana('cancionDomMid', this.value)">
+                    Canción N° <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomMid || ''}" onchange="actualizarCampoSemana('cancionDomMid', this.value)">
                 </td>
                 <td class="no-print"></td>
             </tr>
@@ -433,11 +448,11 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo font-bold text-blue-900">30 min</td>
                 <td class="px-2 font-bold text-blue-900" colspan="2">
-                    <span contenteditable="true" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${temaDiscFin}</span>
+                    <span contenteditable="${ceAttr}" onpaste="limpiarTextoPegado(event)" onblur="actualizarCampoSemana('temaDiscFin', this.innerText)" class="editable-field">${temaDiscFin}</span>
                 </td>
                 <td colspan="7" class="font-bold text-blue-950 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
-                        <input type="text" style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
+                        <input type="text" ${disAttr} style="text-transform: none;" class="input-inline w-full text-blue-950 font-bold text-xs" placeholder="Nombre y apellido" value="${sem.asigViajanteDiscFin || ''}" onchange="actualizarCampoSemana('asigViajanteDiscFin', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigViajanteDiscFin, '', temaDiscFin)}
                     </div>
                 </td>
@@ -446,12 +461,12 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr class="bg-blue-50/30">
                 <td class="c-tiempo">3 min</td>
                 <td class="px-2 font-medium" colspan="2">
-                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)"> y oración
+                    Canción Nº <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.cancionDomFin || ''}" onchange="actualizarCampoSemana('cancionDomFin', this.value)"> y oración
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
                         ${crearSelectHTML('sel-oracionDomFin', 'orac', sem.asigOracionDomFin)}
-                        <input type="text" style="text-transform: none;" class="input-inline w-40 border-b border-slate-400 text-blue-950 font-bold text-xs" placeholder="O escribir nombre..." value="${sem.asigOracionDomFin || ''}" onchange="actualizarCampoSemana('asigOracionDomFin', this.value)">
+                        <input type="text" ${disAttr} style="text-transform: none;" class="input-inline w-40 border-b border-slate-400 text-blue-950 font-bold text-xs" placeholder="O escribir nombre..." value="${sem.asigOracionDomFin || ''}" onchange="actualizarCampoSemana('asigOracionDomFin', this.value)">
                         ${crearBotonWhatsAppHTML(sem.asigOracionDomFin, '', 'Oración final (Domingo)')}
                     </div>
                 </td>
@@ -474,7 +489,7 @@ window.cargarSemanaEnPlanilla = function(idx) {
             <tr>
                 <td class="c-tiempo"></td>
                 <td class="font-medium" colspan="2">
-                    Canción Nº <input type="text" class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
+                    Canción Nº <input type="text" ${disAttr} class="input-inline w-8 border-b border-slate-400" value="${sem.canciones[2] || ''}" onchange="actualizarCancion(2, this.value)"> y oración:
                 </td>
                 <td colspan="7" class="font-black uppercase text-amber-950 bg-amber-50/50 text-center text-xs">
                     <div class="flex items-center justify-center gap-1">
@@ -505,26 +520,36 @@ window.cargarSemanaEnPlanilla = function(idx) {
     }
 
     tbody.innerHTML = filasHTML;
+
+    if (!puedeEditar) {
+        tbody.querySelectorAll('select').forEach(sel => {
+            sel.disabled = true;
+        });
+    }
 };
 
 /* ACCIONES DE EDICIÓN */
 window.actualizarCampoSemana = function(campo, valor) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx][campo] = valor.trim();
     if (campo === 'semana') renderizarSelectorSemanas();
     notificarYGuardarAutosave();
 };
 
 window.actualizarCancion = function(idxCancion, valor) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx].canciones[idxCancion] = valor.trim();
     notificarYGuardarAutosave();
 };
 
 window.actualizarCampoParte = function(idxParte, campo, valor) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx].partes[idxParte][campo] = valor.trim();
     notificarYGuardarAutosave();
 };
 
 window.guardarAsignacionSemana = function(idSelect) {
+    if (!puedeEditarPlanillaVyMC()) return;
     const el = document.getElementById(idSelect);
     if (!el) return;
     const val = el.value;
@@ -563,18 +588,21 @@ window.guardarAsignacionSemana = function(idSelect) {
 };
 
 window.actualizarTipoSemana = function(nuevoTipo) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx].tipoSemana = nuevoTipo;
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
     notificarYGuardarAutosave();
 };
 
 window.cambiarNumSalasSemana = function(num) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx].numSalas = parseInt(num);
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
     notificarYGuardarAutosave();
 };
 
 window.agregarParteSeccion = function(seccion) {
+    if (!puedeEditarPlanillaVyMC()) return;
     const nueva = {
         seccion: seccion,
         t: "5 min",
@@ -616,12 +644,14 @@ window.agregarParteSeccion = function(seccion) {
 };
 
 window.eliminarParte = function(idxParte) {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes[window.semanaActivaIdx].partes.splice(idxParte, 1);
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
     notificarYGuardarAutosave();
 };
 
 window.agregarNuevaSemana = function() {
+    if (!puedeEditarPlanillaVyMC()) return;
     window.programaMes.push(crearEstructuraSemanaEjemplo());
     window.semanaActivaIdx = window.programaMes.length - 1;
     cargarSemanaEnPlanilla(window.semanaActivaIdx);
@@ -629,6 +659,7 @@ window.agregarNuevaSemana = function() {
 };
 
 window.eliminarSemanaActiva = function() {
+    if (!puedeEditarPlanillaVyMC()) return;
     if (window.programaMes.length <= 1) {
         alert("Debe haber al menos una semana en el programa.");
         return;
@@ -642,6 +673,7 @@ window.eliminarSemanaActiva = function() {
 };
 
 window.resetearPlanillaMes = function() {
+    if (!puedeEditarPlanillaVyMC()) return;
     if (confirm("¿Restaurar la planilla mensual a sus valores por defecto?")) {
         inicializarMesDefault(4);
         window.semanaActivaIdx = 0;
@@ -651,6 +683,7 @@ window.resetearPlanillaMes = function() {
 };
 
 window.guardarMesManual = function() {
+    if (!puedeEditarPlanillaVyMC()) return;
     const input = document.getElementById('inputNombreMes');
     if (input) window.nombreMesGlobal = input.value.trim().toUpperCase();
     notificarYGuardarAutosave();
@@ -659,6 +692,7 @@ window.guardarMesManual = function() {
 /* GUARDADO SILENCIOSO EN SUPABASE (INCLUYE SNAPSHOT PÚBLICO) */
 let timeoutAutosave = null;
 window.notificarYGuardarAutosave = async function() {
+    if (!puedeEditarPlanillaVyMC()) return;
     if (timeoutAutosave) clearTimeout(timeoutAutosave);
 
     timeoutAutosave = setTimeout(async () => {
