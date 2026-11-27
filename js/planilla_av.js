@@ -1,7 +1,7 @@
 /**
  * Módulo de Planilla Mensual de Acomodadores y Audio / Video (planillas_av)
  * Incluye motor de descarte inteligente (Aptitud + Ausencia + Cruce ES/FS separado + No duplicar en misma reunión),
- * contador de asignaciones (N), resaltado buscador y envío WhatsApp cuadrilla/individual.
+ * contador de asignaciones (N), resaltado buscador y envío WhatsApp cuadrilla/individual/planilla completa.
  */
 
 window.programaMesAV = [];
@@ -455,15 +455,15 @@ window.asignarHermanoAVPorTipo = function(indexSemana, tipoDia, puestoKey, nombr
 /**
  * Guarda la planilla mensual AV y el teléfono de grupo en Supabase
  */
-window.guardarPlanillaAVEnSupabase = async function() {
+window.guardarPlanillaAVEnSupabase = async function(silencioso = false) {
     if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        alert("Tu usuario tiene rol de solo lectura y no puede guardar cambios.");
+        if (!silencioso) alert("Tu usuario tiene rol de solo lectura y no puede guardar cambios.");
         return;
     }
 
     let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) {
-        alert("Error: No hay sesión activa o congregación asignada.");
+        if (!silencioso) alert("Error: No hay sesión activa o congregación asignada.");
         return;
     }
 
@@ -489,8 +489,8 @@ window.guardarPlanillaAVEnSupabase = async function() {
 
     if (error) {
         console.error("Error guardando Planilla AV:", error);
-        alert("Error al guardar Planilla AV en Supabase: " + error.message);
-    } else {
+        if (!silencioso) alert("Error al guardar Planilla AV en Supabase: " + error.message);
+    } else if (!silencioso) {
         alert("Planilla AV guardada correctamente en Supabase.");
     }
 };
