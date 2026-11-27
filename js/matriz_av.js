@@ -15,6 +15,10 @@ window.puestosConfigAV = [
     { key: 'video', label: 'VIDEO', colorES: 'bg-rose-800 text-white', colorFS: 'bg-rose-700 text-white' }
 ];
 
+function puedeEditarMatrizAV() {
+    return ['super_admin', 'admin_congregacion', 'editor_av'].includes(window.rolUsuarioActual);
+}
+
 /**
  * Carga los elegibles de AV desde Supabase.
  * Carga varones por defecto e incluye a hermanas si están registradas en 'hermanos_av'.
@@ -100,12 +104,12 @@ window.renderizarMatrizAV = function() {
     const contenedor = document.getElementById('contenedorMatrizAV');
     if (!contenedor) return;
 
-    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
+    const puedeEditar = puedeEditarMatrizAV();
 
     let html = '';
 
     // BARRA SUPERIOR: AGREGAR HERMANA EXCEPCIONAL Y AGREGAR PUESTOS
-    if (!esMensajero) {
+    if (puedeEditar) {
         const hermanasDisponibles = (window.listaHermanosGeneral || []).filter(h => 
             h.sexo === 'M' && !window.listaHermanosAV.some(av => Number(av.hermano_id) === Number(h.id))
         );
@@ -150,15 +154,15 @@ window.renderizarMatrizAV = function() {
 
     // Renderizar cabeceras de columnas editables
     window.puestosConfigAV.forEach((p, pIdx) => {
-        const botonEliminar = !esMensajero ? `<button onclick="window.eliminarPuestoAV(${pIdx})" title="Eliminar puesto" class="ml-1 text-rose-300 hover:text-white font-bold px-1">✕</button>` : '';
+        const botonEliminar = puedeEditar ? `<button onclick="window.eliminarPuestoAV(${pIdx})" title="Eliminar puesto" class="ml-1 text-rose-300 hover:text-white font-bold px-1">✕</button>` : '';
 
         html += `
             <th class="px-2 py-2 text-center border-b border-slate-700 !text-white ${p.colorES}">
-                <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
+                <span contenteditable="${puedeEditar}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} ES</span>
             </th>
             <th class="px-2 py-2 text-center border-b border-slate-700 !text-white ${p.colorFS}">
                 <div class="flex items-center justify-center">
-                    <span contenteditable="${!esMensajero}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
+                    <span contenteditable="${puedeEditar}" onblur="window.actualizarNombrePuestoAV(${pIdx}, this.innerText)" class="editable-field !text-white outline-none cursor-pointer hover:bg-slate-700/50 px-1 rounded">${p.label} FS</span>
                     ${botonEliminar}
                 </div>
             </th>
@@ -191,7 +195,7 @@ window.renderizarMatrizAV = function() {
             const campoFS = `${p.key}_fs`;
             const checkedES = h[campoES] ? 'checked' : '';
             const checkedFS = h[campoFS] ? 'checked' : '';
-            const disabled = esMensajero ? 'disabled' : '';
+            const disabled = !puedeEditar ? 'disabled' : '';
 
             html += `
                 <td class="px-2 py-1 text-center">
@@ -209,7 +213,7 @@ window.renderizarMatrizAV = function() {
 
         html += `
             <td class="px-2 py-1 text-center">
-                ${!esMensajero ? `
+                ${puedeEditar ? `
                 <button onclick="window.quitarHermanoDeMatrizAV(${hId})" title="Quitar de la matriz" class="text-rose-500 hover:text-rose-700 font-bold p-1">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>` : ''}
@@ -230,9 +234,7 @@ window.renderizarMatrizAV = function() {
  * Agrega una hermana excepcionalmente a la lista activa de la Matriz AV y crea su fila en Supabase
  */
 window.agregarHermanaAMatrizAV = async function() {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        return;
-    }
+    if (!puedeEditarMatrizAV()) return;
 
     const select = document.getElementById('selectAgregarHermanaAV');
     if (!select || !select.value) {
@@ -284,9 +286,7 @@ window.agregarHermanaAMatrizAV = async function() {
  * Quita a un hermano/hermana de la matriz AV y elimina su registro en Supabase
  */
 window.quitarHermanoDeMatrizAV = async function(hermanoId) {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        return;
-    }
+    if (!puedeEditarMatrizAV()) return;
 
     if (!confirm("¿Deseas quitar a esta persona de la matriz AV?")) return;
 
@@ -313,6 +313,8 @@ window.quitarHermanoDeMatrizAV = async function(hermanoId) {
  * Agrega un nuevo puesto (par de columnas ES / FS)
  */
 window.agregarPuestoAV = function() {
+    if (!puedeEditarMatrizAV()) return;
+
     const nombre = prompt("Ingresa el nombre del nuevo puesto (ej. PLATAFORMA, PARKING):");
     if (!nombre || !nombre.trim()) return;
 
@@ -345,6 +347,8 @@ window.agregarPuestoAV = function() {
  * Elimina un puesto por índice
  */
 window.eliminarPuestoAV = function(index) {
+    if (!puedeEditarMatrizAV()) return;
+
     const puesto = window.puestosConfigAV[index];
     if (!puesto) return;
 
@@ -358,6 +362,8 @@ window.eliminarPuestoAV = function(index) {
  * Actualiza el nombre de un puesto en la configuración local
  */
 window.actualizarNombrePuestoAV = function(index, nuevoTexto) {
+    if (!puedeEditarMatrizAV()) return;
+
     if (!window.puestosConfigAV[index]) return;
     const textoLimpio = nuevoTexto.replace(/\s+(ES|FS)$/i, '').trim();
     if (textoLimpio) {
@@ -369,9 +375,7 @@ window.actualizarNombrePuestoAV = function(index, nuevoTexto) {
  * Guarda o actualiza un checkbox individual directamente en Supabase
  */
 window.actualizarAptitudAVInmediata = async function(hermanoId, campo, valor) {
-    if (window.rolUsuarioActual && window.rolUsuarioActual.startsWith('mensajero_')) {
-        return;
-    }
+    if (!puedeEditarMatrizAV()) return;
 
     let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
     if (!idCongre) return;
