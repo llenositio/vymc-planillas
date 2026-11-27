@@ -20,6 +20,16 @@ window.slugCongregacionActual = "";
 window.rolUsuarioActual = null;
 let canalRealtimePublico = null;
 
+// Roles habilitados para ingresar al Gestor VyMC y AV
+const ROLES_PERMITIDOS_GESTOR_VYMC_AV = [
+    'super_admin',
+    'admin_congregacion',
+    'editor_vymc',
+    'mensajero_vymc',
+    'editor_av',
+    'mensajero_acomodador'
+];
+
 // Verificar sesión o activar Vista Pública al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -305,7 +315,7 @@ function mostrarVistaLoginGoogle() {
     if (vPendiente) vPendiente.classList.add('hidden');
 }
 
-async function mostrarVistaSolicitudPendiente(perfil) {
+async function mostrarVistaSolicitudPendiente(perfil, motivoBloqueoRol = false) {
     const vGoogle = document.getElementById('loginVistaGoogle');
     const vPendiente = document.getElementById('loginVistaPendiente');
     if (vGoogle) vGoogle.classList.add('hidden');
@@ -316,6 +326,15 @@ async function mostrarVistaSolicitudPendiente(perfil) {
     const bloqueSelect = document.getElementById('bloqueSeleccionCongreInicial');
 
     const nombre = perfil?.full_name || window.usuarioActual?.user_metadata?.full_name || window.usuarioActual?.email || 'Hermano/a';
+
+    if (motivoBloqueoRol) {
+        const rolNombre = formatearNombreRol(perfil?.role || perfil?.rol || 'publicador');
+        if (saludo) saludo.textContent = `Hola, ${nombre}. Acceso restringido en este módulo.`;
+        if (detalle) detalle.textContent = `Tu cuenta tiene asignado el rol "${rolNombre}", que corresponde únicamente al sistema de Territorios y no tiene permiso para ingresar al Gestor VyMC y AV.`;
+        if (bloqueSelect) bloqueSelect.classList.add('hidden');
+        return;
+    }
+
     if (saludo) saludo.textContent = `¡Hola, ${nombre}! Tu cuenta está pendiente de aprobación.`;
 
     if (perfil?.status === 'blocked') {
@@ -410,10 +429,17 @@ async function cargarPerfilUsuario(user) {
     const rolEfectivo = data.role || data.rol || 'publicador';
     const estadoEfectivo = data.status || 'approved';
 
-    // Si no está aprobado (y no es super_admin), mostrar pantalla de solicitud/espera
+    // 1. Si no está aprobado (y no es super_admin), mostrar pantalla de solicitud/espera
     if (rolEfectivo !== 'super_admin' && estadoEfectivo !== 'approved') {
         mostrarPantallaLogin(true);
-        await mostrarVistaSolicitudPendiente(data);
+        await mostrarVistaSolicitudPendiente(data, false);
+        return;
+    }
+
+    // 2. Si está aprobado pero su rol pertenece exclusivamente a Territorios (publicador, conductor, etc.), bloquear acceso al Gestor VyMC y AV
+    if (!ROLES_PERMITIDOS_GESTOR_VYMC_AV.includes(rolEfectivo)) {
+        mostrarPantallaLogin(true);
+        await mostrarVistaSolicitudPendiente(data, true);
         return;
     }
 
@@ -493,6 +519,7 @@ function aplicarRestriccionesPorRol(rol) {
             css += `
                 #sec-planilla .select-asig,
                 #sec-planilla [contenteditable="true"],
+                #sec-planilla .input-inline,
                 #sec-hermanos input,
                 #sec-hermanos select {
                     pointer-events: none !important;
@@ -510,6 +537,7 @@ function aplicarRestriccionesPorRol(rol) {
             css += `
                 #sec-av_planilla select,
                 #sec-av_planilla #inputTelGrupoAV,
+                #sec-av_planilla [contenteditable="true"],
                 #sec-av_matriz input,
                 #sec-av_matriz select {
                     pointer-events: none !important;
@@ -677,7 +705,7 @@ function mostrarPantallaLogin(mostrar) {
 }
 
 /* ============================================================================
-   GESTIÓN JERÁRQUICA DE USUARIOS Y CONGREGACIONES (3 NIVELES)
+   GESTIÓN JERÁRQUICA DE USUARIOS Y CONGREGACIONES (CON DELEGACIÓN POR SECCIÓN)
    ============================================================================ */
 
 window.crearCongregacionSuperAdmin = async function() {
@@ -727,10 +755,24 @@ function obtenerRolesAsignablesSegunMiRol(miRol) {
         ];
     }
     if (miRol === 'editor_vymc') {
-        return [{ value: 'mensajero_vymc', label: 'Mensajero VyMC' }];
+        return [
+            { value: 'editor_vymc', label: 'Editor VyMC' },
+            { value: 'mensajero_vymc', label: 'Mensajero VyMC' }
+        ];
     }
     if (miRol === 'editor_av') {
-        return [{ value: 'mensajero_acomodador', label: 'Mensajero Acomodador' }];
+        return [
+            { value: 'editor_av', label: 'Editor Acomodadores/AV' },
+            { value: 'mensajero_acomodador', label: 'Mensajero Acomodador' }
+        ];
+    }
+    if (miRol === 'editor_territorios') {
+        return [
+            { value: 'editor_territorios', label: 'Editor Territorios' },
+            { value: 'mensajero_territorios', label: 'Mensajero Territorios' },
+            { value: 'conductor', label: 'Conductor' },
+            { value: 'publicador', label: 'Publicador' }
+        ];
     }
     return [];
 }
@@ -776,9 +818,13 @@ window.cargarGestionUsuarios = async function() {
                 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Bloqueado</span>`
                 : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Pendiente</span>`;
 
-        const puedeEditarEsteUsuario = (miRol === 'super_admin' || miRol === 'admin_congregacion') ||
-            (u.status === 'pending') ||
-            rolesAsignables.some(r => r.value === u.role);
+        const esMiMismoUsuario = window.usuarioActual && u.id === window.usuarioActual.id;
+        const puedeEditarEsteUsuario = !esMiMismoUsuario && (
+            miRol === 'super_admin' ||
+            miRol === 'admin_congregacion' ||
+            u.status === 'pending' ||
+            rolesAsignables.some(r => r.value === u.role)
+        );
 
         const opcionesRol = rolesAsignables.map(r =>
             `<option value="${r.value}" ${u.role === r.value ? 'selected' : ''}>${r.label}</option>`
@@ -807,7 +853,7 @@ window.cargarGestionUsuarios = async function() {
                     Bloquear
                 </button>
                </div>`
-            : `<span class="text-[11px] text-slate-400">Solo lectura</span>`;
+            : `<span class="text-[11px] text-slate-400">${esMiMismoUsuario ? 'Tu usuario' : 'Solo lectura'}</span>`;
 
         return `
             <tr class="border-b border-slate-200 hover:bg-slate-50">
@@ -842,11 +888,22 @@ window.cargarGestionUsuarios = async function() {
 };
 
 window.guardarEstadoYRolUsuario = async function(userId, nuevoStatus) {
+    const rolesAsignables = obtenerRolesAsignablesSegunMiRol(window.rolUsuarioActual);
+    if (rolesAsignables.length === 0) {
+        alert("No tenés permisos para modificar usuarios.");
+        return;
+    }
+
     const selRol = document.getElementById(`rol-user-${userId}`);
     const selCongre = document.getElementById(`congre-user-${userId}`);
 
     const nuevoRol = selRol ? selRol.value : undefined;
     const nuevaCongre = selCongre ? (selCongre.value || null) : window.congregacionIdActual;
+
+    if (nuevoRol && !rolesAsignables.some(r => r.value === nuevoRol)) {
+        alert("No tenés permisos para asignar ese rol.");
+        return;
+    }
 
     if (nuevoStatus === 'approved' && !nuevaCongre) {
         alert("Debés asignar una congregación antes de aprobar al usuario.");
