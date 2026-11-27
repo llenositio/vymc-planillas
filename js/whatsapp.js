@@ -1,5 +1,5 @@
 /**
- * Módulo de envío de asignaciones VyMC (S-89) y Cuadrilla/Individual/Planilla Completa AV por WhatsApp
+ * Módulo de envío de asignaciones VyMC (S-89) y Individual/Fila/Planilla Completa AV por WhatsApp
  */
 
 /**
@@ -13,19 +13,15 @@ function formatearNumeroWhatsApp(telefonoRaw) {
     let num = strRaw.replace(/\D/g, '');
     if (!num) return null;
 
-    // Si ya empieza con 549 y tiene la longitud internacional correcta (12 a 13 dígitos)
     if (num.startsWith('549') && num.length >= 12) {
         return num;
     }
-    // Si empieza con 54 pero le falta el 9 (ej: 541169070758)
     if (num.startsWith('54') && !num.startsWith('549')) {
         return '549' + num.substring(2);
     }
-    // Si empieza con 0 (ej: 01169070758 o 02804507929)
     if (num.startsWith('0')) {
         num = num.substring(1);
     }
-    // Si tiene 10 dígitos (ej: 1169070758 o 2804507929)
     if (num.length === 10) {
         return '549' + num;
     }
@@ -99,58 +95,6 @@ window.enviarWhatsAppAsignacion = function(nombreHermano, nombreAyudante, fechaS
 };
 
 /**
- * Envía el resumen de la cuadrilla de Acomodadores / AV (fila completa) por WhatsApp al número de grupo
- */
-window.enviarWhatsAppCuadrillaAV = function(indexSemana, tipoDia) {
-    const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
-    if (!semana) {
-        alert("No se encontró la información de la semana seleccionada.");
-        return;
-    }
-
-    const campoPuestos = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
-    const puestosSemana = semana[campoPuestos] || {};
-    const etiquetaReunion = (tipoDia === 'ES') ? 'ENTRE SEMANA' : 'FIN DE SEMANA';
-
-    let mensaje = `*ASIGNACIONES AV Y ACOMODADORES*\n`;
-    mensaje += `*Semana:* ${semana.fecha} (${etiquetaReunion})\n\n`;
-
-    let hayAsignados = false;
-    const puestos = (Array.isArray(window.puestosConfigAV) && window.puestosConfigAV.length > 0)
-        ? window.puestosConfigAV
-        : Object.keys(puestosSemana).map(k => ({ key: k, label: k.toUpperCase() }));
-
-    puestos.forEach(p => {
-        const nombreAsignado = puestosSemana[p.key];
-        if (nombreAsignado && String(nombreAsignado).trim() !== '') {
-            hayAsignados = true;
-            mensaje += `- *${p.label}:* ${nombreAsignado}\n`;
-        }
-    });
-
-    if (!hayAsignados) {
-        alert("No hay hermanos asignados en esta reunión para enviar por WhatsApp.");
-        return;
-    }
-
-    mensaje += `\n_Por favor, si alguno no puede cumplir con su asignación, avise con anticipación para coordinar el reemplazo._\n\n`;
-    mensaje += `Por favor, mandame un OK como respuesta`;
-
-    const inputTel = document.getElementById('inputTelGrupoAV');
-    const telRaw = inputTel ? inputTel.value : '';
-    const numeroGrupo = formatearNumeroWhatsApp(telRaw);
-
-    if (!numeroGrupo) {
-        alert("Ingresa un número de celular/grupo válido en el campo 'Tel. Grupo' arriba a la derecha.");
-        if (inputTel) inputTel.focus();
-        return;
-    }
-
-    const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, '_blank');
-};
-
-/**
  * Envía una notificación individual de asignación AV por WhatsApp a un hermano específico
  */
 window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
@@ -193,6 +137,72 @@ window.enviarWhatsAppIndividualAV = function(indexSemana, tipoDia, puestoKey) {
 };
 
 /**
+ * Botón "Enviar" de cada fila (Cuadrilla): envía por WhatsApp la notificación individual
+ * a cada publicador asignado en esa fila.
+ */
+window.enviarWhatsAppFilaPublicadoresAV = function(indexSemana, tipoDia) {
+    const semana = window.programaMesAV ? window.programaMesAV[indexSemana] : null;
+    if (!semana) {
+        alert("No se encontró la información de la semana seleccionada.");
+        return;
+    }
+
+    const campoPuestos = (tipoDia === 'ES') ? 'puestosES' : 'puestosFS';
+    const puestosSemana = semana[campoPuestos] || {};
+    const etiquetaReunion = (tipoDia === 'ES') ? 'Entre Semana' : 'Fin de Semana';
+
+    const puestos = (Array.isArray(window.puestosConfigAV) && window.puestosConfigAV.length > 0)
+        ? window.puestosConfigAV
+        : Object.keys(puestosSemana).map(k => ({ key: k, label: k.toUpperCase() }));
+
+    const envios = [];
+    const sinTelefono = [];
+
+    puestos.forEach(p => {
+        const nombreAsignado = puestosSemana[p.key];
+        if (!nombreAsignado || String(nombreAsignado).trim() === '') return;
+
+        const hermano = buscarHermanoEnTodasLasListas(nombreAsignado);
+        const celularRaw = hermano ? (hermano.celular || hermano.telefono) : null;
+        const numeroLimpio = formatearNumeroWhatsApp(celularRaw);
+
+        if (!numeroLimpio) {
+            sinTelefono.push(`${nombreAsignado} (${p.label})`);
+            return;
+        }
+
+        let texto = `*ASIGNACIÓN DE ACOMODADORES / AUDIO Y VIDEO*\n\n`;
+        texto += `- *Hermano/a:* ${nombreAsignado}\n`;
+        texto += `- *Función:* ${p.label}\n`;
+        texto += `- *Reunión:* ${etiquetaReunion}\n`;
+        texto += `- *Semana:* ${semana.fecha}\n\n`;
+        texto += `Por favor, mandame un OK como respuesta`;
+
+        envios.push(`https://wa.me/${numeroLimpio}?text=${encodeURIComponent(texto)}`);
+    });
+
+    if (envios.length === 0 && sinTelefono.length === 0) {
+        alert("No hay hermanos asignados en esta fila para enviar por WhatsApp.");
+        return;
+    }
+
+    if (sinTelefono.length > 0) {
+        alert(`Los siguientes hermanos no tienen celular cargado en la Matriz y no se podrán abrir:\n- ${sinTelefono.join('\n- ')}`);
+    }
+
+    envios.forEach(url => {
+        window.open(url, '_blank');
+    });
+};
+
+window.enviarWhatsAppCuadrillaAV = window.enviarWhatsAppFilaPublicadoresAV;
+
+// Asegurar que ningún script cargado después (como herramientas_av.js) vuelva a pisar esta función
+window.addEventListener('DOMContentLoaded', () => {
+    window.enviarWhatsAppCuadrillaAV = window.enviarWhatsAppFilaPublicadoresAV;
+});
+
+/**
  * Genera el enlace público de solo lectura ("modo foto") de la Planilla Mensual AV
  */
 window.generarLinkPublicoAV = function() {
@@ -221,7 +231,10 @@ window.enviarPlanillaCompletaAVAlGrupo = async function() {
         return;
     }
 
-    // Guardar automáticamente antes de enviar para que la foto esté 100% actualizada
+    // Abrir ventana de WhatsApp en el acto del clic para evitar bloqueo de popups tras el await
+    const winWa = window.open('about:blank', '_blank');
+
+    // Esperar a que termine de guardar en Supabase antes de enviar el enlace
     if (typeof window.guardarPlanillaAVEnSupabase === 'function') {
         await window.guardarPlanillaAVEnSupabase(true);
     }
@@ -240,5 +253,9 @@ window.enviarPlanillaCompletaAVAlGrupo = async function() {
     mensaje += `_Por favor, si alguno no puede cumplir con su asignación, avise con anticipación para coordinar el reemplazo._`;
 
     const url = `https://wa.me/${numeroGrupo}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, '_blank');
+    if (winWa) {
+        winWa.location.href = url;
+    } else {
+        window.open(url, '_blank');
+    }
 };
