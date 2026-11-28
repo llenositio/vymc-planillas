@@ -1230,4 +1230,4 @@ window.guardarPlanillaEnSupabase = async function() {
         }
     }
 };
-```[cite: 3, 12, 14]
+
