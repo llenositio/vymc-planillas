@@ -88,7 +88,6 @@ window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null
 
     let ordenGlobal = 0;
 
-    // Ordenar cronológicamente las planillas según mes_ano antes de procesar
     const planillasOrdenadas = [...(window.historialAsignaciones || [])].sort((a, b) => {
         const numA = window.parsearMesAnoANumero(a.mes_ano) || 0;
         const numB = window.parsearMesAnoANumero(b.mes_ano) || 0;
@@ -99,7 +98,6 @@ window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null
         const mesLabel = planilla.mes_ano || 'SIN MES';
         const mesNum = window.parsearMesAnoANumero(mesLabel);
 
-        // Aplicar filtro de fechas si está configurado
         if (desdeNum !== null && (mesNum === null || mesNum < desdeNum)) return;
         if (hastaNum !== null && (mesNum === null || mesNum > hastaNum)) return;
 
@@ -112,19 +110,15 @@ window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null
             if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
             ordenGlobal++;
 
-            // a) Presidencia ES
             if (sem.presidencia) {
                 registrar(sem.presidencia, 'presi', ordenGlobal, mesLabel);
             }
 
-            // b) y j) Oración inicial y final unificadas
             if (sem.oracionIni) registrar(sem.oracionIni, 'oraciones', ordenGlobal, mesLabel);
             if (sem.oracionFin) registrar(sem.oracionFin, 'oraciones', ordenGlobal, mesLabel);
 
-            // k) Presidencia FS
             if (sem.domPresi) registrar(sem.domPresi, 'presiDom', ordenGlobal, mesLabel);
 
-            // l) Lector W
             if (sem.domLector) registrar(sem.domLector, 'lectorAtalaya', ordenGlobal, mesLabel);
 
             (sem.partes || []).forEach(p => {
@@ -133,20 +127,14 @@ window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null
                 const textoCompleto = `${titLower} ${descLower}`;
 
                 if (p.seccion === 'tesoros') {
-                    // c) Discurso de Tesoros
                     if (p.tit && p.tit.trim().startsWith('1.') && p.asig) {
                         registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
-                    }
-                    // d) Busquemos perlas escondidas
-                    else if ((p.tit && p.tit.trim().startsWith('2.')) || textoCompleto.includes('perlas escondidas')) {
+                    } else if ((p.tit && p.tit.trim().startsWith('2.')) || textoCompleto.includes('perlas escondidas')) {
                         if (p.asig) registrar(p.asig, 'perlas', ordenGlobal, mesLabel);
-                    }
-                    // e) Lectura de la Biblia
-                    else if ((p.tit && p.tit.trim().startsWith('3.')) || textoCompleto.includes('lectura de la biblia')) {
+                    } else if ((p.tit && p.tit.trim().startsWith('3.')) || textoCompleto.includes('lectura de la biblia')) {
                         if (p.asig) registrar(p.asig, 'lectura', ordenGlobal, mesLabel);
                     }
                 } else if (p.seccion === 'maestros') {
-                    // f) Seamos Mejores Maestros: Estudiante (E) y Ayudante (A)
                     [p.asig, p.asigB, p.asigC].forEach(nom => {
                         if (nom) {
                             registrar(nom, 'smmE', ordenGlobal, mesLabel);
@@ -160,12 +148,10 @@ window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null
                         }
                     });
                 } else if (p.seccion === 'vida') {
-                    // h) Estudio Bíblico (EB) e i) Lector L
                     if (textoCompleto.includes('estudio bíblico') || textoCompleto.includes('estudio biblico')) {
                         if (p.asig) registrar(p.asig, 'estudioBiblico', ordenGlobal, mesLabel);
                         if (p.asigAyudante) registrar(p.asigAyudante, 'lectorLibro', ordenGlobal, mesLabel);
                     } else {
-                        // g) Nuestra Vida Cristiana: Común (C) o Necesidades Locales (NL)
                         const esNecLoc = textoCompleto.includes('necesidades locales') ||
                                          textoCompleto.includes('necesidades lucales') ||
                                          textoCompleto.includes('nec loc') ||
@@ -434,7 +420,6 @@ window.renderizarTablaHistorial = async function(recargarBD = true) {
         await window.cargarHistorialDesdeSupabase();
     }
 
-    // Procesar con el filtro de fechas seleccionado (si ambos son null, procesa todo)
     window.procesarHistorialAsignaciones(desdeNum, hastaNum);
 
     const hermanos = window.listaHermanos || [];
@@ -460,27 +445,28 @@ window.renderizarTablaHistorial = async function(recargarBD = true) {
         grupos[claveCat].push(h);
     });
 
+    const thBase = 'px-1.5 py-2 border border-slate-700 text-center sticky top-0 z-20';
+
     let html = `
-        <div class="overflow-x-auto">
         <table class="w-full text-[11px] text-left border-collapse">
-            <thead class="bg-slate-900 text-white uppercase text-[10px] font-extrabold sticky top-0 z-10">
-                <tr>
-                    <th class="px-2.5 py-2 border border-slate-700 sticky left-0 bg-slate-900 z-20 min-w-[170px]">Hermano / Hermana</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center w-10">Grp</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-slate-800" title="Presidencia Entre Semana">Presid. ES</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-slate-800" title="Oración Inicial y Final">Oración</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-900" title="Discurso Tesoros de la Biblia">Tesoros</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-800" title="Busquemos Perlas Escondidas">Perlas</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-cyan-700" title="Lectura de la Biblia">Lectura</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-amber-800" title="Seamos Mejores Maestros - Estudiante">SMM (E)</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-amber-700" title="Seamos Mejores Maestros - Ayudante">SMM (A)</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-900" title="Nuestra Vida Cristiana - Tema Común">NVC (C)</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-800" title="Nuestra Vida Cristiana - Necesidades Locales">NVC (NL)</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-950" title="Conductor Estudio Bíblico de Congregación">EB</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-rose-950" title="Lector Estudio Bíblico de Congregación">Lector L</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-indigo-900" title="Presidencia Fin de Semana">Presid. FS</th>
-                    <th class="px-1.5 py-2 border border-slate-700 text-center bg-indigo-800" title="Lector de La Atalaya">Lector W</th>
-                    <th class="px-2 py-2 border border-slate-700 text-center bg-emerald-900">Total Hist.</th>
+            <thead>
+                <tr class="bg-slate-900 text-white uppercase text-[10px] font-extrabold">
+                    <th class="px-2.5 py-2 border border-slate-700 sticky top-0 left-0 bg-slate-900 z-30 min-w-[170px]">Hermano / Hermana</th>
+                    <th class="${thBase} bg-slate-900 w-10">Grp</th>
+                    <th class="${thBase} bg-slate-800" title="Presidencia Entre Semana">Presid. ES</th>
+                    <th class="${thBase} bg-slate-800" title="Oración Inicial y Final">Oración</th>
+                    <th class="${thBase} bg-cyan-900" title="Discurso Tesoros de la Biblia">Tesoros</th>
+                    <th class="${thBase} bg-cyan-800" title="Busquemos Perlas Escondidas">Perlas</th>
+                    <th class="${thBase} bg-cyan-700" title="Lectura de la Biblia">Lectura</th>
+                    <th class="${thBase} bg-amber-800" title="Seamos Mejores Maestros - Estudiante">SMM (E)</th>
+                    <th class="${thBase} bg-amber-700" title="Seamos Mejores Maestros - Ayudante">SMM (A)</th>
+                    <th class="${thBase} bg-rose-900" title="Nuestra Vida Cristiana - Tema Común">NVC (C)</th>
+                    <th class="${thBase} bg-rose-800" title="Nuestra Vida Cristiana - Necesidades Locales">NVC (NL)</th>
+                    <th class="${thBase} bg-rose-950" title="Conductor Estudio Bíblico de Congregación">EB</th>
+                    <th class="${thBase} bg-rose-950" title="Lector Estudio Bíblico de Congregación">Lector L</th>
+                    <th class="${thBase} bg-indigo-900" title="Presidencia Fin de Semana">Presid. FS</th>
+                    <th class="${thBase} bg-indigo-800" title="Lector de La Atalaya">Lector W</th>
+                    <th class="${thBase} bg-emerald-900">Total Hist.</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
@@ -550,7 +536,7 @@ window.renderizarTablaHistorial = async function(recargarBD = true) {
         });
     });
 
-    html += `</tbody></table></div>`;
+    html += `</tbody></table>`;
     contenedor.innerHTML = html;
 
     if (recargarBD) {
