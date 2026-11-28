@@ -402,7 +402,6 @@ async function cargarPerfilUsuario(user) {
         .eq('id', user.id)
         .maybeSingle();
 
-    // Si por alguna razón el perfil aún no se creó, crearlo en estado pending
     if (!data && !error) {
         const esSuper = user.email === 'claudiollenolio@gmail.com';
         const nuevoPerfil = {
@@ -429,14 +428,12 @@ async function cargarPerfilUsuario(user) {
     const rolEfectivo = data.role || data.rol || 'publicador';
     const estadoEfectivo = data.status || 'approved';
 
-    // 1. Si no está aprobado (y no es super_admin), mostrar pantalla de solicitud/espera
     if (rolEfectivo !== 'super_admin' && estadoEfectivo !== 'approved') {
         mostrarPantallaLogin(true);
         await mostrarVistaSolicitudPendiente(data, false);
         return;
     }
 
-    // 2. Si está aprobado pero su rol pertenece exclusivamente a Territorios (publicador, conductor, etc.), bloquear acceso al Gestor VyMC y AV
     if (!ROLES_PERMITIDOS_GESTOR_VYMC_AV.includes(rolEfectivo)) {
         mostrarPantallaLogin(true);
         await mostrarVistaSolicitudPendiente(data, true);
@@ -446,7 +443,6 @@ async function cargarPerfilUsuario(user) {
     window.congregacionIdActual = data.congregacion_id;
     window.rolUsuarioActual = rolEfectivo;
 
-    // Actualizar subtítulo del header con nombre y rol
     const subtituloHeader = document.getElementById('subtituloUsuarioHeader');
     if (subtituloHeader) {
         subtituloHeader.textContent = `${data.full_name || user.email} · ${formatearNombreRol(rolEfectivo)}`;
@@ -460,7 +456,6 @@ async function cargarPerfilUsuario(user) {
         await obtenerSlugCongregacion(window.congregacionIdActual);
     }
 
-    // Aplicar restricciones visuales según el rol del usuario
     aplicarRestriccionesPorRol(window.rolUsuarioActual);
 
     if (typeof cargarHermanosDesdeSupabase === 'function') await cargarHermanosDesdeSupabase();
@@ -493,7 +488,6 @@ function aplicarRestriccionesPorRol(rol) {
     const puedeEditarAV = ['super_admin', 'admin_congregacion', 'editor_av'].includes(rol);
     const puedeGestionarUsuarios = ['super_admin', 'admin_congregacion', 'editor_vymc', 'editor_av'].includes(rol);
 
-    // Mostrar u ocultar pestaña de Usuarios y bloque de Super Admin
     const tabUsuarios = document.getElementById('tab-usuarios');
     if (tabUsuarios) {
         if (puedeGestionarUsuarios) tabUsuarios.classList.remove('hidden');
@@ -506,7 +500,6 @@ function aplicarRestriccionesPorRol(rol) {
         else bloqueNuevaCongre.classList.add('hidden');
     }
 
-    // Bloqueo selectivo por sección (VyMC vs AV) manteniendo intactos botones de WhatsApp, Imprimir y Navegación
     let estiloRestriccion = document.getElementById('estilo-restriccion-mensajero');
     if (!puedeEditarVyMC || !puedeEditarAV) {
         if (!estiloRestriccion) {
@@ -1239,4 +1232,20 @@ window.guardarPlanillaEnSupabase = async function() {
 };
 ```[cite: 3, 12, 14]
 
-¿Querés probar este `supabase.js` junto con el `historial.js` actualizado? Si notás algún otro punto en la app que no se refresque solo, decime cuál y lo vemos.
+### Cómo probar que ya vuelve a entrar sin problemas
+<Steps>
+  <Step subtitle="GitHub / repositorio" title="Subir el archivo actualizado">
+    Reemplazá el contenido de `js/supabase.js` con el código de arriba y guardá/subí los cambios al repositorio (`llenositio.github.io/vymc-planillas/`).
+    *Verification:* El archivo `js/supabase.js` en el repositorio contiene el código actualizado sin errores de sintaxis.
+  </Step>
+  <Step subtitle="Navegador" title="Recargar con caché limpia">
+    Abrí `[https://llenositio.github.io/vymc-planillas/](https://llenositio.github.io/vymc-planillas/)` y presioná `Ctrl + F5` (o `Cmd + Shift + R` en Mac) para forzar la descarga del nuevo `supabase.js` y evitar que el navegador use una versión vieja en caché.
+    *Verification:* Aparece la ventana modal de inicio de sesión con el botón **Continuar con Google**.
+  </Step>
+  <Step subtitle="Acceso normal" title="Iniciar sesión con Google">
+    Hacé clic en **Continuar con Google** y seleccioná tu cuenta habitual.
+    *Verification:* La ventana modal desaparece y se carga la planilla y la matriz normalmente.
+  </Step>
+</Steps>
+
+Si al hacer clic en **Continuar con Google** sigue sin entrar o muestra algún mensaje o error en la consola (`F12`), avisame qué ocurre y lo revisamos puntualmente.
