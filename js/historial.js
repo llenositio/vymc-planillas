@@ -402,6 +402,21 @@ window.mostrarFeedbackBotonConteo = function(estado) {
 };
 
 /**
+ * Normaliza la condición de un hermano a una clave canónica:
+ * 'A', 'SM', 'Pub', 'PNB', 'E', 'Prec' o 'Otro' (cuando está vacía/null/no reconocida)
+ */
+window.normalizarCondicionHermano = function(condRaw) {
+    const cond = (condRaw || '').trim();
+    if (cond === 'A') return 'A';
+    if (cond === 'SM') return 'SM';
+    if (cond === 'Pub' || cond === 'Publicador') return 'Pub';
+    if (cond === 'PNB') return 'PNB';
+    if (cond === 'E' || cond === 'Estudio' || cond === 'Estudiante') return 'E';
+    if (cond === 'Prec' || cond === 'Precursor' || cond === 'Precursora') return 'Prec';
+    return 'Otro';
+};
+
+/**
  * Renderiza la tabla de Estadísticas Acumuladas en la pestaña "Estadísticas"
  */
 window.renderizarTablaHistorial = async function(recargarBD = true) {
@@ -435,18 +450,14 @@ window.renderizarTablaHistorial = async function(recargarBD = true) {
         { key: 'Pub', titulo: 'Publicadores' },
         { key: 'PNB', titulo: 'Publicadores No Bautizados' },
         { key: 'E', titulo: 'Estudiantes' },
+        { key: 'Prec', titulo: 'Precursores' },
         { key: 'Otro', titulo: 'Sin Categoría' }
     ];
 
-    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'PNB': [], 'E': [], 'Otro': [] };
+    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'PNB': [], 'E': [], 'Prec': [], 'Otro': [] };
     hermanos.forEach(h => {
-        const cond = (h.condicion || '').trim();
-        if (cond === 'A') grupos['A'].push(h);
-        else if (cond === 'SM') grupos['SM'].push(h);
-        else if (cond === 'Pub' || cond === 'Publicador') grupos['Pub'].push(h);
-        else if (cond === 'PNB') grupos['PNB'].push(h);
-        else if (cond === 'E' || cond === 'Estudio' || cond === 'Estudiante') grupos['E'].push(h);
-        else grupos['Otro'].push(h);
+        const claveCat = window.normalizarCondicionHermano(h.condicion);
+        grupos[claveCat].push(h);
     });
 
     let html = `
@@ -566,7 +577,8 @@ window.renderizarMatrizHermanos = function() {
     hermanos.forEach((h, idx) => {
         const disabledAttr = esMensajero ? 'disabled' : '';
         const editableAttr = esMensajero ? 'false' : 'true';
-        const condActual = (h.condicion || '').trim();
+        const condCanon = window.normalizarCondicionHermano(h.condicion);
+        const valorSelectCond = condCanon === 'Otro' ? '' : condCanon;
 
         html += `<tr class="hover:bg-slate-50 transition">`;
         html += `<td class="border border-slate-300 font-bold text-slate-500">${idx + 1}</td>`;
@@ -586,11 +598,13 @@ window.renderizarMatrizHermanos = function() {
         html += `
             <td class="border border-slate-300">
                 <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'condicion', this.value)" class="bg-transparent font-bold text-xs outline-none">
-                    <option value="Pub" ${(condActual === 'Pub' || condActual === 'Publicador') ? 'selected' : ''}>Pub</option>
-                    <option value="PNB" ${condActual === 'PNB' ? 'selected' : ''}>PNB</option>
-                    <option value="E" ${(condActual === 'E' || condActual === 'Estudio' || condActual === 'Estudiante') ? 'selected' : ''}>E</option>
-                    <option value="SM" ${condActual === 'SM' ? 'selected' : ''}>SM</option>
-                    <option value="A" ${condActual === 'A' ? 'selected' : ''}>A</option>
+                    <option value="" ${valorSelectCond === '' ? 'selected' : ''}>-- Sin condición --</option>
+                    <option value="Pub" ${valorSelectCond === 'Pub' ? 'selected' : ''}>Pub (Publicador)</option>
+                    <option value="PNB" ${valorSelectCond === 'PNB' ? 'selected' : ''}>PNB (Publicador no bautizado)</option>
+                    <option value="E" ${valorSelectCond === 'E' ? 'selected' : ''}>E (Estudio)</option>
+                    <option value="SM" ${valorSelectCond === 'SM' ? 'selected' : ''}>SM (Siervo ministerial)</option>
+                    <option value="A" ${valorSelectCond === 'A' ? 'selected' : ''}>A (Anciano)</option>
+                    <option value="Prec" ${valorSelectCond === 'Prec' ? 'selected' : ''}>Prec (Precursor)</option>
                 </select>
             </td>
         `;
