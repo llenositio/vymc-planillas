@@ -1,640 +1,777 @@
-/**
- * Módulo de Historial, Estadísticas Acumuladas y Matriz de Hermanos
- * Incluye algoritmo de sugerencia por rotación y antigüedad en cada rol,
- * filtro por rango de fechas (Desde / Hasta) y feedback visual al actualizar.
- */
-
-window.historialAsignaciones = [];
-window.historialPorHermanoRol = {};
-
-/**
- * Convierte "NOVIEMBRE 2026" (o "11/2026") a un entero YYYYMM comparable (ej: 202611)
- */
-window.parsearMesAnoANumero = function(mesAnoStr) {
-    if (!mesAnoStr || typeof mesAnoStr !== 'string') return null;
-    const limpio = mesAnoStr.trim().toUpperCase();
-
-    const meses = {
-        'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
-        'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
-        'SEPTIEMBRE': 9, 'SETIEMBRE': 9, 'OCTUBRE': 10,
-        'NOVIEMBRE': 11, 'DICIEMBRE': 12
-    };
-
-    const matchAnio = limpio.match(/(20\d{2})/);
-    if (!matchAnio) return null;
-    const anio = parseInt(matchAnio[1], 10);
-
-    for (const [nombreMes, numMes] of Object.entries(meses)) {
-        if (limpio.includes(nombreMes)) {
-            return anio * 100 + numMes;
-        }
-    }
-
-    const matchMesNum = limpio.match(/\b(0?[1-9]|1[0-2])\b/);
-    if (matchMesNum) {
-        return anio * 100 + parseInt(matchMesNum[1], 10);
-    }
-
-    return null;
-};
-
-/**
- * Carga todas las planillas guardadas de la congregación desde Supabase
- */
-window.cargarHistorialDesdeSupabase = async function() {
-    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
-    if (!idCongre) return;
-
-    const { data, error } = await db
-        .from('planillas')
-        .select('mes_ano, datos, updated_at')
-        .eq('congregacion_id', idCongre)
-        .order('updated_at', { ascending: true });
-
-    if (error) {
-        console.error("Error cargando historial de planillas:", error);
-        return;
-    }
-
-    window.historialAsignaciones = data || [];
-    window.procesarHistorialAsignaciones();
-};
-
-/**
- * Procesa las planillas históricas (opcionalmente filtradas por rango YYYYMM)
- * y construye un mapa exacto por hermano y rol
- */
-window.procesarHistorialAsignaciones = function(desdeNum = null, hastaNum = null) {
-    const mapa = {};
-
-    const registrar = (nombreRaw, rol, ordenTiempo, etiquetaMes) => {
-        if (!nombreRaw || typeof nombreRaw !== 'string') return;
-        const nombreLimpio = nombreRaw.split('(')[0].trim();
-        if (!nombreLimpio || nombreLimpio.startsWith('--')) return;
-
-        const key = nombreLimpio.toLowerCase();
-        if (!mapa[key]) mapa[key] = {};
-        if (!mapa[key][rol]) {
-            mapa[key][rol] = { count: 0, lastOrder: -1, lastMes: '' };
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor VyMC y AV - Planilla Mensual y Asignaciones</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FontAwesome Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fuente Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, ::before, ::after { box-sizing: border-box !important; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        .bg-tesoros { background-color: #164e63; }
+        .bg-maestros { background-color: #d97706; }
+        .bg-vida { background-color: #b91c1c; }
+        
+        /* PLANILLA EN PANTALLA */
+        #tablaPlanillaCompleta, .tabla-semana-publica { 
+            border-collapse: collapse !important; 
+            width: 100% !important; 
+            table-layout: fixed !important; 
+            background-color: white; 
+            border: 2px solid #0f172a !important;
+            margin-bottom: 1.5rem;
         }
 
-        mapa[key][rol].count += 1;
-        if (ordenTiempo >= mapa[key][rol].lastOrder) {
-            mapa[key][rol].lastOrder = ordenTiempo;
-            mapa[key][rol].lastMes = etiquetaMes;
+        .c-tiempo { 
+            width: 45px !important; 
+            min-width: 45px !important;
+            max-width: 45px !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            font-weight: bold !important;
+            font-size: 11px !important;
+            padding: 3px !important;
+            overflow: hidden !important;
         }
-    };
 
-    let ordenGlobal = 0;
+        #tablaPlanillaCompleta td, #tablaPlanillaCompleta th,
+        .tabla-semana-publica td, .tabla-semana-publica th,
+        .excel-table td, .excel-table th { 
+            border: 1px solid #64748b !important; 
+            padding: 4px 6px !important; 
+            font-size: 11px !important; 
+            line-height: 1.25 !important;
+            word-wrap: break-word; 
+            overflow: hidden; 
+            vertical-align: middle;
+        }
 
-    const planillasOrdenadas = [...(window.historialAsignaciones || [])].sort((a, b) => {
-        const numA = window.parsearMesAnoANumero(a.mes_ano) || 0;
-        const numB = window.parsearMesAnoANumero(b.mes_ano) || 0;
-        return numA - numB;
-    });
+        #contenedorTablaHistorial td, #contenedorTablaHistorial th {
+            padding: 10px 6px !important;
+            font-size: 13px !important;
+            line-height: 1.4 !important;
+            word-wrap: normal !important;
+            overflow: visible !important;
+        }
 
-    planillasOrdenadas.forEach(planilla => {
-        const mesLabel = planilla.mes_ano || 'SIN MES';
-        const mesNum = window.parsearMesAnoANumero(mesLabel);
+        .editable-field {
+            outline: none;
+            color: #475569 !important;
+            transition: color 0.2s, background-color 0.2s;
+            border-radius: 2px;
+            padding: 2px 4px;
+            cursor: text;
+        }
+        .editable-field:focus {
+            color: #0f172a !important;
+            background-color: #fef08a !important;
+        }
 
-        if (desdeNum !== null && (mesNum === null || mesNum < desdeNum)) return;
-        if (hastaNum !== null && (mesNum === null || mesNum > hastaNum)) return;
+        .select-asig { 
+            width: 100%; 
+            background: transparent; 
+            font-weight: 800; 
+            color: #78350f; 
+            border: none; 
+            outline: none; 
+            cursor: pointer; 
+            padding: 1px !important; 
+            font-size: 10px !important; 
+            text-transform: uppercase;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .select-asig:focus { background-color: #fef08a; }
 
-        const rawDatos = typeof planilla.datos === 'string' ? JSON.parse(planilla.datos) : (planilla.datos || []);
-        const semanas = Array.isArray(rawDatos) ? rawDatos : (rawDatos.semanas || rawDatos.programa || []);
+        .input-inline {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-weight: 900;
+            font-size: 13px;
+            color: #0f172a;
+            text-align: center;
+        }
 
-        if (!Array.isArray(semanas)) return;
+        /* VISTA PÚBLICA (ESTILO LECTURA LIMPIA) */
+        body.modo-publico {
+            background-color: #ffffff !important;
+        }
+        body.modo-publico header,
+        body.modo-publico .no-print,
+        body.modo-publico #modalLogin,
+        body.modo-publico .btn-accion-tabla,
+        body.modo-publico .fa-whatsapp {
+            display: none !important;
+        }
+        body.modo-publico .print-area {
+            max-width: 1000px !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 10px !important;
+        }
+        body.modo-publico .select-asig {
+            pointer-events: none !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            border: none !important;
+            background: transparent !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            color: #0f172a !important;
+        }
 
-        semanas.forEach(sem => {
-            if (!sem || sem.tipoSemana === 'asamblea' || sem.tipoSemana === 'conmemoracion') return;
-            ordenGlobal++;
-
-            if (sem.presidencia) {
-                registrar(sem.presidencia, 'presi', ordenGlobal, mesLabel);
+        /* IMPRESIÓN A4 REGULADA */
+        @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 5mm 7mm; 
             }
 
-            if (sem.oracionIni) registrar(sem.oracionIni, 'oraciones', ordenGlobal, mesLabel);
-            if (sem.oracionFin) registrar(sem.oracionFin, 'oraciones', ordenGlobal, mesLabel);
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; font-size: 8px !important; }
+            
+            .print-area { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                padding: 0 !important; 
+            }
 
-            if (sem.domPresi) registrar(sem.domPresi, 'presiDom', ordenGlobal, mesLabel);
+            .hoja-print {
+                page-break-after: always !important;
+                break-after: page !important;
+                display: block !important;
+                clear: both !important;
+            }
 
-            if (sem.domLector) registrar(sem.domLector, 'lectorAtalaya', ordenGlobal, mesLabel);
+            .semana-bloque-print {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin-bottom: 3mm;
+            }
 
-            (sem.partes || []).forEach(p => {
-                const titLower = (p.tit || '').toLowerCase();
-                const descLower = (p.desc || p.tipo || p.detalle || '').toLowerCase();
-                const textoCompleto = `${titLower} ${descLower}`;
+            .tabla-semana-print { 
+                width: 100% !important; 
+                border: 1.5px solid #000 !important; 
+                border-collapse: collapse !important;
+            }
 
-                if (p.seccion === 'tesoros') {
-                    if (p.tit && p.tit.trim().startsWith('1.') && p.asig) {
-                        registrar(p.asig, 'discurso', ordenGlobal, mesLabel);
-                    } else if ((p.tit && p.tit.trim().startsWith('2.')) || textoCompleto.includes('perlas escondidas')) {
-                        if (p.asig) registrar(p.asig, 'perlas', ordenGlobal, mesLabel);
-                    } else if ((p.tit && p.tit.trim().startsWith('3.')) || textoCompleto.includes('lectura de la biblia')) {
-                        if (p.asig) registrar(p.asig, 'lectura', ordenGlobal, mesLabel);
-                    }
-                } else if (p.seccion === 'maestros') {
-                    [p.asig, p.asigB, p.asigC].forEach(nom => {
-                        if (nom) {
-                            registrar(nom, 'smmE', ordenGlobal, mesLabel);
-                            registrar(nom, 'smm', ordenGlobal, mesLabel);
-                        }
-                    });
-                    [p.asigAyudante, p.asigBAyudante, p.asigCAyudante].forEach(nom => {
-                        if (nom) {
-                            registrar(nom, 'smmA', ordenGlobal, mesLabel);
-                            registrar(nom, 'smm', ordenGlobal, mesLabel);
-                        }
-                    });
-                } else if (p.seccion === 'vida') {
-                    if (textoCompleto.includes('estudio bíblico') || textoCompleto.includes('estudio biblico')) {
-                        if (p.asig) registrar(p.asig, 'estudioBiblico', ordenGlobal, mesLabel);
-                        if (p.asigAyudante) registrar(p.asigAyudante, 'lectorLibro', ordenGlobal, mesLabel);
-                    } else {
-                        const esNecLoc = textoCompleto.includes('necesidades locales') ||
-                                         textoCompleto.includes('necesidades lucales') ||
-                                         textoCompleto.includes('nec loc') ||
-                                         textoCompleto.includes('nec. loc');
+            .tabla-semana-print td, .tabla-semana-print th { 
+                border: 1px solid #000 !important; 
+                padding: 0px 2px !important; 
+                font-size: 8px !important; 
+                line-height: 1.05 !important;
+            }
 
-                        if (p.asig) {
-                            if (esNecLoc) {
-                                registrar(p.asig, 'nvcNL', ordenGlobal, mesLabel);
-                            } else {
-                                registrar(p.asig, 'nvcC', ordenGlobal, mesLabel);
-                            }
-                            registrar(p.asig, 'nvc', ordenGlobal, mesLabel);
-                        }
-                    }
+            .select-asig { 
+                color: #78350f !important; 
+                appearance: none; 
+                -webkit-appearance: none; 
+                font-size: 8px !important; 
+                font-weight: 800 !important; 
+            }
+
+            .editable-field { color: #0f172a !important; }
+        }
+    </style>
+</head>
+<body class="pb-12">
+
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-500 text-slate-950 px-2.5 py-1.5 rounded-lg text-xl font-black">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg leading-tight">Gestor VyMC - Planilla y Asignaciones</h1>
+                    <p id="subtituloUsuarioHeader" class="text-xs text-slate-400">Programa Mensual Sincronizado con Supabase</p>
+                </div>
+            </div>
+
+            <!-- CONTENEDOR SELECTOR DE CONGREGACIÓN (EXCLUSIVO SUPER ADMIN) -->
+            <div id="selector-congregacion-container" class="flex items-center"></div>
+
+            <div class="flex items-center gap-2">
+                <nav class="flex flex-wrap gap-1 bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                    <button onclick="cambiarPestaña('planilla')" id="tab-planilla" class="px-3 py-1.5 rounded-lg text-white bg-amber-600 font-bold transition">
+                        <i class="fa-solid fa-table-cells mr-1"></i> Planilla VyMC
+                    </button>
+                    <button onclick="cambiarPestaña('historial')" id="tab-historial" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-clock-rotate-left mr-1"></i> Historial
+                    </button>
+                    <button onclick="cambiarPestaña('estadisticas')" id="tab-estadisticas" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-chart-column mr-1"></i> Estadísticas
+                    </button>
+                    <button onclick="cambiarPestaña('hermanos')" id="tab-hermanos" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-users mr-1"></i> Matriz VyMC
+                    </button>
+
+                    <!-- SEPARADOR Y PESTAÑAS DE AV -->
+                    <span class="border-r border-slate-700 mx-1"></span>
+
+                    <button onclick="cambiarPestaña('av_planilla')" id="tab-av_planilla" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-headphones mr-1"></i> Planilla AV
+                    </button>
+                    <button onclick="cambiarPestaña('av_matriz')" id="tab-av_matriz" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-sliders mr-1"></i> Matriz AV
+                    </button>
+
+                    <!-- PESTAÑA DE USUARIOS Y APROBACIONES (SOLO ADMINS / EDITORES) -->
+                    <button onclick="cambiarPestaña('usuarios')" id="tab-usuarios" class="hidden px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">
+                        <i class="fa-solid fa-user-shield mr-1"></i> Usuarios
+                    </button>
+                </nav>
+
+                <!-- BOTÓN SALIR -->
+                <button onclick="cerrarSesion()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition font-bold text-xs flex items-center gap-1.5 shadow-sm ml-2">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-[98%] mx-auto px-2 sm:px-4 mt-4">
+
+        <!-- PLANILLA MENSUAL VyMC -->
+        <section id="sec-planilla" class="tab-content">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4 no-print">
+                
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <!-- MES + FRANJA VERDE DEL LINK PÚBLICO -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-extrabold uppercase text-slate-700">Mes:</span>
+                            <input type="text" 
+                                   id="inputNombreMes" 
+                                   placeholder="Ej: NOVIEMBRE 2026" 
+                                   oninput="if(typeof window.actualizarTextoTituloMes === 'function') window.actualizarTextoTituloMes(this.value);"
+                                   onchange="if(typeof window.notificarYGuardarAutosave === 'function') window.notificarYGuardarAutosave();"
+                                   class="bg-white border border-slate-300 rounded-lg px-3 py-1.5 font-black text-sm text-amber-800 uppercase focus:ring-2 focus:ring-amber-500 outline-none w-52" 
+                                   value="NOVIEMBRE 2026">
+                        </div>
+
+                        <!-- BARRA DE LINK PÚBLICO MANUAL -->
+                        <div class="flex items-center gap-2 bg-emerald-50 border border-emerald-300 px-3 py-1.5 rounded-lg shadow-sm">
+                            <button type="button" onclick="if(typeof window.actualizarLinkPublico === 'function') window.actualizarLinkPublico();" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold px-2.5 py-1 rounded-md flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer">
+                                <i class="fa-solid fa-arrows-rotate"></i> Actualizar Link
+                            </button>
+                            <input type="text" id="inputLinkPublico" readonly class="bg-white border border-emerald-200 text-xs px-2 py-1 rounded w-60 sm:w-72 text-slate-600 font-mono select-all outline-none" value="">
+                            <button type="button" id="btnCopiarLink" onclick="if(typeof window.copiarLinkPublico === 'function') window.copiarLinkPublico();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1 rounded-md flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer">
+                                <i class="fa-solid fa-copy"></i> <span id="lblCopiarLink">Copiar</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span id="estadoGuardado" class="text-xs font-semibold text-emerald-600 mr-2 flex items-center gap-1 opacity-0 transition-opacity">
+                            <i class="fa-solid fa-cloud-check"></i> Guardado automáticamente
+                        </span>
+                        <button onclick="guardarMesManual()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Mes
+                        </button>
+                        <button onclick="resetearPlanillaMes()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> Resetear Planilla
+                        </button>
+                        <button onclick="prepararEImprimir()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-print"></i> Imprimir / PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold uppercase text-slate-500">Semanas del Mes:</span>
+                        <div id="selectorSemanas" class="flex gap-1 flex-wrap"></div>
+                        <button onclick="agregarNuevaSemana()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i> Agregar Semana
+                        </button>
+                        <button onclick="abrirModalImportador()" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Extraer Programa
+                        </button>
+                        <button onclick="eliminarSemanaActiva()" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1 ml-1">
+                            <i class="fa-solid fa-trash"></i> Eliminar Semana
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-3 border-slate-100">
+
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="font-bold text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders text-amber-600"></i> Formato Semana:
+                        </span>
+                        <div class="flex gap-3 flex-wrap font-medium">
+                            <label class="inline-flex items-center gap-1 cursor-pointer">
+                                <input type="radio" name="tipoSemana" value="normal" checked onchange="actualizarTipoSemana('normal')" class="text-amber-600 focus:ring-amber-500">
+                                <span>Normal</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1 cursor-pointer text-blue-700">
+                                <input type="radio" name="tipoSemana" value="viajante" onchange="actualizarTipoSemana('viajante')" class="text-blue-600 focus:ring-blue-500">
+                                <span class="font-bold"><i class="fa-solid fa-user-tie"></i> Visita Viajante</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1 cursor-pointer text-red-700">
+                                <input type="radio" name="tipoSemana" value="asamblea" onchange="actualizarTipoSemana('asamblea')" class="text-red-600 focus:ring-red-500">
+                                <span class="font-bold"><i class="fa-solid fa-building-columns"></i> Asamblea</span>
+                            </label>
+                            <label class="inline-flex items-center gap-1 cursor-pointer text-purple-700">
+                                <input type="radio" name="tipoSemana" value="conmemoracion" onchange="actualizarTipoSemana('conmemoracion')" class="text-purple-600 focus:ring-purple-500">
+                                <span class="font-bold"><i class="fa-solid fa-wine-glass"></i> Conmemoración</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-white px-2.5 py-1 rounded border border-slate-300">
+                        <span class="font-bold text-slate-700">Salas:</span>
+                        <select id="selectNumSalas" onchange="cambiarNumSalasSemana(this.value)" class="font-bold text-amber-800 bg-transparent outline-none cursor-pointer">
+                            <option value="1">1 Sala (Principal)</option>
+                            <option value="2">2 Salas (A y B)</option>
+                            <option value="3">3 Salas (A, B y C)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-area bg-white p-3 sm:p-6 rounded-xl shadow-lg border border-slate-300 overflow-x-auto">
+                <div class="text-center mb-4 border-b-2 border-slate-900 pb-2">
+                    <h2 id="tituloMesPlanilla" class="text-xl font-black text-slate-900 uppercase tracking-widest">
+                        PROGRAMA DE REUNIONES - MES DE <span id="txtNombreMes">---</span>
+                    </h2>
+                </div>
+
+                <div id="bannerEventoEspecial" class="hidden mb-4 p-4 rounded-lg text-center font-bold text-sm"></div>
+
+                <table class="excel-table" id="tablaPlanillaCompleta">
+                    <colgroup>
+                    <col class="c-tiempo">
+                    <col style="width: 24% !important;">
+                    <col style="width: 34% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 5% !important;">
+                    <col style="width: 30px !important;">
+                    </colgroup>
+                    <thead id="cabeceraTablaPlanilla"></thead>
+                    <tbody id="cuerpoTablaPlanilla"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- HISTORIAL -->
+        <section id="sec-historial" class="tab-content hidden max-w-2xl mx-auto my-6 p-6 bg-white rounded-xl shadow-md border border-slate-200">
+            <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-folder-open text-amber-600"></i> Buscar Planillas de Meses Anteriores
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Mes:</label>
+                    <select id="selectFiltroMes" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50">
+                        <option value="ENERO">Enero (01)</option>
+                        <option value="FEBRERO">Febrero (02)</option>
+                        <option value="MARZO">Marzo (03)</option>
+                        <option value="ABRIL">Abril (04)</option>
+                        <option value="MAYO">Mayo (05)</option>
+                        <option value="JUNIO">Junio (06)</option>
+                        <option value="JULIO">Julio (07)</option>
+                        <option value="AGOSTO">Agosto (08)</option>
+                        <option value="SEPTIEMBRE">Septiembre (09)</option>
+                        <option value="OCTUBRE">Octubre (10)</option>
+                        <option value="NOVIEMBRE" selected>Noviembre (11)</option>
+                        <option value="DICIEMBRE">Diciembre (12)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Año:</label>
+                    <select id="selectFiltroAnio" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none bg-slate-50">
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                        <option value="2028">2028</option>
+                        <option value="2029">2029</option>
+                        <option value="2030">2030</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="buscarYCargarPlanillaHistorial()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-3 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-magnifying-glass"></i> Buscar y Cargar Planilla
+            </button>
+        </section>
+
+        <!-- ESTADÍSTICAS -->
+        <section id="sec-estadisticas" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-column text-amber-600"></i> Estadísticas Acumuladas
+                        </h2>
+                        <p class="text-xs text-slate-500">Conteo automático dinámico por hermano y categoría</p>
+                    </div>
+                    <button onclick="renderizarTablaHistorial()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate mr-1"></i> Actualizar Conteo
+                    </button>
+                </div>
+
+                <!-- CONTENEDOR CON SCROLL INTERNO Y CABECERA FIJA -->
+                <div id="contenedorTablaHistorial" class="max-h-[65vh] overflow-y-auto overflow-x-auto border border-slate-300 rounded-lg shadow-inner bg-white"></div>
+            </div>
+        </section>
+
+        <!-- LISTA DE HERMANOS (MATRIZ VyMC) -->
+        <section id="sec-hermanos" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-users-gear text-amber-600"></i> Matriz de Hermanos (Supabase)
+                        </h2>
+                    </div>
+                    <button onclick="agregarNuevoHermano()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1">
+                        <i class="fa-solid fa-user-plus"></i> Agregar Hermano
+                    </button>
+                </div>
+
+                <!-- CONTENEDOR CON ALTURA MÁXIMA Y SCROLL INTERNO -->
+                <div class="max-h-[65vh] overflow-y-auto border border-slate-300 rounded-lg shadow-inner bg-white">
+                    <table class="excel-table min-w-[1200px] text-center border-collapse">
+                        <thead class="bg-slate-100 text-slate-800 text-xs uppercase font-extrabold sticky top-0 z-10 shadow-sm">
+                            <tr>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-8 border border-slate-300">N°</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 text-left px-3 min-w-[180px] border border-slate-300">Apellidos y Nombres</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Sexo</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-16 border border-slate-300">Condición</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Grupo</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-24 border border-slate-300">Resp.</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-28 border border-slate-300"><i class="fa-brands fa-whatsapp text-emerald-600 mr-1"></i>Celular</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Orac</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Pres VyMC</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Disc Tesor</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">Perlas</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lec Biblia</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">SMM</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">NVC</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-12 border border-slate-300">EB</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lector L</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Presid Púb</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-14 border border-slate-300">Lector W</th>
+                                <th class="sticky top-0 bg-slate-100 z-10 w-10 no-print border border-slate-300">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoTablaHermanos"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: PLANILLA MENSUAL AV -->
+        <section id="sec-av_planilla" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-headphones text-emerald-600"></i> Planilla Mensual - Acomodadores y Audio / Video
+                        </h2>
+                        <p class="text-xs text-slate-500">Programación mensual con filtrado inteligente según el día de la reunión</p>
+                    </div>
+                    
+                    <!-- CONTENEDOR DE TELÉFONO DE GRUPO, ENVÍO MODO FOTO Y BOTÓN GUARDAR -->
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1 bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg shadow-sm">
+                            <i class="fa-brands fa-whatsapp text-emerald-600 font-bold"></i>
+                            <span class="text-xs font-bold text-emerald-900">Tel. Grupo:</span>
+                            <input type="text" 
+                                   id="inputTelGrupoAV" 
+                                   placeholder="Ej: 5491122334455" 
+                                   class="bg-white border border-emerald-300 text-xs px-2 py-1 rounded w-36 sm:w-44 text-slate-700 font-mono outline-none focus:ring-1 focus:ring-emerald-500">
+                        </div>
+                        <button type="button" onclick="if(typeof window.enviarPlanillaCompletaAVAlGrupo === 'function') window.enviarPlanillaCompletaAVAlGrupo();" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-brands fa-whatsapp"></i> Enviar Planilla al Grupo
+                        </button>
+                        <button onclick="if(typeof guardarPlanillaAVEnSupabase === 'function') guardarPlanillaAVEnSupabase();" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar Planilla AV
+                        </button>
+                    </div>
+                </div>
+
+                <div id="contenedorPlanillaAV" class="overflow-x-auto border border-slate-300 rounded-lg shadow-inner bg-white mb-6 p-2"></div>
+
+                <!-- CONTENEDOR INFERIOR: BUSCADOR AMARILLO Y RESUMEN VERDE -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2 border-t border-slate-200">
+                    <div class="bg-amber-50 border border-amber-300 rounded-lg p-3 shadow-sm">
+                        <h4 class="text-xs font-bold text-amber-900 uppercase mb-2 border-b border-amber-200 pb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-magnifying-glass text-amber-600"></i> Buscador y Resaltador de Hermano
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="inputBuscarHermanoAV" onkeyup="if(typeof window.actualizarResaltadoBuscador === 'function') window.actualizarResaltadoBuscador();" placeholder="Escribe el nombre del hermano..." class="flex-1 bg-white border border-amber-300 rounded px-2.5 py-1 text-xs outline-none focus:ring-2 focus:ring-amber-500">
+                        </div>
+                        <p id="textoConteoBuscadoAV" class="text-xs font-bold text-rose-700 mt-2 min-h-[1rem]"></p>
+                    </div>
+
+                    <div id="contenedorTablaVerdeAV"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: MATRIZ DE ELEGIBLES AV -->
+        <section id="sec-av_matriz" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-emerald-600"></i> Matriz de Elegibles (Aptitudes AV)
+                        </h2>
+                        <p class="text-xs text-slate-500">Marca los puestos habilitados para Entre Semana (ES) y Fin de Semana (FS)</p>
+                    </div>
+                </div>
+
+                <div id="contenedorMatrizAV" class="max-h-[65vh] overflow-y-auto border border-slate-300 rounded-lg shadow-inner bg-white"></div>
+            </div>
+        </section>
+
+        <!-- NUEVA SECCIÓN: GESTIÓN JERÁRQUICA DE USUARIOS Y CONGREGACIONES -->
+        <section id="sec-usuarios" class="tab-content hidden">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-user-shield text-amber-600"></i> Gestión de Usuarios y Roles
+                        </h2>
+                        <p class="text-xs text-slate-500">Aprueba solicitudes pendientes y asigna permisos según tu nivel de acceso</p>
+                    </div>
+                    <button onclick="if(typeof window.cargarGestionUsuarios === 'function') window.cargarGestionUsuarios();" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-rotate"></i> Actualizar Lista
+                    </button>
+                </div>
+
+                <!-- BLOQUE EXCLUSIVO SUPER ADMIN: ALTA DE CONGREGACIÓN -->
+                <div id="bloqueNuevaCongregacion" class="hidden bg-amber-50 border border-amber-300 rounded-xl p-4">
+                    <h3 class="text-xs font-extrabold text-amber-900 uppercase mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-building-columns"></i> Nueva Congregación (Super Admin)
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="inputNuevaCongreNombre" placeholder="Nombre de la congregación (ej: Centro Mar del Plata)" class="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500">
+                        <input type="text" id="inputNuevaCongreCiudad" placeholder="Ciudad (ej: Mar del Plata)" value="Mar del Plata" class="sm:w-52 bg-white border border-amber-300 rounded-lg px-3 py-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500">
+                        <button type="button" onclick="if(typeof window.crearCongregacionSuperAdmin === 'function') window.crearCongregacionSuperAdmin();" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-extrabold px-4 py-2 rounded-lg transition shadow-sm">
+                            <i class="fa-solid fa-plus mr-1"></i> Crear Congregación
+                        </button>
+                    </div>
+                </div>
+
+                <div id="contenedorGestionUsuarios" class="overflow-x-auto border border-slate-300 rounded-lg bg-white"></div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- MODAL DE EXTRACCIÓN Y BORRADOR -->
+    <div id="modalImportador" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+        <div class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+                <h3 class="font-extrabold text-base flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Extractor e Importador de Programa
+                </h3>
+                <button onclick="cerrarModalImportador()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="pasoModalTextoCrudo" class="p-4 flex-1 overflow-y-auto space-y-3">
+                <p class="text-xs text-slate-600 font-medium">
+                    Pega aquí el <strong>texto copiado directamente de la guía</strong>:
+                </p>
+                <textarea id="inputTextoCrudo" rows="12" class="w-full p-3 font-mono text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed" placeholder="Pega el programa aquí..."></textarea>
+            </div>
+
+            <div id="pasoModalFormateado" class="p-4 flex-1 overflow-y-auto space-y-3 hidden">
+                <div class="flex flex-wrap justify-between items-center gap-2 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+                    <span class="text-xs text-amber-900 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info text-amber-600"></i> Revisa el borrador con sintaxis <code class="bg-white px-1 py-0.5 rounded font-mono font-bold text-amber-800 border border-amber-300">//</code> antes de inyectar a la planilla.
+                    </span>
+                    <button onclick="volverAPasoTextoCrudo()" class="text-xs text-slate-500 hover:text-slate-800 underline font-semibold">
+                        Volver al texto original
+                    </button>
+                </div>
+
+                <textarea id="outputTextoDelimitado" rows="12" class="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed text-slate-800"></textarea>
+            </div>
+
+            <div class="bg-slate-50 p-3 border-t border-slate-200 flex justify-end gap-2">
+                <button onclick="cerrarModalImportador()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                    Cancelar
+                </button>
+                <button id="btnConvertirCrudo" onclick="convertirTextoCrudoADelimitado()" class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear"></i> Generar Borrador
+                </button>
+                <button id="btnCargarAPlanilla" onclick="cargarDelimitadoAPlanilla()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition hidden flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Cargar a la Planilla
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL PANTALLA DE INICIO DE SESIÓN (GOOGLE OAUTH + SOLICITUD PENDIENTE) -->
+    <div id="modalLogin" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 sm:p-8">
+            <div class="text-center mb-6">
+                <div class="bg-amber-500 text-slate-950 w-12 h-12 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-md">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900">Gestor VyMC y AV</h2>
+                <p class="text-xs text-slate-500 mt-1">Acceso unificado con tu cuenta de Google</p>
+            </div>
+
+            <!-- VISTA 1: BOTÓN CONTINUAR CON GOOGLE -->
+            <div id="loginVistaGoogle" class="space-y-4">
+                <button type="button" id="btnLoginGoogle" onclick="window.iniciarSesionConGoogle();" class="w-full bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-300 hover:border-slate-400 font-extrabold text-sm py-3 px-4 rounded-xl transition shadow-sm flex items-center justify-center gap-3 cursor-pointer">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"/>
+                        <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"/>
+                    </svg>
+                    <span>Continuar con Google</span>
+                </button>
+                <p class="text-[11px] text-center text-slate-400">
+                    Si es tu primera vez, podrás seleccionar tu congregación para solicitar acceso.
+                </p>
+            </div>
+
+            <!-- VISTA 2: USUARIO NUEVO / PENDIENTE DE APROBACIÓN -->
+            <div id="loginVistaPendiente" class="hidden space-y-4">
+                <div class="bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-950">
+                    <p class="font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock text-amber-600"></i>
+                        <span id="txtPendienteSaludo">¡Hola! Tu cuenta está pendiente de aprobación.</span>
+                    </p>
+                    <p id="txtPendienteDetalle" class="mt-1 text-amber-800">
+                        Seleccioná tu congregación para enviar tu solicitud de acceso al administrador.
+                    </p>
+                </div>
+
+                <div id="bloqueSeleccionCongreInicial" class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-700 uppercase">Tu Congregación</label>
+                    <select id="selectCongregacionSolicitud" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-amber-500 outline-none bg-white">
+                        <option value="">Cargando congregaciones...</option>
+                    </select>
+                    <button type="button" id="btnEnviarSolicitudCongre" onclick="window.enviarSolicitudCongregacion();" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-sm py-2.5 rounded-lg transition shadow-md cursor-pointer">
+                        Solicitar Acceso
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <button type="button" onclick="window.location.reload();" class="text-xs font-bold text-amber-700 hover:underline">
+                        <i class="fa-solid fa-rotate mr-1"></i> Verificar si ya me aprobaron
+                    </button>
+                    <button type="button" onclick="window.cerrarSesion();" class="text-xs font-bold text-rose-600 hover:underline">
+                        Cerrar sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARGA DE SCRIPTS MODULARES DE VyMC -->
+    <script src="js/supabase.js"></script>
+    <script src="js/whatsapp.js"></script>
+    <script src="js/historial.js"></script>
+    
+    <script src="js/state.js"></script>
+    <script src="js/ui-helpers.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/importador.js"></script>
+    <script src="js/impresion-publico.js"></script>
+
+    <!-- CARGA DE SCRIPTS MODULARES DE ACOMODADORES / AV -->
+    <script src="js/matriz_av.js"></script>
+    <script src="js/planilla_av.js"></script>
+    <script src="js/herramientas_av.js"></script>
+
+    <script>
+        // Lógica para conmutar las pestañas incluyendo las de AV y Usuarios
+        window.cambiarPestaña = function(pestaña) {
+            const secciones = ['planilla', 'historial', 'estadisticas', 'hermanos', 'av_planilla', 'av_matriz', 'usuarios'];
+            
+            secciones.forEach(sec => {
+                const elSec = document.getElementById(`sec-${sec}`); const elTab = document.getElementById(`tab-${sec}`);
+                
+                if (elSec) elSec.classList.add('hidden');
+                if (elTab) {
+                    elTab.classList.remove('bg-amber-600', 'text-white', 'font-bold');
+                    elTab.classList.add('text-slate-300');
                 }
             });
-        });
-    });
 
-    window.historialPorHermanoRol = mapa;
-};
+            const secActiva = document.getElementById(`sec-${pestaña}`); const tabActivo = document.getElementById(`tab-${pestaña}`);
 
-/**
- * Ordena una lista de hermanos aptos para un rol específico priorizando:
- * 1. Quienes nunca han tenido ese rol o lo tuvieron hace más tiempo (menor lastOrder)
- * 2. Menor cantidad de veces realizadas en ese rol
- * 3. Orden alfabético
- */
-window.obtenerSugeridosPorRol = function(rol, listaAptos) {
-    if (!Array.isArray(listaAptos)) return [];
-    const mapa = window.historialPorHermanoRol || {};
+            if (secActiva) secActiva.classList.remove('hidden');
+            if (tabActivo) {
+                tabActivo.classList.add('bg-amber-600', 'text-white', 'font-bold');
+                tabActivo.classList.remove('text-slate-300');
+            }
 
-    const aliasRol = {
-        'tesoros': 'discurso',
-        'lec_biblia': 'lectura',
-        'smm': 'smmE',
-        'nvc': 'nvcC',
-        'ebc': 'estudioBiblico',
-        'lector_ebc': 'lectorLibro',
-        'pres_pub': 'presiDom',
-        'lector_atalaya': 'lectorAtalaya'
-    };
-    const rolBuscado = aliasRol[rol] || rol;
+            // Refrescar automáticamente la vista al entrar sin necesidad de recargar el navegador
+            if (pestaña === 'planilla') {
+                if (typeof window.renderizarSelectorSemanas === 'function') {
+                    window.renderizarSelectorSemanas();
+                }
+                if (Array.isArray(window.programaMes) && window.programaMes.length > 0 && typeof window.cargarSemanaEnPlanilla === 'function') {
+                    const idx = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
+                    window.cargarSemanaEnPlanilla(idx);
+                }
+            }
 
-    return [...listaAptos].sort((a, b) => {
-        const keyA = (a.nombre || '').trim().toLowerCase();
-        const keyB = (b.nombre || '').trim().toLowerCase();
+            if (pestaña === 'estadisticas' && typeof window.renderizarTablaHistorial === 'function') {
+                window.renderizarTablaHistorial(false);
+            }
 
-        const infoA = (mapa[keyA] && mapa[keyA][rolBuscado]) ? mapa[keyA][rolBuscado] : { count: 0, lastOrder: -1 };
-        const infoB = (mapa[keyB] && mapa[keyB][rolBuscado]) ? mapa[keyB][rolBuscado] : { count: 0, lastOrder: -1 };
+            if (pestaña === 'hermanos' && typeof window.renderizarMatrizHermanos === 'function') {
+                window.renderizarMatrizHermanos();
+            }
 
-        if (infoA.lastOrder !== infoB.lastOrder) {
-            return infoA.lastOrder - infoB.lastOrder;
-        }
-        if (infoA.count !== infoB.count) {
-            return infoA.count - infoB.count;
-        }
-        return (a.nombre || '').localeCompare(b.nombre || '');
-    });
-};
+            // Disparar carga de datos de Supabase al abrir pestañas de AV o Usuarios
+            if (pestaña === 'av_matriz') {
+                if (typeof window.cargarElegiblesAVDesdeSupabase === 'function') {
+                    window.cargarElegiblesAVDesdeSupabase();
+                } else if (typeof window.renderizarMatrizAV === 'function') {
+                    window.renderizarMatrizAV();
+                }
+            }
 
-/**
- * Busca y carga una planilla histórica por mes y año
- */
-window.buscarYCargarPlanillaHistorial = async function() {
-    const selMes = document.getElementById('selectFiltroMes');
-    const selAnio = document.getElementById('selectFiltroAnio');
-    if (!selMes || !selAnio) return;
+            if (pestaña === 'av_planilla') {
+                if (typeof window.cargarAusenciasDesdeSupabase === 'function') {
+                    window.cargarAusenciasDesdeSupabase();
+                }
+                if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
+                    window.cargarPlanillaAVDesdeSupabase();
+                } else if (typeof window.renderizarPlanillaAV === 'function') {
+                    window.renderizarPlanillaAV();
+                }
+            }
 
-    const mesBuscado = `${selMes.value} ${selAnio.value}`.trim().toUpperCase();
-    let idCongre = window.congregacionIdActual || (window.congregacionActual ? window.congregacionActual.id : null);
-
-    if (!idCongre) {
-        alert("No hay congregación seleccionada.");
-        return;
-    }
-
-    const { data, error } = await db
-        .from('planillas')
-        .select('*')
-        .eq('congregacion_id', idCongre)
-        .eq('mes_ano', mesBuscado)
-        .maybeSingle();
-
-    if (error) {
-        console.error("Error buscando planilla en historial:", error);
-        alert("Ocurrió un error al buscar la planilla.");
-        return;
-    }
-
-    if (!data || !data.datos) {
-        alert(`No se encontró ninguna planilla guardada para "${mesBuscado}".`);
-        return;
-    }
-
-    const rawDatos = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
-    window.programaMes = Array.isArray(rawDatos) ? rawDatos : (rawDatos.semanas || rawDatos.programa || []);
-    window.nombreMesGlobal = data.mes_ano;
-    window.semanaActivaIdx = 0;
-
-    const inputMes = document.getElementById('inputNombreMes');
-    if (inputMes) inputMes.value = window.nombreMesGlobal;
-    if (typeof window.actualizarTextoTituloMes === 'function') {
-        window.actualizarTextoTituloMes(window.nombreMesGlobal);
-    }
-
-    if (typeof window.cambiarPestaña === 'function') {
-        window.cambiarPestaña('planilla');
-    }
-    if (typeof window.renderizarSelectorSemanas === 'function') {
-        window.renderizarSelectorSemanas();
-    }
-    if (typeof window.cargarSemanaEnPlanilla === 'function') {
-        window.cargarSemanaEnPlanilla(0);
-    }
-    if (typeof window.actualizarLinkPublico === 'function') {
-        window.actualizarLinkPublico();
-    }
-    if (typeof window.cargarPlanillaAVDesdeSupabase === 'function') {
-        await window.cargarPlanillaAVDesdeSupabase();
-    }
-};
-
-/**
- * Inyecta (si no existe) la barra de filtro Desde / Hasta arriba de Estadísticas
- */
-window.asegurarBarraFiltroEstadisticas = function(contenedor) {
-    if (document.getElementById('barraFiltroRangoEstadisticas')) return;
-
-    const mesesLista = [
-        { val: '01', txt: 'Enero' }, { val: '02', txt: 'Febrero' },
-        { val: '03', txt: 'Marzo' }, { val: '04', txt: 'Abril' },
-        { val: '05', txt: 'Mayo' }, { val: '06', txt: 'Junio' },
-        { val: '07', txt: 'Julio' }, { val: '08', txt: 'Agosto' },
-        { val: '09', txt: 'Septiembre' }, { val: '10', txt: 'Octubre' },
-        { val: '11', txt: 'Noviembre' }, { val: '12', txt: 'Diciembre' }
-    ];
-
-    const anioActual = new Date().getFullYear();
-    const aniosLista = [];
-    for (let y = anioActual - 2; y <= anioActual + 2; y++) {
-        aniosLista.push(y);
-    }
-
-    const optMeses = `<option value="">-- Mes --</option>` + mesesLista.map(m => `<option value="${m.val}">${m.txt}</option>`).join('');
-    const optAnios = `<option value="">-- Año --</option>` + aniosLista.map(y => `<option value="${y}">${y}</option>`).join('');
-
-    const barra = document.createElement('div');
-    barra.id = 'barraFiltroRangoEstadisticas';
-    barra.className = 'flex flex-wrap items-center gap-2 mb-3 p-2.5 bg-slate-100 border border-slate-200 rounded-lg text-xs';
-    barra.innerHTML = `
-        <span class="font-bold text-slate-700">Filtrar período:</span>
-        <div class="flex items-center gap-1">
-            <label class="text-slate-600 font-semibold">Desde:</label>
-            <select id="estDesdeMes" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optMeses}</select>
-            <select id="estDesdeAnio" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optAnios}</select>
-        </div>
-        <div class="flex items-center gap-1">
-            <label class="text-slate-600 font-semibold">Hasta:</label>
-            <select id="estHastaMes" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optMeses}</select>
-            <select id="estHastaAnio" onchange="window.aplicarFiltroRangoEstadisticas()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-slate-800">${optAnios}</select>
-        </div>
-        <button type="button" onclick="window.limpiarFiltroRangoEstadisticas()" class="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded transition">
-            Todo el historial
-        </button>
-        <span id="estInfoRangoActivo" class="text-[11px] font-semibold text-emerald-700 ml-auto">Mostrando: Todo el historial</span>
-    `;
-
-    contenedor.parentNode.insertBefore(barra, contenedor);
-};
-
-window.obtenerRangoEstadisticasSeleccionado = function() {
-    const dMes = document.getElementById('estDesdeMes')?.value || '';
-    const dAnio = document.getElementById('estDesdeAnio')?.value || '';
-    const hMes = document.getElementById('estHastaMes')?.value || '';
-    const hAnio = document.getElementById('estHastaAnio')?.value || '';
-
-    const desdeNum = (dMes && dAnio) ? parseInt(`${dAnio}${dMes}`, 10) : null;
-    const hastaNum = (hMes && hAnio) ? parseInt(`${hAnio}${hMes}`, 10) : null;
-
-    const infoSpan = document.getElementById('estInfoRangoActivo');
-    if (infoSpan) {
-        if (desdeNum === null && hastaNum === null) {
-            infoSpan.textContent = 'Mostrando: Todo el historial';
-        } else {
-            const txtDesde = desdeNum ? `${dMes}/${dAnio}` : 'Inicio';
-            const txtHasta = hastaNum ? `${hMes}/${hAnio}` : 'Actualidad';
-            infoSpan.textContent = `Período filtrado: ${txtDesde} → ${txtHasta}`;
-        }
-    }
-
-    return { desdeNum, hastaNum };
-};
-
-window.aplicarFiltroRangoEstadisticas = function() {
-    window.renderizarTablaHistorial(false);
-};
-
-window.limpiarFiltroRangoEstadisticas = function() {
-    ['estDesdeMes', 'estDesdeAnio', 'estHastaMes', 'estHastaAnio'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    window.renderizarTablaHistorial(false);
-};
-
-/**
- * Feedback visual en el botón "Actualizar Conteo"
- */
-window.mostrarFeedbackBotonConteo = function(estado) {
-    const botones = Array.from(document.querySelectorAll('button')).filter(b =>
-        b.textContent.includes('Actualizar Conteo') || b.dataset.esBotonConteo === '1'
-    );
-
-    botones.forEach(btn => {
-        btn.dataset.esBotonConteo = '1';
-        if (!btn.dataset.htmlOriginal) {
-            btn.dataset.htmlOriginal = btn.innerHTML;
-        }
-
-        if (estado === 'cargando') {
-            btn.disabled = true;
-            btn.classList.add('opacity-75');
-            btn.innerHTML = `<i class="fa-solid fa-rotate fa-spin mr-1"></i> Actualizando...`;
-        } else if (estado === 'ok') {
-            btn.disabled = false;
-            btn.classList.remove('opacity-75');
-            btn.innerHTML = `<i class="fa-solid fa-check mr-1 text-emerald-400"></i> Actualizado ✓`;
-            setTimeout(() => {
-                btn.innerHTML = btn.dataset.htmlOriginal;
-            }, 1600);
-        }
-    });
-};
-
-/**
- * Normaliza la condición de un hermano a una clave canónica:
- * 'A', 'SM', 'Pub', 'PNB', 'E', 'Prec' o 'Otro' (cuando está vacía/null/no reconocida)
- */
-window.normalizarCondicionHermano = function(condRaw) {
-    const cond = (condRaw || '').trim();
-    if (cond === 'A') return 'A';
-    if (cond === 'SM') return 'SM';
-    if (cond === 'Pub' || cond === 'Publicador') return 'Pub';
-    if (cond === 'PNB') return 'PNB';
-    if (cond === 'E' || cond === 'Estudio' || cond === 'Estudiante') return 'E';
-    if (cond === 'Prec' || cond === 'Precursor' || cond === 'Precursora') return 'Prec';
-    return 'Otro';
-};
-
-/**
- * Renderiza la tabla de Estadísticas Acumuladas en la pestaña "Estadísticas"
- */
-window.renderizarTablaHistorial = async function(recargarBD = true) {
-    const contenedor = document.getElementById('contenedorTablaHistorial');
-    if (!contenedor) return;
-
-    if (recargarBD) {
-        window.mostrarFeedbackBotonConteo('cargando');
-    }
-
-    window.asegurarBarraFiltroEstadisticas(contenedor);
-    const { desdeNum, hastaNum } = window.obtenerRangoEstadisticasSeleccionado();
-
-    if (recargarBD || !window.historialAsignaciones || window.historialAsignaciones.length === 0) {
-        await window.cargarHistorialDesdeSupabase();
-    }
-
-    window.procesarHistorialAsignaciones(desdeNum, hastaNum);
-
-    const hermanos = window.listaHermanos || [];
-    if (hermanos.length === 0) {
-        contenedor.innerHTML = `<p class="text-center text-xs text-slate-500 py-6">No hay hermanos cargados en la congregación.</p>`;
-        if (recargarBD) window.mostrarFeedbackBotonConteo('ok');
-        return;
-    }
-
-    const categorias = [
-        { key: 'A', titulo: 'Ancianos' },
-        { key: 'SM', titulo: 'Siervos Ministeriales' },
-        { key: 'Pub', titulo: 'Publicadores' },
-        { key: 'PNB', titulo: 'Publicadores No Bautizados' },
-        { key: 'E', titulo: 'Estudiantes' },
-        { key: 'Prec', titulo: 'Precursores' },
-        { key: 'Otro', titulo: 'Sin Categoría' }
-    ];
-
-    const grupos = { 'A': [], 'SM': [], 'Pub': [], 'PNB': [], 'E': [], 'Prec': [], 'Otro': [] };
-    hermanos.forEach(h => {
-        const claveCat = window.normalizarCondicionHermano(h.condicion);
-        grupos[claveCat].push(h);
-    });
-
-    const thBase = 'px-1.5 py-2 border border-slate-700 text-center sticky top-0 z-20';
-
-    let html = `
-        <table class="w-full text-[11px] text-left border-collapse">
-            <thead>
-                <tr class="bg-slate-900 text-white uppercase text-[10px] font-extrabold">
-                    <th class="px-2.5 py-2 border border-slate-700 sticky top-0 left-0 bg-slate-900 z-30 min-w-[170px]">Hermano / Hermana</th>
-                    <th class="${thBase} bg-slate-900 w-10">Grp</th>
-                    <th class="${thBase} bg-slate-800" title="Presidencia Entre Semana">Presid. ES</th>
-                    <th class="${thBase} bg-slate-800" title="Oración Inicial y Final">Oración</th>
-                    <th class="${thBase} bg-cyan-900" title="Discurso Tesoros de la Biblia">Tesoros</th>
-                    <th class="${thBase} bg-cyan-800" title="Busquemos Perlas Escondidas">Perlas</th>
-                    <th class="${thBase} bg-cyan-700" title="Lectura de la Biblia">Lectura</th>
-                    <th class="${thBase} bg-amber-800" title="Seamos Mejores Maestros - Estudiante">SMM (E)</th>
-                    <th class="${thBase} bg-amber-700" title="Seamos Mejores Maestros - Ayudante">SMM (A)</th>
-                    <th class="${thBase} bg-rose-900" title="Nuestra Vida Cristiana - Tema Común">NVC (C)</th>
-                    <th class="${thBase} bg-rose-800" title="Nuestra Vida Cristiana - Necesidades Locales">NVC (NL)</th>
-                    <th class="${thBase} bg-rose-950" title="Conductor Estudio Bíblico de Congregación">EB</th>
-                    <th class="${thBase} bg-rose-950" title="Lector Estudio Bíblico de Congregación">Lector L</th>
-                    <th class="${thBase} bg-indigo-900" title="Presidencia Fin de Semana">Presid. FS</th>
-                    <th class="${thBase} bg-indigo-800" title="Lector de La Atalaya">Lector W</th>
-                    <th class="${thBase} bg-emerald-900">Total Hist.</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-200">
-    `;
-
-    const mapaHist = window.historialPorHermanoRol || {};
-
-    const celda = (objRol, colorClass) => {
-        const cant = objRol ? objRol.count : 0;
-        const ult = objRol && objRol.lastMes ? ` title="Último: ${objRol.lastMes}"` : '';
-        const estiloCero = cant === 0 ? 'text-slate-300 font-normal' : `font-bold ${colorClass}`;
-        return `<td class="px-1.5 py-1.5 text-center border border-slate-200 ${estiloCero}"${ult}>${cant}</td>`;
-    };
-
-    categorias.forEach(cat => {
-        const lista = grupos[cat.key];
-        if (!lista || lista.length === 0) return;
-
-        html += `
-            <tr class="bg-slate-200 font-black text-slate-800 uppercase text-[10px]">
-                <td colspan="16" class="px-2.5 py-1.5 border border-slate-300">${cat.titulo} (${lista.length})</td>
-            </tr>
-        `;
-
-        lista.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '')).forEach(h => {
-            const k = (h.nombre || '').trim().toLowerCase();
-            const hData = mapaHist[k] || {};
-
-            const cPresiES = hData.presi ? hData.presi.count : 0;
-            const cOrac = hData.oraciones ? hData.oraciones.count : 0;
-            const cDiscurso = hData.discurso ? hData.discurso.count : 0;
-            const cPerlas = hData.perlas ? hData.perlas.count : 0;
-            const cLectura = hData.lectura ? hData.lectura.count : 0;
-            const cSmmE = hData.smmE ? hData.smmE.count : 0;
-            const cSmmA = hData.smmA ? hData.smmA.count : 0;
-            const cNvcC = hData.nvcC ? hData.nvcC.count : 0;
-            const cNvcNL = hData.nvcNL ? hData.nvcNL.count : 0;
-            const cEB = hData.estudioBiblico ? hData.estudioBiblico.count : 0;
-            const cLectorL = hData.lectorLibro ? hData.lectorLibro.count : 0;
-            const cPresiFS = hData.presiDom ? hData.presiDom.count : 0;
-            const cLectorW = hData.lectorAtalaya ? hData.lectorAtalaya.count : 0;
-
-            const totalHist = cPresiES + cOrac + cDiscurso + cPerlas + cLectura +
-                              cSmmE + cSmmA + cNvcC + cNvcNL + cEB + cLectorL +
-                              cPresiFS + cLectorW;
-
-            html += `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="px-2.5 py-1.5 font-bold text-slate-900 border border-slate-200 sticky left-0 bg-white">${h.nombre}</td>
-                    <td class="px-1.5 py-1.5 text-center text-slate-600 border border-slate-200">${h.grupo || '-'}</td>
-                    ${celda(hData.presi, 'text-slate-800')}
-                    ${celda(hData.oraciones, 'text-slate-800')}
-                    ${celda(hData.discurso, 'text-cyan-900')}
-                    ${celda(hData.perlas, 'text-cyan-800')}
-                    ${celda(hData.lectura, 'text-cyan-700')}
-                    ${celda(hData.smmE, 'text-amber-900')}
-                    ${celda(hData.smmA, 'text-amber-700')}
-                    ${celda(hData.nvcC, 'text-rose-900')}
-                    ${celda(hData.nvcNL, 'text-rose-700')}
-                    ${celda(hData.estudioBiblico, 'text-rose-950')}
-                    ${celda(hData.lectorLibro, 'text-rose-950')}
-                    ${celda(hData.presiDom, 'text-indigo-900')}
-                    ${celda(hData.lectorAtalaya, 'text-indigo-700')}
-                    <td class="px-2 py-1.5 text-center font-black text-emerald-900 bg-emerald-50/60 border border-slate-200">${totalHist}</td>
-                </tr>
-            `;
-        });
-    });
-
-    html += `</tbody></table>`;
-    contenedor.innerHTML = html;
-
-    if (recargarBD) {
-        window.mostrarFeedbackBotonConteo('ok');
-    }
-};
-
-/**
- * Renderiza la Matriz de Hermanos VyMC en la pestaña "Matriz VyMC"
- */
-window.renderizarMatrizHermanos = function() {
-    const tbody = document.getElementById('cuerpoTablaHermanos');
-    if (!tbody) return;
-
-    const esMensajero = (typeof window.rolUsuarioActual === 'string' && window.rolUsuarioActual.startsWith('mensajero_'));
-    const hermanos = window.listaHermanos || [];
-
-    let html = '';
-    const camposBool = [
-        'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 'lec_biblia',
-        'smm', 'nvc', 'ebc', 'lector_ebc', 'pres_pub', 'lector_atalaya'
-    ];
-
-    hermanos.forEach((h, idx) => {
-        const disabledAttr = esMensajero ? 'disabled' : '';
-        const editableAttr = esMensajero ? 'false' : 'true';
-        const condCanon = window.normalizarCondicionHermano(h.condicion);
-        const valorSelectCond = condCanon === 'Otro' ? '' : condCanon;
-
-        html += `<tr class="hover:bg-slate-50 transition">`;
-        html += `<td class="border border-slate-300 font-bold text-slate-500">${idx + 1}</td>`;
-        html += `
-            <td class="border border-slate-300 text-left px-2 font-bold text-slate-900">
-                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'nombre', this.innerText.trim())" class="editable-field block">${h.nombre || ''}</span>
-            </td>
-        `;
-        html += `
-            <td class="border border-slate-300">
-                <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'sexo', this.value)" class="bg-transparent font-bold text-xs outline-none">
-                    <option value="V" ${h.sexo === 'V' ? 'selected' : ''}>V</option>
-                    <option value="M" ${h.sexo === 'M' ? 'selected' : ''}>M</option>
-                </select>
-            </td>
-        `;
-        html += `
-            <td class="border border-slate-300">
-                <select ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, 'condicion', this.value)" class="bg-transparent font-bold text-xs outline-none">
-                    <option value="" ${valorSelectCond === '' ? 'selected' : ''}>-- Sin condición --</option>
-                    <option value="Pub" ${valorSelectCond === 'Pub' ? 'selected' : ''}>Pub (Publicador)</option>
-                    <option value="PNB" ${valorSelectCond === 'PNB' ? 'selected' : ''}>PNB (Publicador no bautizado)</option>
-                    <option value="E" ${valorSelectCond === 'E' ? 'selected' : ''}>E (Estudio)</option>
-                    <option value="SM" ${valorSelectCond === 'SM' ? 'selected' : ''}>SM (Siervo ministerial)</option>
-                    <option value="A" ${valorSelectCond === 'A' ? 'selected' : ''}>A (Anciano)</option>
-                    <option value="Prec" ${valorSelectCond === 'Prec' ? 'selected' : ''}>Prec (Precursor)</option>
-                </select>
-            </td>
-        `;
-        html += `
-            <td class="border border-slate-300">
-                <input type="number" ${disabledAttr} value="${h.grupo || 1}" onchange="actualizarHermanoBD(${h.id}, 'grupo', parseInt(this.value) || 1)" class="w-10 text-center bg-transparent font-bold outline-none">
-            </td>
-        `;
-        html += `
-            <td class="border border-slate-300">
-                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'responsabilidades', this.innerText.trim())" class="editable-field text-xs">${h.responsabilidades || ''}</span>
-            </td>
-        `;
-        html += `
-            <td class="border border-slate-300 font-mono text-xs">
-                <span contenteditable="${editableAttr}" onblur="actualizarHermanoBD(${h.id}, 'celular', this.innerText.trim())" class="editable-field">${h.celular || ''}</span>
-            </td>
-        `;
-
-        camposBool.forEach(campo => {
-            const checked = (h[campo] === true || h[campo] === 'X') ? 'checked' : '';
-            html += `
-                <td class="border border-slate-300 text-center">
-                    <input type="checkbox" ${checked} ${disabledAttr} onchange="actualizarHermanoBD(${h.id}, '${campo}', this.checked)" class="w-4 h-4 rounded text-amber-600 cursor-pointer">
-                </td>
-            `;
-        });
-
-        html += `
-            <td class="border border-slate-300 text-center no-print">
-                ${!esMensajero ? `
-                <button onclick="if(confirm('¿Eliminar a ${h.nombre}?')) eliminarHermanoBD(${h.id})" class="text-rose-500 hover:text-rose-700 p-1">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>` : ''}
-            </td>
-        `;
-        html += `</tr>`;
-    });
-
-    tbody.innerHTML = html;
-};
-
-window.agregarNuevoHermano = function() {
-    if (typeof window.agregarNuevoHermanoBD === 'function') {
-        window.agregarNuevoHermanoBD();
-    }
-};
+            if (pestaña === 'usuarios' && typeof window.cargarGestionUsuarios === 'function') {
+                window.cargarGestionUsuarios();
+            }
+        };
+    </script>
+</body>
+</html>
