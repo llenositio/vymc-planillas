@@ -569,7 +569,7 @@ function aplicarRestriccionesPorRol(rol) {
     });
 
     const btnGuardarAV = document.querySelector("button[onclick*='guardarPlanillaAVEnSupabase']");
-    if (btnGuardarAV) btnGuardarAV.style.display = puedeEditarAV ? '' : 'none';
+    if (btnGuardarAV) btn.style.display = puedeEditarAV ? '' : 'none';
 
     const inputMes = document.getElementById('inputNombreMes');
     if (inputMes) inputMes.disabled = !puedeEditarVyMC;
@@ -988,17 +988,60 @@ window.cargarHermanosDesdeSupabase = async function() {
     if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
+function sincronizarVistasTrasCambioHermano(campo) {
+    const secEstadisticas = document.getElementById('sec-estadisticas');
+    const estadisticasVisible = secEstadisticas ? !secEstadisticas.classList.contains('hidden') : true;
+
+    if (typeof window.renderizarTablaHistorial === 'function' && estadisticasVisible) {
+        window.renderizarTablaHistorial(false);
+    }
+
+    // Si cambió algún campo de habilitación o condición/sexo/nombre, refrescar selectores de la planilla activa
+    const camposQueAfectanSelectores = [
+        'nombre', 'sexo', 'condicion', 'grupo',
+        'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 'lec_biblia',
+        'smm', 'nvc', 'ebc', 'lector_ebc', 'pres_pub', 'lector_atalaya'
+    ];
+
+    if (camposQueAfectanSelectores.includes(campo) && Array.isArray(window.programaMes) && window.programaMes.length > 0) {
+        const activeEl = document.activeElement;
+        const estaEditandoTexto = activeEl && (
+            activeEl.isContentEditable ||
+            (activeEl.tagName === 'INPUT' && activeEl.type !== 'checkbox')
+        );
+
+        if (!estaEditandoTexto && typeof window.cargarSemanaEnPlanilla === 'function') {
+            const idxActual = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
+            window.cargarSemanaEnPlanilla(idxActual);
+        }
+    }
+}
+
 window.actualizarHermanoBD = async function(id, campo, valor) {
     if (!['super_admin', 'admin_congregacion', 'editor_vymc'].includes(window.rolUsuarioActual)) {
         return;
     }
 
+    const valorNormalizado = (campo === 'condicion' && valor === '') ? null : valor;
+
     const { error } = await db
         .from('hermanos')
-        .update({ [campo]: valor })
+        .update({ [campo]: valorNormalizado })
         .eq('id', id);
 
-    if (error) console.error("Error actualizando hermano:", error);
+    if (error) {
+        console.error("Error actualizando hermano:", error);
+        return;
+    }
+
+    if (Array.isArray(window.listaHermanos)) {
+        const hermanoLocal = window.listaHermanos.find(h => String(h.id) === String(id));
+        if (hermanoLocal) {
+            hermanoLocal[campo] = valorNormalizado;
+        }
+    }
+
+    sincronizarVistasTrasCambioHermano(campo);
 };
 
 window.agregarNuevoHermanoBD = async function() {
@@ -1047,8 +1090,9 @@ window.eliminarHermanoBD = async function(id) {
         return;
     }
 
-    window.listaHermanos = window.listaHermanos.filter(h => h.id !== id);
+    window.listaHermanos = (window.listaHermanos || []).filter(h => String(h.id) !== String(id));
     if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
+    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial(false);
 };
 
 /* CARGAR PLANILLA (DESDE EDITOR) */
@@ -1204,3 +1248,6 @@ window.guardarPlanillaEnSupabase = async function() {
         }
     }
 };
+```[cite: 6]
+
+Si querés probar este `supabase.js` junto con el `historial.js` anterior y contás cómo responde al cambiar un tilde o condición, seguimos con el próximo archivo que quieras mirar.
