@@ -569,7 +569,7 @@ function aplicarRestriccionesPorRol(rol) {
     });
 
     const btnGuardarAV = document.querySelector("button[onclick*='guardarPlanillaAVEnSupabase']");
-    if (btnGuardarAV) btn.style.display = puedeEditarAV ? '' : 'none';
+    if (btnGuardarAV) btnGuardarAV.style.display = puedeEditarAV ? '' : 'none';
 
     const inputMes = document.getElementById('inputNombreMes');
     if (inputMes) inputMes.disabled = !puedeEditarVyMC;
@@ -988,32 +988,21 @@ window.cargarHermanosDesdeSupabase = async function() {
     if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial();
 };
 
-function sincronizarVistasTrasCambioHermano(campo) {
-    const secEstadisticas = document.getElementById('sec-estadisticas');
-    const estadisticasVisible = secEstadisticas ? !secEstadisticas.classList.contains('hidden') : true;
-
-    if (typeof window.renderizarTablaHistorial === 'function' && estadisticasVisible) {
+function refrescarVistasTrasCambioHermano() {
+    if (typeof window.renderizarTablaHistorial === 'function') {
         window.renderizarTablaHistorial(false);
     }
 
-    // Si cambió algún campo de habilitación o condición/sexo/nombre, refrescar selectores de la planilla activa
-    const camposQueAfectanSelectores = [
-        'nombre', 'sexo', 'condicion', 'grupo',
-        'oracion', 'pres_vymc', 'disc_tesoros', 'perlas', 'lec_biblia',
-        'smm', 'nvc', 'ebc', 'lector_ebc', 'pres_pub', 'lector_atalaya'
-    ];
+    const activeEl = document.activeElement;
+    const estaEditandoTexto = activeEl && (
+        activeEl.closest('[contenteditable="true"]') ||
+        activeEl.tagName === 'INPUT' ||
+        activeEl.tagName === 'TEXTAREA'
+    );
 
-    if (camposQueAfectanSelectores.includes(campo) && Array.isArray(window.programaMes) && window.programaMes.length > 0) {
-        const activeEl = document.activeElement;
-        const estaEditandoTexto = activeEl && (
-            activeEl.isContentEditable ||
-            (activeEl.tagName === 'INPUT' && activeEl.type !== 'checkbox')
-        );
-
-        if (!estaEditandoTexto && typeof window.cargarSemanaEnPlanilla === 'function') {
-            const idxActual = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
-            window.cargarSemanaEnPlanilla(idxActual);
-        }
+    if (!estaEditandoTexto && Array.isArray(window.programaMes) && window.programaMes.length > 0 && typeof window.cargarSemanaEnPlanilla === 'function') {
+        const idx = (typeof window.semanaActivaIdx === 'number' && window.semanaActivaIdx >= 0) ? window.semanaActivaIdx : 0;
+        window.cargarSemanaEnPlanilla(idx);
     }
 }
 
@@ -1022,11 +1011,11 @@ window.actualizarHermanoBD = async function(id, campo, valor) {
         return;
     }
 
-    const valorNormalizado = (campo === 'condicion' && valor === '') ? null : valor;
+    const valorGuardar = (campo === 'condicion' && valor === '') ? null : valor;
 
     const { error } = await db
         .from('hermanos')
-        .update({ [campo]: valorNormalizado })
+        .update({ [campo]: valorGuardar })
         .eq('id', id);
 
     if (error) {
@@ -1037,11 +1026,11 @@ window.actualizarHermanoBD = async function(id, campo, valor) {
     if (Array.isArray(window.listaHermanos)) {
         const hermanoLocal = window.listaHermanos.find(h => String(h.id) === String(id));
         if (hermanoLocal) {
-            hermanoLocal[campo] = valorNormalizado;
+            hermanoLocal[campo] = valorGuardar;
         }
     }
 
-    sincronizarVistasTrasCambioHermano(campo);
+    refrescarVistasTrasCambioHermano();
 };
 
 window.agregarNuevoHermanoBD = async function() {
@@ -1092,7 +1081,7 @@ window.eliminarHermanoBD = async function(id) {
 
     window.listaHermanos = (window.listaHermanos || []).filter(h => String(h.id) !== String(id));
     if (typeof renderizarMatrizHermanos === 'function') renderizarMatrizHermanos();
-    if (typeof renderizarTablaHistorial === 'function') renderizarTablaHistorial(false);
+    refrescarVistasTrasCambioHermano();
 };
 
 /* CARGAR PLANILLA (DESDE EDITOR) */
@@ -1248,6 +1237,6 @@ window.guardarPlanillaEnSupabase = async function() {
         }
     }
 };
-```[cite: 6]
+```[cite: 3, 12, 14]
 
-Si querés probar este `supabase.js` junto con el `historial.js` anterior y contás cómo responde al cambiar un tilde o condición, seguimos con el próximo archivo que quieras mirar.
+¿Querés probar este `supabase.js` junto con el `historial.js` actualizado? Si notás algún otro punto en la app que no se refresque solo, decime cuál y lo vemos.
