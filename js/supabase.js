@@ -1231,21 +1231,3 @@ window.guardarPlanillaEnSupabase = async function() {
     }
 };
 ```[cite: 3, 12, 14]
-
-### Cómo probar que ya vuelve a entrar sin problemas
-<Steps>
-  <Step subtitle="GitHub / repositorio" title="Subir el archivo actualizado">
-    Reemplazá el contenido de `js/supabase.js` con el código de arriba y guardá/subí los cambios al repositorio (`llenositio.github.io/vymc-planillas/`).
-    *Verification:* El archivo `js/supabase.js` en el repositorio contiene el código actualizado sin errores de sintaxis.
-  </Step>
-  <Step subtitle="Navegador" title="Recargar con caché limpia">
-    Abrí `[https://llenositio.github.io/vymc-planillas/](https://llenositio.github.io/vymc-planillas/)` y presioná `Ctrl + F5` (o `Cmd + Shift + R` en Mac) para forzar la descarga del nuevo `supabase.js` y evitar que el navegador use una versión vieja en caché.
-    *Verification:* Aparece la ventana modal de inicio de sesión con el botón **Continuar con Google**.
-  </Step>
-  <Step subtitle="Acceso normal" title="Iniciar sesión con Google">
-    Hacé clic en **Continuar con Google** y seleccioná tu cuenta habitual.
-    *Verification:* La ventana modal desaparece y se carga la planilla y la matriz normalmente.
-  </Step>
-</Steps>
-
-Si al hacer clic en **Continuar con Google** sigue sin entrar o muestra algún mensaje o error en la consola (`F12`), avisame qué ocurre y lo revisamos puntualmente.
