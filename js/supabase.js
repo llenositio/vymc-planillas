@@ -107,7 +107,7 @@ async function cargarPlanillaVistaPublica(slug, mes) {
     }
 
     const slugLimpio = slug.toLowerCase().replace(/\s+/g, '');
-    let congreEncontrada = congregaciones.find(c => 
+    let congreEncontrada = congregaciones.find(c =>
         c.nombre.toLowerCase().replace(/\s+/g, '') === slugLimpio || c.id === slug
     );
 
@@ -613,7 +613,7 @@ async function renderizarSelectorSuperAdmin() {
         window.congregacionIdActual = congregaciones[0].id;
     }
 
-    let opciones = congregaciones.map(c => 
+    let opciones = congregaciones.map(c =>
         `<option value="${c.id}" data-nombre="${c.nombre}" ${c.id === window.congregacionIdActual ? 'selected' : ''}>${c.nombre}</option>`
     ).join('');
 
@@ -636,7 +636,7 @@ async function renderizarSelectorSuperAdmin() {
 
 window.cambiarCongregacionSuperAdmin = async function(nuevaCongreId) {
     window.congregacionIdActual = nuevaCongreId;
-    
+
     const select = document.getElementById('selectCongreSuperAdmin');
     if (select && select.selectedOptions[0]) {
         window.slugCongregacionActual = select.selectedOptions[0].getAttribute('data-nombre').toLowerCase().replace(/\s+/g, '');
@@ -677,7 +677,7 @@ window.cerrarSesion = async function() {
     window.rolUsuarioActual = null;
     window.listaHermanos = [];
     window.programaMes = [];
-    
+
     const contenedor = document.getElementById('selector-congregacion-container');
     if (contenedor) contenedor.innerHTML = '';
 
@@ -1101,7 +1101,7 @@ window.cargarPlanillaDesdeSupabase = async function() {
     if (data && data.datos) {
         window.programaMes = typeof data.datos === 'string' ? JSON.parse(data.datos) : (data.datos || []);
         window.nombreMesGlobal = data.mes_ano || "";
-        
+
         if (inputMes) inputMes.value = window.nombreMesGlobal;
         if (typeof actualizarTextoTituloMes === 'function') actualizarTextoTituloMes(window.nombreMesGlobal);
 
@@ -1160,11 +1160,11 @@ function generarSnapshotHTMLPublico() {
         selectsOriginales.forEach((sel, i) => {
             const textoSeleccionado = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
             const esVacio = !textoSeleccionado || textoSeleccionado.includes('-- ELEGIR --') || textoSeleccionado.includes('-- ASIGNAR --');
-            
+
             const span = document.createElement('span');
             span.className = 'font-bold uppercase text-slate-900 text-[11px]';
             span.textContent = esVacio ? '' : textoSeleccionado.split('(')[0].trim();
-            
+
             if (selectsClonados[i]) {
                 selectsClonados[i].parentNode.replaceChild(span, selectsClonados[i]);
             }
